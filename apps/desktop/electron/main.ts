@@ -9079,30 +9079,34 @@ async function runIxHermesInit(): Promise<{ ok: boolean; log: string }> {
     }
   } else {
     fs.mkdirSync(hermesHome, { recursive: true })
+  }
 
-    const configPath = path.join(hermesHome, 'config.yaml')
-    // Regenerate configs this app seeded (marker comment) so re-running init
-    // picks up new EKS MCP deployments; hand-edited configs are left alone.
-    let seededByUs = false
+  const configPath = path.join(hermesHome, 'config.yaml')
+  // Regenerate configs this app seeded (marker comment) so re-running init
+  // picks up new EKS MCP deployments; hand-edited configs — and the
+  // hermes-deployment seed, which carries no marker — are left alone. This
+  // runs after the installer branch too: install-local.sh never overwrites
+  // an existing config.yaml, so without this a desktop-seeded config would
+  // go stale forever on machines with the hermes-deployment checkout.
+  let seededByUs = false
 
-    try {
-      seededByUs = /^# (Seeded|Generated) by the Hermes desktop/.test(fs.readFileSync(configPath, 'utf8'))
-    } catch {
-      seededByUs = false
-    }
+  try {
+    seededByUs = /^# (Seeded|Generated) by the Hermes desktop/.test(fs.readFileSync(configPath, 'utf8'))
+  } catch {
+    seededByUs = false
+  }
 
-    if (!fileExists(configPath) || seededByUs) {
-      // process.resourcesPath lets the generator fall back to the skill packs
-      // bundled with the packaged app when the dev checkouts are absent.
-      fs.writeFileSync(
-        configPath,
-        fullHermesConfigYaml(settings.litellmUrl, settings.gatewayUrl, os.homedir(), process.resourcesPath),
-        'utf8'
-      )
-      log += `wrote ${configPath} — LiteLLM model provider + admin-mcp gateway + direct entries for every EKS MCP deployment\n`
-    } else {
-      log += `${configPath} exists (hand-edited) — left as-is\n`
-    }
+  if (!fileExists(configPath) || seededByUs) {
+    // process.resourcesPath lets the generator fall back to the skill packs
+    // bundled with the packaged app when the dev checkouts are absent.
+    fs.writeFileSync(
+      configPath,
+      fullHermesConfigYaml(settings.litellmUrl, settings.gatewayUrl, os.homedir(), process.resourcesPath),
+      'utf8'
+    )
+    log += `wrote ${configPath} — LiteLLM model provider + admin-mcp gateway + direct entries for every EKS MCP deployment\n`
+  } else {
+    log += `${configPath} exists without the desktop seed marker (hand-edited or hermes-deployment seed) — left as-is\n`
   }
 
   // Portal admin-skills catalog → native SKILL.md folders Hermes loads like
