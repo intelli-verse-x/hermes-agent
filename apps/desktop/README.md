@@ -110,7 +110,7 @@ rm "$HOME/.hermes/hermes-agent/.hermes-bootstrap-complete"
 # Rebuild a broken Python venv
 rm -rf "$HOME/.hermes/hermes-agent/venv"
 # Reset a stuck macOS microphone prompt (macOS only)
-tccutil reset Microphone com.nousresearch.hermes
+tccutil reset Microphone ai.intelli-verse-x.ix-agency
 ```
 
 **Windows (PowerShell):**
@@ -123,6 +123,47 @@ Remove-Item -Recurse -Force "$env:LOCALAPPDATA\hermes\hermes-agent\venv"
 ```
 
 > The default Hermes home on Windows is `%LOCALAPPDATA%\hermes`. Set the `HERMES_HOME` env var if you've relocated it.
+
+---
+
+## IX Agency integration
+
+The `/ix-agency` view adds the company surfaces on top of the stock desktop app
+(nothing existing is removed). Everything below is configured in **IX Agency →
+Connect**; all secrets are encrypted at rest with Electron `safeStorage`
+(Keychain-backed on macOS).
+
+| Setting | Default | Used by |
+|---|---|---|
+| Portal URL | `https://admin.intelli-verse-x.ai` | Portal tab webview + OTP login gate |
+| admin-mcp gateway URL + bearer token | `https://admin-mcp.intelli-verse-x.ai/` | Org tools directory, MCP status lamp, native copilot tool loop |
+| LiteLLM base URL + API key | `https://litellm.intelli-verse-x.ai` | Native copilot (Copilot tab) |
+| WireGuard `usa-vpn.conf` | imported once via file picker → keychain | VPN connect button + status lamp |
+| Expected VPN egress IP | `3.224.15.124` | Lamp turns green only when exit-IP check matches |
+| Update manifest URL | `https://hermes-desktop-updates.s3.amazonaws.com/latest.json` | Update poller (launch + every 4 h) |
+| Cognito S2S client id/secret | pool client `7i9clgl5c6dv2qk755ssrrlo80` (secret user-supplied) | Hermes first-run init |
+
+Notes:
+
+- **Login is enforced**: the native copilot and MCP directory require a live
+  portal OTP session (probed main-process against the `persist:ix-agency-portal`
+  webview session). LiteLLM/gateway credentials alone do not unlock them.
+- **Write gate**: any mutating MCP tool call stops with a Confirm card in the
+  chat; the confirmation nonce lives only in the main process and execution
+  uses the arguments frozen at request time.
+- **Updates**: publish a `latest.json` (Tauri-updater shape or plain
+  `{"version","url","notes"}`) at the manifest URL. When it is newer than the
+  running version, a non-blocking "Update available — Restart to update"
+  button appears in the IX strip and the tray; clicking opens the release URL
+  for this platform.
+- **VPN status truthfulness**: green requires the tunnel artifact, a fresh
+  `wg show` handshake when readable (root-only on macOS — unreadable is
+  reported, not faked) and the exit-IP check to match the expected egress IP.
+- **Hermes init**: validates the Cognito client-credentials grant (JWKS
+  signature verification), then runs `hermes-deployment/scripts/install-local.sh`
+  when a checkout exists at `~/dev/hermes-deployment`, else writes a minimal
+  `~/.hermes/config.yaml` pointing at the LiteLLM gateway; gateway/LiteLLM
+  secrets land in `~/.hermes/.env` (0600).
 
 ---
 

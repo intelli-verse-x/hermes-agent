@@ -1,0 +1,108 @@
+# desktop-release.yml — IX Agency desktop release chain (fork-only; upstream
+# hermes-agent has no packaged-release CI).
+#
+# Trigger: push an `ix-desktop-v*` tag whose version matches
+# apps/desktop/package.json (e.g. ix-desktop-v0.17.0), or run manually.
+#
+# Each platform job builds with electron-builder and publishes DIRECTLY to
+# s3://intelliverse-x-desktop/ix-agency/ (package.json > build.publish):
+# installers + per-platform channel files (latest.yml / latest-mac.yml /
+# latest-linux.yml). Installed apps poll that feed with electron-updater's
+# generic provider (electron/ix-updater.ts) — the "Update available" button
+# pops up within 4 h and installs in place.
+#
+# Required repo secrets:
+#   AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY — IAM user
+#     intelliverse-x-desktop-ci (S3 read/write on that bucket only).
+# Optional (macOS signing + notarization; unsigned builds still publish, but
+# mac in-place auto-update needs a signed app — unsigned falls back to
+# opening the .dmg URL):
+#   CSC_LINK / CSC_KEY_PASSWORD — Developer ID cert (base64 .p12 / password)
+#   APPLE_ID / APPLE_APP_SPECIFIC_PASSWORD / APPLE_TEAM_ID — notarytool
+name: desktop-release
+
+on:
+  push:
+    tags: ["ix-desktop-v*"]
+  workflow_dispatch: {}
+
+concurrency:
+  group: desktop-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build-publish:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: macos-latest
+          - platform: ubuntu-22.04
+          - platform: windows-latest
+    runs-on: ${{ matrix.platform }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Linux packaging deps (rpm for the rpm target)
+        if: matrix.platform == 'ubuntu-22.04'
+        run: sudo apt-get update && sudo apt-get install -y rpm
+
+      - name: Guard — tag version must match apps/desktop/package.json
+        if: startsWith(github.ref, 'refs/tags/ix-desktop-v')
+        run: |
+          TAG_VERSION="${GITHUB_REF_NAME#ix-desktop-v}"
+          PKG_VERSION="$(node -p "require('./apps/desktop/package.json').version")"
+          if [ "$TAG_VERSION" != "$PKG_VERSION" ]; then
+            echo "Tag $GITHUB_REF_NAME is v$TAG_VERSION but apps/desktop is v$PKG_VERSION" >&2
+            exit 1
+          fi
+
+      - run: npm ci
+
+      - name: Typecheck + IX unit tests
+        working-directory: apps/desktop
+        run: |
+          npx tsc -p . --noEmit
+          npx tsx --test electron/ix-updater.test.ts electron/ix-status.test.ts
+
+      - name: Build renderer + electron bundles
+        working-directory: apps/desktop
+        run: npm run build
+
+      - name: Package + publish to S3 feed
+        working-directory: apps/desktop
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: us-east-1
+          # macOS signing/notarization (skipped when unset; CSC_IDENTITY_AUTO_DISCOVERY
+          # avoids electron-builder hunting a keychain identity that isn't there).
+          CSC_LINK: ${{ secrets.CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          CSC_IDENTITY_AUTO_DISCOVERY: ${{ secrets.CSC_LINK != '' }}
+        run: npm run builder -- --publish always
+
+      - name: Upload installers as workflow artifacts (debug/QA convenience)
+        uses: actions/upload-artifact@v4
+        with:
+          name: ix-agency-${{ matrix.platform }}
+          path: |
+            apps/desktop/release/*.dmg
+            apps/desktop/release/*.zip
+            apps/desktop/release/*.exe
+            apps/desktop/release/*.msi
+            apps/desktop/release/*.AppImage
+            apps/desktop/release/*.deb
+            apps/desktop/release/*.rpm
+            apps/desktop/release/latest*.yml
+          if-no-files-found: warn
