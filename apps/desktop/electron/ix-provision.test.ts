@@ -39,6 +39,18 @@ test('ixDirectMcpTiles keeps only public HTTPS endpoints on our domains', () => 
   assert.deepEqual(tiles.map(t => t.id), ['notifuse', 'open-seo'])
 })
 
+test('ixDirectMcpTiles drops denylisted broken endpoints even on our domains', () => {
+  const tiles = ixDirectMcpTiles([
+    // /rpc is the raw Leantime JSON-RPC bridge, not MCP.
+    { id: 'leantime', mcpUrl: 'https://leantime-mcp.intelli-verse-x.ai/rpc' },
+    // No agent-mcp deployment exists; the hostname 404s via the wildcard ALB.
+    { id: 'agent-mcp', mcpUrl: 'https://agent-mcp.intelli-verse-x.ai/mcp' },
+    { id: 'notifuse', mcpUrl: 'https://notifuse-mcp.intelli-verse-x.ai/mcp' }
+  ])
+
+  assert.deepEqual(tiles.map(t => t.id), ['notifuse'])
+})
+
 test('the bundled registry snapshot yields the EKS MCP fleet', () => {
   const ids = ixDirectMcpTiles().map(t => t.id)
 
@@ -47,6 +59,8 @@ test('the bundled registry snapshot yields the EKS MCP fleet', () => {
   }
 
   assert.ok(!ids.includes('admin-mcp'), 'gateway itself must not be duplicated')
+  assert.ok(!ids.includes('leantime'), 'leantime /rpc bridge is not MCP — must stay denylisted')
+  assert.ok(!ids.includes('agent-mcp'), 'agent-mcp is not deployed — must stay denylisted')
 })
 
 /* ── bearer detection + yaml generation ──────────────────────────────────── */
@@ -84,6 +98,10 @@ test('fullHermesConfigYaml wires LiteLLM, the gateway and the EKS fleet', () => 
 
   for (const id of ['notifuse', 'fonoster', 'telnyx']) {
     assert.ok(yaml.includes(`  ${id}:`), `expected direct entry for ${id}`)
+  }
+
+  for (const id of ['leantime', 'agent-mcp']) {
+    assert.ok(!yaml.includes(`  ${id}:`), `broken endpoint ${id} must not appear in a fresh config`)
   }
 
   // marker line the init handler uses to know it may regenerate

@@ -46,6 +46,18 @@ type IxPortalSkill = {
 
 const EKS_MCP_HOST_SUFFIXES = ['.intelli-verse-x.ai', '.toba-tech.ai']
 
+/** Tiles whose URL would qualify for direct wiring but whose endpoint is
+ *  known-broken today — a fresh config must not ship entries that can never
+ *  connect. Both stay reachable through admin-mcp's admin_call_mcp. */
+const DIRECT_MCP_DENYLIST = new Set([
+  // leantime-mcp's registered mcpUrl (/rpc) is the raw Leantime JSON-RPC
+  // bridge, not an MCP endpoint — it answers "method not found: initialize".
+  'leantime',
+  // No agent-mcp deployment/ingress exists in the cluster; the hostname
+  // resolves to the wildcard ALB and 404s on every path.
+  'agent-mcp'
+])
+
 /** Tiles that get a first-class mcp_servers entry: public HTTPS endpoints on
  *  our own domains. In-cluster-only URLs (svc.cluster.local) and external
  *  SaaS MCPs stay reachable through the admin-mcp gateway's admin_call_mcp. */
@@ -53,7 +65,7 @@ export function ixDirectMcpTiles(tiles: IxMcpTile[] = mcpTilesData.items as IxMc
   return tiles.filter(tile => {
     const url = tile.mcpUrl || ''
 
-    if (tile.id === 'admin-mcp' || !url.startsWith('https://')) {
+    if (tile.id === 'admin-mcp' || DIRECT_MCP_DENYLIST.has(tile.id) || !url.startsWith('https://')) {
       return false
     }
 
