@@ -81,9 +81,11 @@ EXPECT_VERSION=0.17.1 node apps/desktop/scripts/verify-update-feed.mjs
   (download → install → restart).
 - **macOS**: in-place update requires a **signed** build (Squirrel.Mac).
   Until `CSC_LINK`/notarization secrets are set, unsigned mac builds fall
-  back to opening the new `.dmg` for a drag-install.
-- **Linux deb/rpm**: no in-place path — the update button downloads the new
-  package.
+  back to opening the download page for a drag-install.
+- **Windows MSI / Linux deb/rpm**: no in-place path — the app still checks
+  the feed and the update button opens the download page
+  (`https://intelliverse-x-desktop.s3.amazonaws.com/index.html`, republished
+  by the `publish-download-page` job on every release).
 
 ## Troubleshooting
 

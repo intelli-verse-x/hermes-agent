@@ -335,6 +335,9 @@ export interface IxMcpLampStatus {
 
 export interface IxUpdateStatus {
   updateAvailable: boolean
+  /** True when clicking Update installs in place (NSIS, signed Squirrel.Mac,
+   *  AppImage). Unset/false ⇒ clicking opens the download page instead. */
+  inPlace?: boolean
   currentVersion: string
   latestVersion: string
   url: string

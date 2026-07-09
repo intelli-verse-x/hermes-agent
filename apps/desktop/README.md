@@ -142,7 +142,7 @@ Connect**; all secrets are encrypted at rest with Electron `safeStorage`
 | LiteLLM base URL + API key | `https://litellm.intelli-verse-x.ai` | Native copilot (Copilot tab) |
 | WireGuard `usa-vpn.conf` | imported once via file picker → keychain | VPN connect button + status lamp |
 | Expected VPN egress IP | `3.224.15.124` | Lamp turns green only when exit-IP check matches |
-| Update manifest URL | `https://hermes-desktop-updates.s3.amazonaws.com/latest.json` | Update poller (launch + every 4 h) |
+| Update feed URL | `https://intelliverse-x-desktop.s3.amazonaws.com/ix-agency` | Update poller (launch + every 4 h) — electron-updater channel `.yml` feed |
 | Cognito S2S client id/secret | pool client `7i9clgl5c6dv2qk755ssrrlo80` (secret user-supplied) | Hermes first-run init |
 
 Notes:
@@ -153,10 +153,13 @@ Notes:
 - **Write gate**: any mutating MCP tool call stops with a Confirm card in the
   chat; the confirmation nonce lives only in the main process and execution
   uses the arguments frozen at request time.
-- **Updates**: publish a `latest.json` (Tauri-updater shape or plain
-  `{"version","url","notes"}`) at the manifest URL. When it is newer than the
-  running version, a non-blocking "Update available — Restart to update"
-  button appears in the IX strip and the tray; clicking opens the release URL
+- **Updates**: CI publishes the electron-updater feed (`latest.yml` /
+  `latest-mac.yml` / `latest-linux.yml` + artifacts) to the S3 feed base on a
+  version bump merged to `main` (see [RELEASING.md](./RELEASING.md)). When a
+  newer version is available, a non-blocking "Update available — Restart to
+  update" button appears in the IX strip and the tray; clicking installs in
+  place (Windows NSIS / Linux AppImage / signed macOS), otherwise opens the
+  download
   for this platform.
 - **VPN status truthfulness**: green requires the tunnel artifact, a fresh
   `wg show` handshake when readable (root-only on macOS — unreadable is

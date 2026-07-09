@@ -8,14 +8,19 @@
  */
 
 import assert from 'node:assert/strict'
+import fs from 'node:fs'
+import os from 'node:os'
+import path from 'node:path'
 import test from 'node:test'
 
 import {
   DEFAULT_UPDATE_FEED_URL,
+  DOWNLOAD_PAGE_URL,
   inPlaceUpdateSupport,
   isLegacyJsonManifest,
   normalizeUpdateFeedUrl,
   pickDownloadUrl,
+  pickFallbackUrl,
   releaseNotesText
 } from './ix-updater'
 
@@ -46,11 +51,28 @@ test('isLegacyJsonManifest: custom .json manifests keep the legacy poller', () =
   assert.equal(isLegacyJsonManifest(''), false)
 })
 
-test('inPlaceUpdateSupport: win/mac/AppImage yes; bare linux no', () => {
-  assert.equal(inPlaceUpdateSupport('win32', {}).supported, true)
+test('inPlaceUpdateSupport: NSIS win/mac/AppImage yes; MSI win and bare linux no', () => {
+  // NSIS installs leave "Uninstall <product>.exe" next to the binary; MSI don't.
+  const nsisDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ix-nsis-'))
+  const msiDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ix-msi-'))
+
+  fs.writeFileSync(path.join(nsisDir, 'Uninstall IX Agency.exe'), '')
+
+  assert.equal(inPlaceUpdateSupport('win32', {}, nsisDir).supported, true)
+  assert.equal(inPlaceUpdateSupport('win32', {}, msiDir).supported, false)
+  assert.equal(inPlaceUpdateSupport('win32', {}, path.join(msiDir, 'missing')).supported, false)
   assert.equal(inPlaceUpdateSupport('darwin', {}).supported, true)
   assert.equal(inPlaceUpdateSupport('linux', { APPIMAGE: '/tmp/IX.AppImage' }).supported, true)
   assert.equal(inPlaceUpdateSupport('linux', {}).supported, false)
+
+  fs.rmSync(nsisDir, { recursive: true, force: true })
+  fs.rmSync(msiDir, { recursive: true, force: true })
+})
+
+test('pickFallbackUrl: official feed goes to the download page, custom feeds keep the artifact', () => {
+  assert.equal(pickFallbackUrl(DEFAULT_UPDATE_FEED_URL, 'https://x/IX.dmg'), DOWNLOAD_PAGE_URL)
+  assert.equal(pickFallbackUrl('https://example.com/feed', 'https://x/IX.dmg'), 'https://x/IX.dmg')
+  assert.equal(pickFallbackUrl('https://example.com/feed', ''), '')
 })
 
 test('pickDownloadUrl: platform-preferred artifact, resolved against the feed base', () => {

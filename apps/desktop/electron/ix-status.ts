@@ -51,6 +51,9 @@ export function compareVersions(a: string, b: string): number {
 
 export interface UpdateStatus {
   updateAvailable: boolean
+  /** True when clicking Update genuinely installs in place (NSIS, signed
+   *  Squirrel.Mac, AppImage). Unset/false ⇒ clicking opens a download link. */
+  inPlace?: boolean
   currentVersion: string
   latestVersion: string
   /** Where the Update button sends the user (platform artifact or release page). */

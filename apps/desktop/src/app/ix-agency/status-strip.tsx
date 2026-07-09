@@ -127,7 +127,7 @@ export function IxStatusStrip() {
             variant="secondary"
           >
             <Codicon name="arrow-circle-up" size="0.75rem" />
-            Update available — Restart to update
+            {update.inPlace ? 'Update available — Restart to update' : 'Update available — Get the new version'}
           </Button>
         </Tip>
       )}

@@ -118,6 +118,26 @@ jobs:
             apps/desktop/release/latest*.yml
           if-no-files-found: warn
 
+  # Publish the download landing page to the bucket root on every release.
+  # The page fetches ix-agency/latest-*.yml at runtime so it always shows the
+  # newest version without republishing — this step just makes sure edits to
+  # apps/desktop/download-site/index.html ship automatically too.
+  publish-download-page:
+    needs: build-publish
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Upload download-site/index.html to s3://intelliverse-x-desktop/index.html
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: us-east-1
+        run: |
+          aws s3 cp apps/desktop/download-site/index.html s3://intelliverse-x-desktop/index.html \
+            --content-type "text/html; charset=utf-8" \
+            --cache-control "no-cache"
+          curl -sf https://intelliverse-x-desktop.s3.amazonaws.com/index.html >/dev/null
+
   # End-to-end feed check: after all 3 platforms publish, confirm the public
   # S3 feed serves the new version on every channel and every artifact it
   # references is downloadable with the exact size the channel file records.

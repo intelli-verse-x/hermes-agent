@@ -1,0 +1,366 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex" />
+    <title>Download IX Agency — Intelliverse X</title>
+    <meta
+      name="description"
+      content="Download the IX Agency desktop app for macOS, Windows and Linux. Auto-updating build from the Intelliverse X release feed."
+    />
+    <style>
+      :root {
+        --bg: #0b0d12;
+        --panel: #141821;
+        --panel-2: #1b2130;
+        --border: #262d3d;
+        --text: #e7ecf5;
+        --muted: #9aa6bd;
+        --muted-2: #6b7488;
+        --accent: #6d8bff;
+        --accent-2: #a06bff;
+        --ok: #34d399;
+        --warn: #fbbf24;
+        --radius: 14px;
+      }
+      * { box-sizing: border-box; }
+      html, body { margin: 0; padding: 0; }
+      body {
+        background:
+          radial-gradient(1200px 600px at 50% -10%, rgba(109, 139, 255, 0.18), transparent 60%),
+          var(--bg);
+        color: var(--text);
+        font: 15px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        -webkit-font-smoothing: antialiased;
+        min-height: 100vh;
+      }
+      .wrap { max-width: 960px; margin: 0 auto; padding: 56px 20px 80px; }
+      header { text-align: center; margin-bottom: 40px; }
+      .logo {
+        width: 60px; height: 60px; border-radius: 16px; margin: 0 auto 18px;
+        background: linear-gradient(135deg, var(--accent), var(--accent-2));
+        display: grid; place-items: center; font-size: 30px; font-weight: 800; color: #fff;
+        box-shadow: 0 12px 40px rgba(109, 139, 255, 0.35);
+      }
+      h1 { font-size: 30px; margin: 0 0 8px; letter-spacing: -0.02em; }
+      .sub { color: var(--muted); margin: 0 auto; max-width: 560px; }
+      .verpill {
+        display: inline-flex; align-items: center; gap: 8px; margin-top: 16px;
+        padding: 6px 14px; border: 1px solid var(--border); border-radius: 999px;
+        background: var(--panel); color: var(--muted); font-size: 13px;
+      }
+      .verpill b { color: var(--text); font-weight: 600; }
+      .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ok); }
+
+      .primary { margin: 34px 0 12px; }
+      .primary-card {
+        display: flex; align-items: center; gap: 18px; justify-content: space-between;
+        padding: 22px 24px; border: 1px solid var(--border); border-radius: var(--radius);
+        background: linear-gradient(180deg, var(--panel-2), var(--panel));
+        flex-wrap: wrap;
+      }
+      .primary-card .who { display: flex; align-items: center; gap: 16px; }
+      .os-ico { font-size: 32px; }
+      .primary-card h2 { margin: 0; font-size: 18px; }
+      .primary-card p { margin: 2px 0 0; color: var(--muted); font-size: 13px; }
+      .btn {
+        display: inline-flex; align-items: center; gap: 9px; cursor: pointer;
+        padding: 12px 22px; border-radius: 10px; border: 0; text-decoration: none;
+        font-weight: 600; font-size: 15px; color: #fff;
+        background: linear-gradient(135deg, var(--accent), var(--accent-2));
+        box-shadow: 0 8px 24px rgba(109, 139, 255, 0.3); transition: transform 0.06s ease, opacity 0.2s;
+      }
+      .btn:hover { opacity: 0.94; }
+      .btn:active { transform: translateY(1px); }
+      .btn.ghost {
+        background: transparent; color: var(--text); border: 1px solid var(--border); box-shadow: none;
+        font-size: 13px; padding: 9px 15px; font-weight: 500;
+      }
+      .btn.ghost:hover { background: var(--panel-2); }
+
+      .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 28px; }
+      @media (max-width: 720px) { .grid { grid-template-columns: 1fr; } }
+      .card {
+        border: 1px solid var(--border); border-radius: var(--radius); background: var(--panel);
+        padding: 20px; display: flex; flex-direction: column; gap: 12px;
+      }
+      .card h3 { margin: 0; font-size: 15px; display: flex; align-items: center; gap: 9px; }
+      .card .files { display: flex; flex-direction: column; gap: 8px; margin-top: 2px; }
+      .file {
+        display: flex; align-items: center; justify-content: space-between; gap: 10px;
+        padding: 9px 12px; border: 1px solid var(--border); border-radius: 9px;
+        background: var(--panel-2); text-decoration: none; color: var(--text); font-size: 13px;
+        transition: border-color 0.15s;
+      }
+      .file:hover { border-color: var(--accent); }
+      .file .ext { font-weight: 600; }
+      .file .sz { color: var(--muted-2); font-size: 12px; }
+      .tag { font-size: 11px; color: var(--muted-2); border: 1px solid var(--border); border-radius: 6px; padding: 1px 6px; }
+
+      section.steps { margin-top: 44px; }
+      section.steps h2, section.notes h2 { font-size: 16px; margin: 0 0 14px; }
+      ol.steps-list { margin: 0; padding-left: 20px; color: var(--muted); }
+      ol.steps-list li { margin-bottom: 8px; }
+      ol.steps-list b { color: var(--text); font-weight: 600; }
+      .note {
+        margin-top: 40px; border: 1px solid var(--border); border-left: 3px solid var(--warn);
+        border-radius: 10px; background: var(--panel); padding: 16px 18px; color: var(--muted); font-size: 13px;
+      }
+      .note b { color: var(--text); }
+      details.verify { margin-top: 10px; }
+      details.verify summary { cursor: pointer; color: var(--muted); font-size: 12px; }
+      details.verify code {
+        display: block; margin-top: 8px; padding: 10px; background: #0a0c11; border: 1px solid var(--border);
+        border-radius: 8px; font-size: 11px; color: var(--muted); overflow-x: auto; white-space: pre-wrap; word-break: break-all;
+      }
+      footer { margin-top: 56px; text-align: center; color: var(--muted-2); font-size: 12px; }
+      footer a { color: var(--muted); }
+      .err { color: var(--warn); }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <header>
+        <div class="logo">IX</div>
+        <h1>Download IX Agency</h1>
+        <p class="sub">
+          The Intelliverse X desktop app — one place for the copilot, every platform tool, the company VPN and the
+          local Hermes agent. Installs auto-update from the release feed.
+        </p>
+        <div class="verpill">
+          <span class="dot"></span>
+          <span>Latest version <b id="version">…</b></span>
+          <span id="reldate"></span>
+        </div>
+      </header>
+
+      <div class="primary">
+        <div class="primary-card">
+          <div class="who">
+            <span class="os-ico" id="primary-ico">💻</span>
+            <div>
+              <h2 id="primary-title">Detecting your platform…</h2>
+              <p id="primary-desc">Pick your download below.</p>
+            </div>
+          </div>
+          <a class="btn" id="primary-btn" href="#downloads" style="visibility: hidden">Download</a>
+        </div>
+      </div>
+
+      <div class="grid" id="downloads">
+        <div class="card" id="card-mac">
+          <h3>🍎 macOS <span class="tag">Apple Silicon</span></h3>
+          <div class="files" data-files>…</div>
+        </div>
+        <div class="card" id="card-win">
+          <h3>🪟 Windows <span class="tag">x64</span></h3>
+          <div class="files" data-files>…</div>
+        </div>
+        <div class="card" id="card-linux">
+          <h3>🐧 Linux <span class="tag">x86_64</span></h3>
+          <div class="files" data-files>…</div>
+        </div>
+      </div>
+
+      <section class="steps">
+        <h2>After you install</h2>
+        <ol class="steps-list">
+          <li><b>Open the app and sign in</b> with your work email — you'll get a 6-digit code by email. The session lasts 12 hours.</li>
+          <li><b>Everything else is automatic.</b> On sign-in the app fetches your credentials from the portal (gateway token, personal LiteLLM key, VPN profile, Cognito secret), connects the company VPN (expect an admin-password / UAC prompt) and initializes the local Hermes agent. No values to paste.</li>
+          <li><b>One prerequisite:</b> install the VPN backend — macOS <code style="display:inline;padding:1px 5px">brew install wireguard-tools</code>, Windows "WireGuard for Windows".</li>
+          <li>Prefer manual control? <b>Settings → Connect</b> still accepts your own values — anything you set there is never overwritten.</li>
+        </ol>
+        <p style="margin-top: 14px">
+          <a class="btn ghost" href="https://admin.intelli-verse-x.ai/admin/portal" target="_blank" rel="noreferrer">Open the admin portal →</a>
+          <a class="btn ghost" id="handbook" href="https://admin.intelli-verse-x.ai/admin/team" target="_blank" rel="noreferrer">Need access? Ask your admin</a>
+        </p>
+      </section>
+
+      <div class="note">
+        <b>First launch on macOS:</b> this build isn't notarized yet, so Gatekeeper will say
+        <i>“IX Agency” is damaged and can’t be opened</i>. It isn't damaged — that's the quarantine flag on
+        unsigned downloads. Drag the app to <b>Applications</b>, then run this once in Terminal and open it normally:
+        <details class="verify" open>
+          <summary>the one-time command</summary>
+          <code>xattr -cr "/Applications/IX Agency.app"</code>
+        </details>
+        On Windows you may see a SmartScreen prompt (choose <b>More info → Run anyway</b>).
+        Only ever install IX Agency from this page.
+      </div>
+
+      <footer>
+        Served from the Intelliverse X release feed ·
+        <a href="https://admin.intelli-verse-x.ai" target="_blank" rel="noreferrer">admin.intelli-verse-x.ai</a>
+        · <span id="foot-ver"></span>
+      </footer>
+    </div>
+
+    <script>
+      // The artifacts + electron-updater channel manifests live under ix-agency/
+      // in this same bucket. We read the manifests at runtime so this page never
+      // goes stale: every new release CI publishes is picked up automatically.
+      const FEED = "ix-agency/";
+      const MANIFESTS = { mac: "latest-mac.yml", win: "latest.yml", linux: "latest-linux.yml" };
+
+      const EXT_LABEL = {
+        dmg: "Disk image (.dmg)",
+        zip: "Zip (.zip)",
+        exe: "Installer (.exe)",
+        msi: "MSI (.msi)",
+        AppImage: "AppImage",
+        deb: "Debian (.deb)",
+        rpm: "RPM (.rpm)"
+      };
+      // Preferred artifact per OS for the big primary button.
+      const PRIMARY_EXT = { mac: "dmg", win: "exe", linux: "AppImage" };
+      const OS_META = {
+        mac: { ico: "🍎", title: "Download for macOS", desc: "Apple Silicon · .dmg" },
+        win: { ico: "🪟", title: "Download for Windows", desc: "x64 · .exe installer" },
+        linux: { ico: "🐧", title: "Download for Linux", desc: "x86_64 · AppImage" }
+      };
+
+      function humanSize(bytes) {
+        if (!bytes) return "";
+        const mb = bytes / (1024 * 1024);
+        return mb >= 1 ? mb.toFixed(0) + " MB" : (bytes / 1024).toFixed(0) + " KB";
+      }
+      function extOf(url) {
+        const m = url.match(/\.([A-Za-z0-9]+)$/);
+        return m ? m[1] : "";
+      }
+      // Minimal YAML read for the electron-updater manifest shape: a top-level
+      // `version:` and a `files:` list of `- url: / sha512: / size:` entries.
+      function parseManifest(text) {
+        const version = (text.match(/^version:\s*(.+)$/m) || [])[1]?.trim() || "";
+        const releaseDate = (text.match(/^releaseDate:\s*'?([^'\n]+)'?/m) || [])[1]?.trim() || "";
+        const files = [];
+        // Line-based pass (robust against optional fields/order):
+        let cur = null;
+        for (const raw of text.split("\n")) {
+          const u = raw.match(/^\s*-\s*url:\s*(\S+)/);
+          if (u) { cur = { url: u[1], sha512: "", size: 0 }; files.push(cur); continue; }
+          // A top-level key (no indentation) ends the files list — otherwise the
+          // trailing top-level sha512 would overwrite the last file's checksum.
+          if (/^\S/.test(raw)) { cur = null; }
+          if (!cur) continue;
+          const s = raw.match(/^\s*sha512:\s*(\S+)/);
+          if (s) cur.sha512 = s[1];
+          const z = raw.match(/^\s*size:\s*(\d+)/);
+          if (z) cur.size = parseInt(z[1], 10);
+        }
+        return { version, releaseDate, files };
+      }
+
+      function fileRow(f) {
+        const ext = extOf(f.url);
+        const label = EXT_LABEL[ext] || ext;
+        const a = document.createElement("a");
+        a.className = "file";
+        a.href = FEED + f.url;
+        a.setAttribute("download", "");
+        const left = document.createElement("span");
+        left.className = "ext";
+        left.textContent = label;
+        const right = document.createElement("span");
+        right.className = "sz";
+        right.textContent = humanSize(f.size);
+        a.append(left, right);
+        if (f.sha512) {
+          const d = document.createElement("details");
+          d.className = "verify";
+          const sum = document.createElement("summary");
+          sum.textContent = "verify checksum";
+          const code = document.createElement("code");
+          code.textContent =
+            "# SHA-512 (base64), from the release manifest:\n" +
+            f.sha512 +
+            "\n\n# macOS/Linux — compare after download:\nshasum -a 512 " +
+            f.url +
+            " | xxd -r -p | base64";
+          d.append(sum, code);
+          const wrap = document.createElement("div");
+          wrap.append(a, d);
+          return wrap;
+        }
+        return a;
+      }
+
+      function detectOS() {
+        const p = (navigator.userAgentData?.platform || navigator.platform || navigator.userAgent).toLowerCase();
+        if (p.includes("mac")) return "mac";
+        if (p.includes("win")) return "win";
+        if (p.includes("linux") || p.includes("x11")) return "linux";
+        return null;
+      }
+
+      async function load() {
+        const results = {};
+        await Promise.all(
+          Object.entries(MANIFESTS).map(async ([os, file]) => {
+            try {
+              const res = await fetch(FEED + file, { cache: "no-store" });
+              if (!res.ok) throw new Error("HTTP " + res.status);
+              results[os] = parseManifest(await res.text());
+            } catch (e) {
+              results[os] = { version: "", releaseDate: "", files: [], error: String(e) };
+            }
+          })
+        );
+
+        // Version pill (any manifest carries it; they publish together).
+        const ver = results.mac.version || results.win.version || results.linux.version || "unavailable";
+        document.getElementById("version").textContent = ver;
+        document.getElementById("foot-ver").textContent = "v" + ver;
+        const rd = results.mac.releaseDate || results.win.releaseDate || results.linux.releaseDate;
+        if (rd) {
+          const d = new Date(rd);
+          if (!isNaN(d)) document.getElementById("reldate").textContent = "· " + d.toLocaleDateString();
+        }
+
+        // Per-OS cards.
+        const cards = { mac: "card-mac", win: "card-win", linux: "card-linux" };
+        for (const [os, id] of Object.entries(cards)) {
+          const holder = document.querySelector("#" + id + " [data-files]");
+          holder.textContent = "";
+          const r = results[os];
+          if (r.error || !r.files.length) {
+            const e = document.createElement("div");
+            e.className = "err";
+            e.textContent = "Temporarily unavailable";
+            holder.append(e);
+            continue;
+          }
+          // Primary ext first, then the rest.
+          const order = [...r.files].sort((a, b) => {
+            const pa = extOf(a.url) === PRIMARY_EXT[os] ? -1 : 0;
+            const pb = extOf(b.url) === PRIMARY_EXT[os] ? -1 : 0;
+            return pa - pb;
+          });
+          for (const f of order) holder.append(fileRow(f));
+        }
+
+        // Primary hero button for the detected OS.
+        const os = detectOS();
+        const meta = OS_META[os];
+        const btn = document.getElementById("primary-btn");
+        if (os && meta && results[os] && results[os].files.length) {
+          const pick =
+            results[os].files.find((f) => extOf(f.url) === PRIMARY_EXT[os]) || results[os].files[0];
+          document.getElementById("primary-ico").textContent = meta.ico;
+          document.getElementById("primary-title").textContent = meta.title;
+          document.getElementById("primary-desc").textContent = meta.desc + " · " + humanSize(pick.size);
+          btn.href = FEED + pick.url;
+          btn.setAttribute("download", "");
+          btn.textContent = "Download " + ver;
+          btn.style.visibility = "visible";
+        } else {
+          document.getElementById("primary-title").textContent = "Choose your platform";
+          document.getElementById("primary-desc").textContent = "Pick the right download for your OS below.";
+        }
+      }
+
+      load();
+    </script>
+  </body>
+</html>

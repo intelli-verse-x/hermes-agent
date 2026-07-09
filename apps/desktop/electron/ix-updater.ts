@@ -20,14 +20,23 @@
  *    poll-and-open-URL behavior (no fake in-place states for feeds that have
  *    no channel files).
  *  - inPlaceUpdateSupport: quitAndInstall is only honest on NSIS (Windows),
- *    Squirrel.Mac (signed macOS), and AppImage (Linux). deb/rpm/source
- *    installs get the download-URL fallback instead of a lying "restarting…".
+ *    Squirrel.Mac (signed macOS), and AppImage (Linux). MSI/deb/rpm/source
+ *    installs get the download-page fallback instead of a lying "restarting…".
  *  - pickDownloadUrl / releaseNotesText: map electron-updater's UpdateInfo
  *    into the existing IxUpdateStatus shape used by the status strip + tray.
+ *  - pickFallbackUrl: where the Update button sends the user when in-place
+ *    install is impossible (official feed → the download landing page, which
+ *    offers the right artifact per install kind; custom feeds → the artifact).
  */
+import fs from 'node:fs'
+import path from 'node:path'
 
 /** Official S3 feed base (electron-builder channel files live here). */
 export const DEFAULT_UPDATE_FEED_URL = 'https://intelliverse-x-desktop.s3.amazonaws.com/ix-agency'
+
+/** Public download landing page (CI keeps it in sync with the feed —
+ *  .github/workflows/desktop-release.yml publish-download-page job). */
+export const DOWNLOAD_PAGE_URL = 'https://intelliverse-x-desktop.s3.amazonaws.com/index.html'
 
 /** Pre-electron-updater defaults that may be persisted in ix-agency.json. */
 const LEGACY_FEED_URLS = new Set([
@@ -60,13 +69,28 @@ export interface InPlaceSupport {
   reason: string
 }
 
+/** NSIS installs leave "Uninstall <product>.exe" next to the app binary;
+ *  MSI installs don't — that file is the cheapest honest nsis-vs-msi marker. */
+function hasNsisUninstaller(execDir: string): boolean {
+  try {
+    return fs.readdirSync(execDir).some(name => /^uninstall .+\.exe$/i.test(name))
+  } catch {
+    return false
+  }
+}
+
 /** Where quitAndInstall genuinely works (electron-updater's own matrix). */
 export function inPlaceUpdateSupport(
   platform: NodeJS.Platform = process.platform,
-  env: NodeJS.ProcessEnv = process.env
+  env: NodeJS.ProcessEnv = process.env,
+  execDir: string = path.dirname(process.execPath)
 ): InPlaceSupport {
   if (platform === 'win32') {
-    return { supported: true, reason: 'NSIS in-place update' }
+    if (hasNsisUninstaller(execDir)) {
+      return { supported: true, reason: 'NSIS in-place update' }
+    }
+
+    return { supported: false, reason: 'MSI installs are updated by downloading the new installer' }
   }
 
   if (platform === 'darwin') {
@@ -112,6 +136,14 @@ export function pickDownloadUrl(
   }
 
   return `${feedBase.replace(/\/+$/, '')}/${pick.replace(/^\/+/, '')}`
+}
+
+/** Where the Update button sends the user when in-place install is impossible
+ *  or fails (unsigned mac, MSI, deb/rpm): the CI-managed download landing page
+ *  for the official feed — it always offers the newest release per install
+ *  kind — otherwise the platform artifact from the custom feed. */
+export function pickFallbackUrl(feedBase: string, artifactUrl: string): string {
+  return feedBase === DEFAULT_UPDATE_FEED_URL ? DOWNLOAD_PAGE_URL : artifactUrl
 }
 
 /** electron-updater releaseNotes can be a string or a per-version array. */
