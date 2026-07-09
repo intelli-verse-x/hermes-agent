@@ -121,6 +121,9 @@ def packaged_gui_app_paths() -> "list[Path]":
     paths: list[Path] = []
     if sys.platform == "darwin":
         paths += [
+            Path("/Applications/IX Agency.app"),
+            home / "Applications" / "IX Agency.app",
+            # Pre-0.17.1 installs used the Hermes bundle name.
             Path("/Applications/Hermes.app"),
             home / "Applications" / "Hermes.app",
         ]
@@ -128,7 +131,9 @@ def packaged_gui_app_paths() -> "list[Path]":
         local = os.environ.get("LOCALAPPDATA")
         local_base = Path(local) if local else (home / "AppData" / "Local")
         paths += [
-            # NSIS per-user install (perMachine=false → Programs\Hermes).
+            # NSIS per-user install (perMachine=false → Programs\IX Agency).
+            local_base / "Programs" / "IX Agency",
+            # Pre-0.17.1 install dir.
             local_base / "Programs" / "Hermes",
             # Older / alternate layout some builds used.
             local_base / "hermes-desktop",
@@ -136,6 +141,7 @@ def packaged_gui_app_paths() -> "list[Path]":
         program_files = os.environ.get("ProgramFiles")
         if program_files:
             # NSIS per-machine fallback (needs admin to remove).
+            paths.append(Path(program_files) / "IX Agency")
             paths.append(Path(program_files) / "Hermes")
     else:
         # Linux: AppImage is a single file the user placed somewhere; we can
@@ -147,6 +153,7 @@ def packaged_gui_app_paths() -> "list[Path]":
         data = os.environ.get("XDG_DATA_HOME")
         data_base = Path(data) if data else (home / ".local" / "share")
         paths += [
+            data_base / "applications" / "ix-agency.desktop",
             data_base / "applications" / "hermes.desktop",
             data_base / "applications" / "Hermes.desktop",
         ]

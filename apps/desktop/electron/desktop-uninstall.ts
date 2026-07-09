@@ -92,10 +92,11 @@ function resolveRemovableAppPath(execPath, platform, env: any = {}) {
   }
 
   if (platform === 'win32') {
-    // NSIS per-user installs Hermes.exe directly in the install dir.
+    // NSIS per-user installs the exe directly in the install dir
+    // (Programs\IX Agency; pre-0.17.1 builds used Programs\Hermes).
     const dir = p.dirname(exe)
 
-    if (/[\\/]Hermes$/i.test(dir) || /[\\/]hermes-desktop$/i.test(dir)) {
+    if (/[\\/]IX Agency$/i.test(dir) || /[\\/]Hermes$/i.test(dir) || /[\\/]hermes-desktop$/i.test(dir)) {
       return dir
     }
 
@@ -106,6 +107,7 @@ function resolveRemovableAppPath(execPath, platform, env: any = {}) {
   if (env.APPIMAGE) {
     return env.APPIMAGE
   }
+
   // Unpacked electron-builder tree: …/linux-unpacked/hermes
   const dir = p.dirname(exe)
 

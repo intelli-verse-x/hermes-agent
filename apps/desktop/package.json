@@ -1,8 +1,8 @@
 {
   "name": "hermes",
-  "productName": "Hermes",
+  "productName": "IX Agency",
   "private": true,
-  "version": "0.17.0",
+  "version": "0.17.1",
   "description": "IX Agency — AI agency desktop by Intelliverse X.",
   "homepage": "https://admin.intelli-verse-x.ai",
   "author": "Intelliverse X",
@@ -156,8 +156,7 @@
   "build": {
     "electronVersion": "40.10.2",
     "appId": "ai.intelli-verse-x.ix-agency",
-    "productName": "Hermes",
-    "executableName": "Hermes",
+    "productName": "IX Agency",
     "protocols": [
       {
         "name": "IX Agency Protocol",
@@ -235,8 +234,8 @@
       "entitlementsInherit": "electron/entitlements.mac.inherit.plist",
       "extendInfo": {
         "CFBundleDisplayName": "IX Agency",
-        "CFBundleExecutable": "Hermes",
-        "CFBundleName": "Hermes",
+        "CFBundleExecutable": "IX Agency",
+        "CFBundleName": "IX Agency",
         "NSAudioCaptureUsageDescription": "IX Agency uses audio capture for voice conversations.",
         "NSMicrophoneUsageDescription": "IX Agency uses the microphone for voice input and voice conversations."
       },
@@ -285,7 +284,8 @@
         "AppImage",
         "deb",
         "rpm"
-      ]
+      ],
+      "executableName": "ix-agency"
     },
     "nsis": {
       "oneClick": false,

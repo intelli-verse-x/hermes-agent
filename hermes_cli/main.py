@@ -5084,16 +5084,24 @@ def _write_desktop_build_stamp(project_root: Path, *, source_mode: bool) -> None
 def _desktop_packaged_executable(desktop_dir: Path) -> Optional[Path]:
     """Return the current platform's unpacked Electron app executable."""
     release_dir = desktop_dir / "release"
+    # "IX Agency" is the product identity from 0.17.1 on; the "Hermes" names
+    # cover trees built before the rebrand.
     if sys.platform == "darwin":
-        candidates = list(release_dir.glob("mac*/Hermes.app/Contents/MacOS/Hermes"))
+        candidates = list(release_dir.glob("mac*/IX Agency.app/Contents/MacOS/IX Agency"))
+        candidates += list(release_dir.glob("mac*/Hermes.app/Contents/MacOS/Hermes"))
     elif sys.platform == "win32":
         candidates = [
+            release_dir / "win-unpacked" / "IX Agency.exe",
+            release_dir / "win-ia32-unpacked" / "IX Agency.exe",
+            release_dir / "win-arm64-unpacked" / "IX Agency.exe",
             release_dir / "win-unpacked" / "Hermes.exe",
             release_dir / "win-ia32-unpacked" / "Hermes.exe",
             release_dir / "win-arm64-unpacked" / "Hermes.exe",
         ]
     else:
         candidates = [
+            release_dir / "linux-unpacked" / "ix-agency",
+            release_dir / "linux-arm64-unpacked" / "ix-agency",
             release_dir / "linux-unpacked" / "hermes",
             release_dir / "linux-unpacked" / "Hermes",
             release_dir / "linux-arm64-unpacked" / "hermes",

@@ -472,9 +472,10 @@ const BOOT_FAKE_STEP_MS = (() => {
   return Math.max(120, raw)
 })()
 
-// IX Agency display brand. Internal bundle/executable identity stays "Hermes"
-// (productName/executableName) so the updater, relaunch, and uninstall paths
-// that glob Hermes.app / Hermes.exe keep working across upstream syncs.
+// IX Agency brand — as of 0.17.1 it is also the bundle/executable identity
+// (productName "IX Agency", appId ai.intelli-verse-x.ix-agency, linux binary
+// ix-agency), so electron-updater and the relaunch/uninstall paths key off
+// the same name users see.
 const APP_NAME = 'IX Agency'
 const TITLEBAR_HEIGHT = 34
 const MACOS_TRAFFIC_LIGHTS_HEIGHT = 14
@@ -3050,6 +3051,9 @@ async function applyUpdatesPosixInApp(opts: any) {
   }
 
   const rebuiltApp = [
+    path.join(updateRoot, 'apps', 'desktop', 'release', 'mac-arm64', 'IX Agency.app'),
+    path.join(updateRoot, 'apps', 'desktop', 'release', 'mac', 'IX Agency.app'),
+    // Trees built before the 0.17.1 rebrand.
     path.join(updateRoot, 'apps', 'desktop', 'release', 'mac-arm64', 'Hermes.app'),
     path.join(updateRoot, 'apps', 'desktop', 'release', 'mac', 'Hermes.app')
   ].find(directoryExists)
