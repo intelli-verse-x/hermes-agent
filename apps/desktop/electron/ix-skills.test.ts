@@ -19,6 +19,7 @@ import test from 'node:test'
 
 import {
   deleteUserSkill,
+  fetchPortalSkills,
   IX_SKILL_TEMPLATES,
   listUserSkills,
   parseSkillMd,
@@ -205,6 +206,48 @@ test('publishUserSkill surfaces portal errors and never marks published', async 
   } finally {
     fs.rmSync(dir, { recursive: true, force: true })
   }
+})
+
+/* ── live org catalog (GET /api/admin/skills) ────────────────────────────── */
+
+test('fetchPortalSkills normalizes built-in + team skills from the live catalog', async () => {
+  let seenUrl = ''
+
+  const fakeFetch = (async (url: string) => {
+    seenUrl = url
+
+    return new Response(
+      JSON.stringify({
+        builtIn: [{ id: 'weekly-business-report', label: 'Weekly business report', blurb: 'Numbers', content: '# S' }],
+        team: [
+          { _id: 'adminSkill.launch-runbook', label: 'Launch runbook', content: '# Steps', updatedBy: 'me@ix.ai' },
+          { label: 'no id — dropped' }
+        ]
+      }),
+      { status: 200 }
+    )
+  }) as unknown as typeof fetch
+
+  const skills = await fetchPortalSkills('https://portal.example.com', fakeFetch)
+
+  assert.equal(seenUrl, 'https://portal.example.com/api/admin/skills')
+  assert.equal(skills.length, 2)
+
+  const [builtIn, team] = skills
+
+  assert.equal(builtIn.id, 'weekly-business-report')
+  assert.equal(builtIn.title, 'Weekly business report')
+  assert.equal(builtIn.description, 'Numbers')
+  assert.equal(builtIn.source, 'built-in')
+  assert.equal(team.id, 'adminSkill.launch-runbook')
+  assert.equal(team.source, 'team')
+  assert.match(team.persona, /me@ix\.ai/)
+})
+
+test('fetchPortalSkills throws on HTTP errors (caller keeps the bundled snapshot)', async () => {
+  const failing = (async () => new Response('nope', { status: 503 })) as unknown as typeof fetch
+
+  await assert.rejects(() => fetchPortalSkills('https://portal.example.com', failing), /503/)
 })
 
 /* ── templates + paths ───────────────────────────────────────────────────── */

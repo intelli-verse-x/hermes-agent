@@ -12,8 +12,8 @@ import { cn } from '@/lib/utils'
 import { notifyError } from '@/store/notifications'
 
 import { $ixPendingSkill } from './copilot-store'
-import skillsData from './data/skills.json'
 import { LoginPane } from './login-pane'
+import { $ixSync, orgSkillCatalog } from './sync-store'
 import type { IxSkillItem } from './types'
 
 /**
@@ -26,8 +26,6 @@ import type { IxSkillItem } from './types'
  * the persist:ix-agency-portal session): signed out ⇒ the NATIVE login form
  * IS the pane (no webview — main drives /api/auth/otp/* directly).
  */
-
-const SKILLS: IxSkillItem[] = Array.isArray(skillsData.items) ? (skillsData.items as IxSkillItem[]) : []
 
 const MAX_ACTIVE_SKILLS = 3
 
@@ -195,6 +193,12 @@ type LiveItem = IxChatDisplayItem & { running?: boolean }
 export function CopilotTab() {
   const bridge = window.hermesDesktop?.ixAgency
   const pendingSkill = useStore($ixPendingSkill)
+
+  // Live org skill catalog from the post-login auto-attach sync (bundled
+  // snapshot until the first sync lands) — the picker always shows what
+  // https://admin.intelli-verse-x.ai/admin/skills shows.
+  const sync = useStore($ixSync)
+  const skillCatalog: IxSkillItem[] = orgSkillCatalog(sync)
 
   // Login enforcement (renderer side of it — main enforces on every IPC).
   const [auth, setAuth] = useState<null | { authenticated: boolean; detail: string }>(null)
@@ -386,7 +390,8 @@ export function CopilotTab() {
       const isNew = !conversationIdRef.current
 
       const skills = isNew
-        ? SKILLS.filter(skill => activeSkillIds.includes(skill.id))
+        ? skillCatalog
+            .filter(skill => activeSkillIds.includes(skill.id))
             .slice(0, MAX_ACTIVE_SKILLS)
             .map(skill => ({ name: skill.title, content: skill.content }))
         : undefined
@@ -423,7 +428,7 @@ export function CopilotTab() {
         setBusy(false)
       }
     },
-    [activeSkillIds, bridge, busy, model, refreshConversations]
+    [activeSkillIds, bridge, busy, model, refreshConversations, skillCatalog]
   )
 
   const decide = useCallback(
@@ -464,7 +469,7 @@ export function CopilotTab() {
     return <LoginPane detail={auth?.detail} onSignedIn={() => void refreshAuth()} />
   }
 
-  const activeSkillLabels = lockedSkills ?? SKILLS.filter(s => activeSkillIds.includes(s.id)).map(s => s.title)
+  const activeSkillLabels = lockedSkills ?? skillCatalog.filter(s => activeSkillIds.includes(s.id)).map(s => s.title)
 
   return (
     <div className="flex h-full min-h-0">
@@ -531,7 +536,7 @@ export function CopilotTab() {
               <span className="text-[0.68rem] text-muted-foreground/70">none active in this conversation</span>
             )
           ) : (
-            SKILLS.map(skill => {
+            skillCatalog.map(skill => {
               const active = activeSkillIds.includes(skill.id)
 
               return (

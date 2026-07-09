@@ -253,6 +253,26 @@ declare global {
           approve: boolean
         }) => Promise<{ ok: boolean; state: 'approved' | 'denied' }>
         onChatEvent: (callback: (event: IxChatRendererEvent) => void) => () => void
+        // Auto-attach sync (MCP directory + dynamic connectors + org skills):
+        // runs automatically after OTP login and on boot with a live session.
+        syncGet: () => Promise<IxAgencySyncState>
+        syncRun: () => Promise<IxAgencySyncState>
+        onSyncEvent: (callback: (state: IxAgencySyncState) => void) => () => void
+        // Per-MCP-tile health lamps, cached ~30s in the main process.
+        mcpHealth: (refresh?: boolean) => Promise<{ probedAt: number; results: IxMcpTileHealth[] }>
+        // Dynamic connectors (super admin). Tokens are write-only pass-through.
+        connectorsList: () => Promise<IxDynamicConnectorRow[]>
+        connectorsSave: (payload: IxConnectorDraftInput) => Promise<IxDynamicConnectorRow>
+        connectorsPatch: (payload: { id: string; enabled: boolean }) => Promise<IxDynamicConnectorRow>
+        connectorsDelete: (id: string) => Promise<{ deleted: boolean }>
+        connectorsTest: (payload: {
+          authHeader?: string
+          id?: string
+          token?: string
+          url?: string
+        }) => Promise<{ ok: boolean; message: string; toolCount?: number; tools?: string[] }>
+        connectorsParseImport: (json: string) => Promise<{ connectors: IxConnectorDraftInput[]; errors: string[] }>
+        connectorsExport: () => Promise<{ json: string; count: number }>
       }
     }
   }
@@ -418,6 +438,74 @@ export interface IxAgencySkillTemplate {
   title: string
   description: string
   content: string
+}
+
+/** Per-MCP-tile health lamp (mirrors electron/ix-mcp-health.ts). */
+export interface IxMcpTileHealth {
+  tileId: string
+  state: 'green' | 'grey' | 'red'
+  detail: string
+  toolCount?: number
+}
+
+/** Portal dynamic connector row — tokens never reach the renderer. */
+export interface IxDynamicConnectorRow {
+  id: string
+  label: string
+  url: string
+  transport: 'cluster-mcp' | 'remote-mcp'
+  authHeader: string
+  hasToken: boolean
+  category: string
+  appIds: string[]
+  bundles: string[]
+  readOnlyTools: string[]
+  enabled: boolean
+  lastTestedAt?: string
+  toolCount?: number
+  toolNames?: string[]
+}
+
+/** Connector create/update payload (token is write-only). */
+export interface IxConnectorDraftInput {
+  id?: string
+  label: string
+  url: string
+  transport: 'cluster-mcp' | 'remote-mcp'
+  authHeader: string
+  token?: string
+  category: string
+  appIds: string[]
+  bundles: string[]
+  readOnlyTools: string[]
+  enabled?: boolean
+}
+
+/** Live org skill from the portal's admin catalog (built-in + team). */
+export interface IxPortalCatalogSkill {
+  id: string
+  title: string
+  description: string
+  persona: string
+  rank: null | number
+  superAdminOnly: boolean
+  content: string
+  starterPrompts: string[]
+  tiers: string[]
+  bundles: string[]
+  appIds: string[]
+  source: 'built-in' | 'team'
+}
+
+/** Result of the login/boot auto-attach sync (main process). */
+export interface IxAgencySyncState {
+  syncedAt: null | number
+  tiles: IxAgencyMcpTile[]
+  tilesDetail: string
+  connectors: IxDynamicConnectorRow[]
+  connectorsError: null | string
+  orgSkills: IxPortalCatalogSkill[]
+  orgSkillsError: null | string
 }
 
 export interface DesktopMarketplaceSearchItem {

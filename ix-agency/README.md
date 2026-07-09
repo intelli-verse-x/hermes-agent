@@ -53,16 +53,23 @@ seeded into `~/.hermes/skills/` automatically by the installer and
 They use the open Agent Skills format (SKILL.md), so the same folders work in
 Cursor, Claude Code, Codex, and Goose.
 
-## Web research: self-hosted Firecrawl
+## Web research: Firecrawl
 
 Two integration paths, both configured in `config.example.yaml`:
 
 1. Native `web` toolset — set `web.backend: firecrawl` in
-   `~/.hermes/config.yaml` and `FIRECRAWL_API_URL` in `~/.hermes/.env`
-   (see the repo root `.env.example`). The bundled `plugins/web/firecrawl`
-   plugin then routes `web_search` / `web_extract` to the org instance.
+   `~/.hermes/config.yaml` plus `FIRECRAWL_API_KEY` in `~/.hermes/.env`
+   (the org's shared cloud key). The bundled `plugins/web/firecrawl`
+   plugin routes `web_search` / `web_extract` through it.
 2. MCP — the `firecrawl` entry under `mcp_servers` runs the MIT-licensed
-   `firecrawl-mcp` server for crawl/deep-research tools.
+   `firecrawl-mcp` server for crawl/deep-research tools (26 tools verified).
+
+The org currently uses Firecrawl **cloud** (`api.firecrawl.dev`) — no
+self-hosted instance is deployed (verified 2026-07-09 against the cluster
+and `intelli-verse-kube-infra`). Both the plugin and the MCP server also
+honor `FIRECRAWL_API_URL` for a self-hosted instance, so if one is deployed
+later (suggested host `firecrawl.intelli-verse-x.ai`), setting that one env
+var flips all research traffic to it with no other changes.
 
 Do not fork Firecrawl's core into this repo: it is AGPL-3.0. Run it as a
 separate service and talk to it over the API, which keeps this fork's

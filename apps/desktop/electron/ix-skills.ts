@@ -284,6 +284,86 @@ export async function publishUserSkill(
   return markPublished(dir, skill, payload.id)
 }
 
+/* ── live org catalog (Skills.md — built-in + team skills) ─────────────────── */
+
+/** One entry of the portal's live Skills.md catalog, normalized to the shape
+ *  the desktop's skills tab / copilot picker render (types.ts IxSkillItem). */
+export interface IxPortalCatalogSkill {
+  id: string
+  title: string
+  description: string
+  persona: string
+  rank: null | number
+  superAdminOnly: boolean
+  content: string
+  starterPrompts: string[]
+  tiers: string[]
+  bundles: string[]
+  appIds: string[]
+  /** built-in (shipped with the portal) vs team (Sanity, user-published). */
+  source: 'built-in' | 'team'
+}
+
+function normalizeCatalogSkill(
+  raw: { blurb?: string; content?: string; label?: string },
+  id: string,
+  source: 'built-in' | 'team',
+  persona: string
+): IxPortalCatalogSkill {
+  return {
+    id,
+    title: String(raw.label ?? id),
+    description: String(raw.blurb ?? ''),
+    persona,
+    rank: null,
+    superAdminOnly: false,
+    content: String(raw.content ?? ''),
+    starterPrompts: [],
+    tiers: [],
+    bundles: [],
+    appIds: [],
+    source
+  }
+}
+
+/**
+ * GET <portalUrl>/api/admin/skills — the live team catalog behind the web
+ * admin Skills.md page: { builtIn: [{id,label,blurb,content}], team:
+ * [{_id,label,blurb,content,…}] }. Runs at login/boot so every signed-in
+ * user has all skills wired up without a manual refresh.
+ */
+export async function fetchPortalSkills(portalUrl: string, fetchImpl: typeof fetch): Promise<IxPortalCatalogSkill[]> {
+  const res = await fetchImpl(new URL('/api/admin/skills', portalUrl).toString(), {
+    signal: AbortSignal.timeout(15_000)
+  })
+
+  if (!res.ok) {
+    throw new Error(`Skills catalog fetch failed (HTTP ${res.status}).`)
+  }
+
+  const body = (await res.json()) as {
+    builtIn?: { blurb?: string; content?: string; id?: string; label?: string }[]
+    team?: { _id?: string; blurb?: string; content?: string; label?: string; updatedBy?: string }[]
+  }
+
+  const builtIn = (Array.isArray(body?.builtIn) ? body.builtIn : [])
+    .filter(item => item && typeof item.id === 'string' && item.id)
+    .map(item => normalizeCatalogSkill(item, String(item.id), 'built-in', 'all tiers'))
+
+  const team = (Array.isArray(body?.team) ? body.team : [])
+    .filter(item => item && typeof item._id === 'string' && item._id)
+    .map(item =>
+      normalizeCatalogSkill(
+        item,
+        String(item._id),
+        'team',
+        item.updatedBy ? `team skill — by ${item.updatedBy}` : 'team skill'
+      )
+    )
+
+  return [...builtIn, ...team]
+}
+
 /* ── starter templates (pre-populated prompts the team can build on) ───────── */
 
 export const IX_SKILL_TEMPLATES: IxSkillTemplate[] = [

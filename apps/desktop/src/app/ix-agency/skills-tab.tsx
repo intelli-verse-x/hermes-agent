@@ -1,3 +1,4 @@
+import { useStore } from '@nanostores/react'
 import { type ReactNode, useCallback, useEffect, useState } from 'react'
 
 import { Badge } from '@/components/ui/badge'
@@ -13,7 +14,6 @@ import { DetailColumn, ListColumn, MasterDetail } from '../master-detail'
 import { PanelEmpty, PanelListRow, PanelMeta } from '../overlays/panel'
 
 import { $ixPendingSkill } from './copilot-store'
-import skillsData from './data/skills.json'
 import {
   groupSkillsByMcp,
   groupSkillsByPod,
@@ -24,6 +24,7 @@ import {
   skillPods,
   tileWiring
 } from './skill-mcps'
+import { $ixSync, orgSkillCatalog } from './sync-store'
 import type { IxSkillItem } from './types'
 
 const POD_DOT: Record<IxPod, string> = {
@@ -32,10 +33,6 @@ const POD_DOT: Record<IxPod, string> = {
   product: 'bg-sky-400',
   engineering: 'bg-emerald-500'
 }
-
-// Bundled snapshot of the Intelliverse portal's admin-skills catalog
-// (scripts/generate-ix-agency-data.mjs regenerates from the sibling checkout).
-const SKILLS: IxSkillItem[] = Array.isArray(skillsData.items) ? (skillsData.items as IxSkillItem[]) : []
 
 // Selection: an org playbook, one of MY drafts, or the new-skill flow.
 type Selection = { id: string; kind: 'org' | 'user' } | { kind: 'new' } | null
@@ -130,6 +127,11 @@ type SkillEntry = {
 }
 
 export function SkillsTab({ onRunNatively, query }: { onRunNatively?: () => void; query: string }) {
+  // Live org catalog (built-in + team skills) from the post-login auto-attach
+  // sync; the bundled snapshot fills in until the first sync lands.
+  const sync = useStore($ixSync)
+  const catalog: IxSkillItem[] = orgSkillCatalog(sync)
+
   const [selection, setSelection] = useState<Selection>(null)
   const [userSkills, setUserSkills] = useState<IxAgencyUserSkill[]>([])
   const [templates, setTemplates] = useState<IxAgencySkillTemplate[]>([])
@@ -160,7 +162,7 @@ export function SkillsTab({ onRunNatively, query }: { onRunNatively?: () => void
 
   const q = normalize(query)
 
-  const orgSkills = SKILLS.filter(
+  const orgSkills = catalog.filter(
     skill => !q || normalize(`${skill.id} ${skill.title} ${skill.description}`).includes(q)
   )
 
@@ -168,7 +170,7 @@ export function SkillsTab({ onRunNatively, query }: { onRunNatively?: () => void
     skill => !q || normalize(`${skill.id} ${skill.title} ${skill.description}`).includes(q)
   )
 
-  const selectedOrg = selection?.kind === 'org' ? (SKILLS.find(s => s.id === selection.id) ?? null) : null
+  const selectedOrg = selection?.kind === 'org' ? (catalog.find(s => s.id === selection.id) ?? null) : null
   const selectedUser = selection?.kind === 'user' ? (userSkills.find(s => s.id === selection.id) ?? null) : null
 
   // "By tool" view: every skill (mine + org) bucketed under each MCP tile its

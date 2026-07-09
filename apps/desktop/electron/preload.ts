@@ -289,6 +289,28 @@ contextBridge.exposeInMainWorld('hermesDesktop', {
       ipcRenderer.on('hermes:ix-agency:chat:event', listener)
 
       return () => ipcRenderer.removeListener('hermes:ix-agency:chat:event', listener)
-    }
+    },
+    // Auto-attach sync: gateway MCP directory + dynamic connectors + org
+    // skills, run automatically after login/boot and pushed via syncEvent.
+    syncGet: () => ipcRenderer.invoke('hermes:ix-agency:sync:get'),
+    syncRun: () => ipcRenderer.invoke('hermes:ix-agency:sync:run'),
+    onSyncEvent: callback => {
+      const listener = (_event, payload) => callback(payload)
+      ipcRenderer.on('hermes:ix-agency:sync:event', listener)
+
+      return () => ipcRenderer.removeListener('hermes:ix-agency:sync:event', listener)
+    },
+    // Per-MCP-tile health lamps (green/grey/red), cached in the main process.
+    mcpHealth: refresh => ipcRenderer.invoke('hermes:ix-agency:mcp:health', { refresh }),
+    // Dynamic connectors (super admin): CRUD + probe through the portal's
+    // /api/portal/connectors/dynamic routes. Tokens pass through the main
+    // process only — never stored or echoed back.
+    connectorsList: () => ipcRenderer.invoke('hermes:ix-agency:connectors:list'),
+    connectorsSave: payload => ipcRenderer.invoke('hermes:ix-agency:connectors:save', payload),
+    connectorsPatch: payload => ipcRenderer.invoke('hermes:ix-agency:connectors:patch', payload),
+    connectorsDelete: id => ipcRenderer.invoke('hermes:ix-agency:connectors:delete', { id }),
+    connectorsTest: payload => ipcRenderer.invoke('hermes:ix-agency:connectors:test', payload),
+    connectorsParseImport: json => ipcRenderer.invoke('hermes:ix-agency:connectors:parse-import', { json }),
+    connectorsExport: () => ipcRenderer.invoke('hermes:ix-agency:connectors:export')
   }
 })

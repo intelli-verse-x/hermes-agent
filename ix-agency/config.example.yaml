@@ -9,11 +9,15 @@
 # the repo root, including FIRECRAWL_API_URL for the self-hosted instance.
 
 # -----------------------------------------------------------------------------
-# Web research through the org's self-hosted Firecrawl
+# Web research through Firecrawl
 # -----------------------------------------------------------------------------
 # Pins both web_search and web_extract to the Firecrawl provider (the bundled
-# plugins/web/firecrawl plugin). With FIRECRAWL_API_URL set in ~/.hermes/.env
-# all traffic goes to the org instance instead of the cloud API.
+# plugins/web/firecrawl plugin). The org currently uses Firecrawl CLOUD with
+# the shared fc- key (FIRECRAWL_API_KEY in ~/.hermes/.env — same key the rest
+# of the org tooling uses). No self-hosted instance is deployed yet (verified
+# 2026-07-09: no firecrawl ingress/service in intelli-verse-kube-infra); when
+# one lands, set FIRECRAWL_API_URL in ~/.hermes/.env and the same plugin and
+# MCP server route to it instead — no config change needed here.
 web:
   backend: firecrawl
 
@@ -23,14 +27,17 @@ web:
 # firecrawl-mcp-server (MIT) exposes search/scrape/crawl/extract as MCP tools.
 # This complements the native web toolset with crawl and deep-research tools,
 # and is what external MCP clients (Cursor, Claude Code) should also use.
+# Verified: the server starts with either env var; with only FIRECRAWL_API_URL
+# set it targets the self-hosted instance (no cloud key required).
 mcp_servers:
   firecrawl:
     command: npx
     args: ["-y", "firecrawl-mcp"]
     env:
-      FIRECRAWL_API_URL: "https://firecrawl.intelli-verse-x.ai"
-      # FIRECRAWL_API_KEY only if the self-hosted instance enforces auth:
-      # FIRECRAWL_API_KEY: "fc-..."
+      # Cloud (current org default):
+      FIRECRAWL_API_KEY: "${FIRECRAWL_API_KEY}"
+      # Self-hosted (once deployed — key then optional):
+      # FIRECRAWL_API_URL: "https://firecrawl.intelli-verse-x.ai"
 
 # -----------------------------------------------------------------------------
 # Dashboard behind the company VPN (remote IX Agency backends)

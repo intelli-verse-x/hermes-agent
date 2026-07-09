@@ -33,6 +33,8 @@ import {
 import electronUpdater from 'electron-updater'
 import nodePty from 'node-pty'
 
+import ixMcpTilesSnapshot from '../src/app/ix-agency/data/mcp-tiles.json' with { type: 'json' }
+
 import { dashboardFallbackArgs, sourceDeclaresServe } from './backend-command'
 import { buildDesktopBackendEnv, normalizeHermesHomeRoot } from './backend-env'
 import { canImportHermesCli, verifyHermesCli } from './backend-probes'
@@ -116,9 +118,30 @@ import {
   runIxChatTurn,
   writeIxChatStore
 } from './ix-chat'
+import {
+  deleteIxConnector,
+  exportConnectorsJson,
+  type IxConnectorDraft,
+  type IxDynamicConnector,
+  listIxConnectors,
+  parseConnectorImport,
+  saveIxConnector,
+  setIxConnectorEnabled,
+  testIxConnector
+} from './ix-connectors'
 import { ixLoginSendOtp, ixLoginVerifyOtp } from './ix-login'
+import { type IxMcpHealthResult, type IxMcpHealthTarget, probeMcpHealth } from './ix-mcp-health'
 import { fetchLiteLlmModels, fullHermesConfigYaml, materializeIxPortalSkills } from './ix-provision'
-import { deleteUserSkill, IX_SKILL_TEMPLATES, listUserSkills, publishUserSkill, saveUserSkill, userSkillsDir } from './ix-skills'
+import {
+  deleteUserSkill,
+  fetchPortalSkills,
+  IX_SKILL_TEMPLATES,
+  type IxPortalCatalogSkill,
+  listUserSkills,
+  publishUserSkill,
+  saveUserSkill,
+  userSkillsDir
+} from './ix-skills'
 import {
   combineVpnStatus,
   compareVersions,
@@ -8037,13 +8060,279 @@ ipcMain.handle('hermes:ix-agency:auth:verify-otp', async (_event, input) => {
   // renderer's next authStatus reflects the fresh login immediately.
   ixAuthCache = null
 
-  return probeIxPortalAuth(true)
+  const status = await probeIxPortalAuth(true)
+
+  // Auto-attach: fresh login pulls the MCP directory, dynamic connectors and
+  // org skills without any manual refresh (fire-and-forget; the renderer gets
+  // the result via the sync:event push).
+  if (status.authenticated) {
+    void runIxAgencySync().catch(() => {})
+  }
+
+  return status
 })
 
 ipcMain.handle('hermes:ix-agency:mcp:list', async () => {
   await requireIxPortalAuth()
 
   return fetchIxMcpDirectory(currentIxAgencySettings())
+})
+
+// ── IX Agency auto-attach sync ──────────────────────────────────────────────
+// On every successful OTP login (and on boot when a valid session already
+// exists) the whole estate is wired up automatically: the gateway MCP
+// directory, the portal's dynamic connectors, and the live Skills.md catalog.
+// The result is pushed to the renderer (sync:event) and queryable (sync:get)
+// so no tab depends on a manual refresh.
+interface IxAgencySyncState {
+  syncedAt: null | number
+  tiles: Awaited<ReturnType<typeof fetchIxMcpDirectory>>['tiles']
+  tilesDetail: string
+  connectors: IxDynamicConnector[]
+  /** null = not fetched (e.g. not super admin); [] = fetched, none exist. */
+  connectorsError: null | string
+  orgSkills: IxPortalCatalogSkill[]
+  orgSkillsError: null | string
+}
+
+let ixSyncState: IxAgencySyncState = {
+  syncedAt: null,
+  tiles: [],
+  tilesDetail: '',
+  connectors: [],
+  connectorsError: null,
+  orgSkills: [],
+  orgSkillsError: null
+}
+
+let ixSyncInFlight: null | Promise<IxAgencySyncState> = null
+
+function broadcastIxSync() {
+  for (const win of BrowserWindow.getAllWindows()) {
+    if (!win.isDestroyed()) {
+      win.webContents.send('hermes:ix-agency:sync:event', ixSyncState)
+    }
+  }
+}
+
+async function runIxAgencySync(): Promise<IxAgencySyncState> {
+  if (ixSyncInFlight) {
+    return ixSyncInFlight
+  }
+
+  ixSyncInFlight = (async () => {
+    const settings = currentIxAgencySettings()
+    const portalFetch = ixPortalSessionFetch()
+    const next: IxAgencySyncState = { ...ixSyncState }
+
+    // Gateway MCP directory — failures keep the previous tiles (the renderer
+    // falls back to its bundled snapshot when the list is empty).
+    try {
+      const directory = await fetchIxMcpDirectory(settings)
+
+      next.tiles = directory.tiles
+      next.tilesDetail = directory.detail
+    } catch (error) {
+      next.tilesDetail = `Gateway directory unavailable: ${error instanceof Error ? error.message : String(error)}`
+    }
+
+    // Dynamic connectors — 403 just means the login isn't super admin.
+    try {
+      next.connectors = await listIxConnectors(settings.portalUrl, portalFetch)
+      next.connectorsError = null
+    } catch (error) {
+      next.connectors = []
+      next.connectorsError = error instanceof Error ? error.message : String(error)
+    }
+
+    // Live Skills.md catalog (built-in + team skills).
+    try {
+      next.orgSkills = await fetchPortalSkills(settings.portalUrl, portalFetch)
+      next.orgSkillsError = null
+    } catch (error) {
+      next.orgSkillsError = error instanceof Error ? error.message : String(error)
+    }
+
+    next.syncedAt = Date.now()
+    ixSyncState = next
+    broadcastIxSync()
+
+    return ixSyncState
+  })().finally(() => {
+    ixSyncInFlight = null
+  })
+
+  return ixSyncInFlight
+}
+
+ipcMain.handle('hermes:ix-agency:sync:get', async () => ixSyncState)
+
+ipcMain.handle('hermes:ix-agency:sync:run', async () => {
+  await requireIxPortalAuth()
+
+  return runIxAgencySync()
+})
+
+// Boot-time auto-attach: when a valid portal session already exists, wire
+// everything up without any user action.
+void app.whenReady().then(async () => {
+  try {
+    const status = await probeIxPortalAuth()
+
+    if (status.authenticated) {
+      await runIxAgencySync()
+    }
+  } catch {
+    // No session yet — the login flow triggers the sync instead.
+  }
+})
+
+// ── IX Agency per-MCP health lamps ──────────────────────────────────────────
+// Probes every tile (gateway directory + dynamic connectors) concurrently
+// with a short timeout and caches the results; refresh=true re-probes.
+const IX_MCP_HEALTH_CACHE_MS = 30_000
+
+let ixMcpHealthCache: { at: number; results: IxMcpHealthResult[] } | null = null
+
+let ixMcpHealthInFlight: null | Promise<IxMcpHealthResult[]> = null
+
+function ixMcpHealthTargets(): IxMcpHealthTarget[] {
+  const tiles = ixSyncState.tiles.length ? ixSyncState.tiles : bundledIxMcpTiles()
+
+  return [
+    ...tiles.map(tile => ({ tileId: tile.id, mcpUrl: tile.mcpUrl, kind: 'gateway' as const })),
+    ...ixSyncState.connectors.map(connector => ({ tileId: connector.id, kind: 'dynamic' as const }))
+  ]
+}
+
+function bundledIxMcpTiles(): { id: string; mcpUrl: string }[] {
+  const items = (ixMcpTilesSnapshot as { items?: { id?: string; mcpUrl?: string }[] }).items ?? []
+
+  return items
+    .filter(item => typeof item?.id === 'string' && item.id)
+    .map(item => ({ id: String(item.id), mcpUrl: String(item.mcpUrl ?? '') }))
+}
+
+ipcMain.handle('hermes:ix-agency:mcp:health', async (_event, input) => {
+  const refresh = Boolean(input?.refresh)
+
+  if (!refresh && ixMcpHealthCache && Date.now() - ixMcpHealthCache.at < IX_MCP_HEALTH_CACHE_MS) {
+    return { probedAt: ixMcpHealthCache.at, results: ixMcpHealthCache.results }
+  }
+
+  ixMcpHealthInFlight ??= (async () => {
+    const settings = currentIxAgencySettings()
+
+    const results = await probeMcpHealth(ixMcpHealthTargets(), {
+      gatewayUrl: settings.gatewayUrl,
+      gatewayToken: settings.gatewayToken,
+      portalUrl: settings.portalUrl,
+      portalFetch: ixPortalSessionFetch()
+    })
+
+    ixMcpHealthCache = { at: Date.now(), results }
+
+    return results
+  })().finally(() => {
+    ixMcpHealthInFlight = null
+  })
+
+  const results = await ixMcpHealthInFlight
+
+  return { probedAt: ixMcpHealthCache?.at ?? Date.now(), results }
+})
+
+// ── IX Agency dynamic connectors (super admin) ──────────────────────────────
+// Thin IPC shims over the portal's /api/portal/connectors/dynamic routes.
+// Everything runs through the OTP session's cookie jar in this process; the
+// connector token passes straight through to the portal on save/test and is
+// never persisted or logged here.
+ipcMain.handle('hermes:ix-agency:connectors:list', async () => {
+  await requireIxPortalAuth()
+
+  const connectors = await listIxConnectors(currentIxAgencySettings().portalUrl, ixPortalSessionFetch())
+
+  ixSyncState = { ...ixSyncState, connectors, connectorsError: null }
+
+  return connectors
+})
+
+ipcMain.handle('hermes:ix-agency:connectors:save', async (_event, input) => {
+  await requireIxPortalAuth()
+
+  const saved = await saveIxConnector(
+    currentIxAgencySettings().portalUrl,
+    (input ?? {}) as IxConnectorDraft,
+    ixPortalSessionFetch()
+  )
+
+  ixSyncState = {
+    ...ixSyncState,
+    connectors: [...ixSyncState.connectors.filter(c => c.id !== saved.id), saved]
+  }
+  ixMcpHealthCache = null
+
+  return saved
+})
+
+ipcMain.handle('hermes:ix-agency:connectors:patch', async (_event, input) => {
+  await requireIxPortalAuth()
+
+  const updated = await setIxConnectorEnabled(
+    currentIxAgencySettings().portalUrl,
+    String(input?.id ?? ''),
+    Boolean(input?.enabled),
+    ixPortalSessionFetch()
+  )
+
+  ixSyncState = {
+    ...ixSyncState,
+    connectors: ixSyncState.connectors.map(c => (c.id === updated.id ? updated : c))
+  }
+
+  return updated
+})
+
+ipcMain.handle('hermes:ix-agency:connectors:delete', async (_event, input) => {
+  await requireIxPortalAuth()
+
+  const id = String(input?.id ?? '')
+
+  await deleteIxConnector(currentIxAgencySettings().portalUrl, id, ixPortalSessionFetch())
+  ixSyncState = { ...ixSyncState, connectors: ixSyncState.connectors.filter(c => c.id !== id) }
+  ixMcpHealthCache = null
+
+  return { deleted: true }
+})
+
+ipcMain.handle('hermes:ix-agency:connectors:test', async (_event, input) => {
+  await requireIxPortalAuth()
+
+  return testIxConnector(
+    currentIxAgencySettings().portalUrl,
+    {
+      ...(typeof input?.id === 'string' && input.id ? { id: input.id } : {}),
+      ...(typeof input?.url === 'string' ? { url: input.url } : {}),
+      ...(typeof input?.authHeader === 'string' ? { authHeader: input.authHeader } : {}),
+      ...(typeof input?.token === 'string' ? { token: input.token } : {})
+    },
+    ixPortalSessionFetch()
+  )
+})
+
+// Import/export live main-side so the parsing rules stay in one module.
+ipcMain.handle('hermes:ix-agency:connectors:parse-import', async (_event, input) =>
+  parseConnectorImport(String(input?.json ?? ''))
+)
+
+ipcMain.handle('hermes:ix-agency:connectors:export', async () => {
+  await requireIxPortalAuth()
+
+  const connectors = ixSyncState.connectors.length
+    ? ixSyncState.connectors
+    : await listIxConnectors(currentIxAgencySettings().portalUrl, ixPortalSessionFetch())
+
+  return { json: exportConnectorsJson(connectors), count: connectors.length }
 })
 
 // ── IX Agency user-level skills ─────────────────────────────────────────────
