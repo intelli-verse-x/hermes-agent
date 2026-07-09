@@ -3,8 +3,8 @@
   "productName": "Hermes",
   "private": true,
   "version": "0.17.0",
-  "description": "Native desktop shell for Hermes Agent.",
-  "author": "Nous Research",
+  "description": "IX Agency — AI agency desktop, powered by Hermes Agent.",
+  "author": "Intelliverse X",
   "type": "module",
   "main": "dist/electron-main.mjs",
   "engines": {
@@ -162,7 +162,7 @@
         ]
       }
     ],
-    "artifactName": "Hermes-${version}-${os}-${arch}.${ext}",
+    "artifactName": "IX-Agency-${version}-${os}-${arch}.${ext}",
     "icon": "assets/icon",
     "directories": {
       "output": "release"
@@ -198,11 +198,11 @@
       "entitlements": "electron/entitlements.mac.plist",
       "entitlementsInherit": "electron/entitlements.mac.inherit.plist",
       "extendInfo": {
-        "CFBundleDisplayName": "Hermes",
+        "CFBundleDisplayName": "IX Agency",
         "CFBundleExecutable": "Hermes",
         "CFBundleName": "Hermes",
-        "NSAudioCaptureUsageDescription": "Hermes uses audio capture for voice conversations.",
-        "NSMicrophoneUsageDescription": "Hermes uses the microphone for voice input and voice conversations."
+        "NSAudioCaptureUsageDescription": "IX Agency uses audio capture for voice conversations.",
+        "NSMicrophoneUsageDescription": "IX Agency uses the microphone for voice input and voice conversations."
       },
       "gatekeeperAssess": false,
       "hardenedRuntime": true,
@@ -212,7 +212,7 @@
       ]
     },
     "dmg": {
-      "title": "Install Hermes",
+      "title": "Install IX Agency",
       "backgroundColor": "#f5f5f7",
       "iconSize": 96,
       "window": {
@@ -234,7 +234,7 @@
       ]
     },
     "win": {
-      "legalTrademarks": "Hermes",
+      "legalTrademarks": "IX Agency",
       "target": [
         "nsis",
         "msi"
@@ -243,8 +243,8 @@
     },
     "linux": {
       "category": "Development",
-      "maintainer": "Nous Research <support@nousresearch.com>",
-      "synopsis": "Native desktop shell for Hermes Agent.",
+      "maintainer": "Intelliverse X <support@intelli-verse-x.ai>",
+      "synopsis": "IX Agency — AI agency desktop, powered by Hermes Agent.",
       "target": [
         "AppImage",
         "deb",
@@ -255,8 +255,8 @@
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "perMachine": false,
-      "shortcutName": "Hermes",
-      "uninstallDisplayName": "Hermes",
+      "shortcutName": "IX Agency",
+      "uninstallDisplayName": "IX Agency",
       "warningsAsErrors": false
     }
   }

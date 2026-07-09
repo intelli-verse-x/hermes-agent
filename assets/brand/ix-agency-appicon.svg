@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="IX Agency app icon">
+  <!-- App icon: IX monogram on a deep-navy tile. Palette from intelli-verse-x.ai. -->
+  <defs>
+    <linearGradient id="ixa-bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0E2350"/>
+      <stop offset="1" stop-color="#06122E"/>
+    </linearGradient>
+    <linearGradient id="ixa-i" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#60A5FA"/>
+      <stop offset="1" stop-color="#2563EB"/>
+    </linearGradient>
+    <linearGradient id="ixa-x" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#38BDF8"/>
+      <stop offset="1" stop-color="#2563EB"/>
+    </linearGradient>
+  </defs>
+  <rect x="0" y="0" width="512" height="512" rx="115" fill="url(#ixa-bg)"/>
+  <!-- mark, scaled 3x from the 128 grid, centered (mark spans x 5..119 -> 15..357 @3x; offset +70) -->
+  <g transform="translate(70 64) scale(3)">
+    <rect x="14" y="26" width="18" height="76" rx="9" fill="url(#ixa-i)"/>
+    <path d="M50 28 L110 100" stroke="url(#ixa-x)" stroke-width="18" stroke-linecap="round" fill="none"/>
+    <path d="M50 100 L69.8 76.3" stroke="#76CDFB" stroke-width="18" stroke-linecap="round" fill="none"/>
+    <path d="M90.2 51.7 L110 28" stroke="#76CDFB" stroke-width="18" stroke-linecap="round" fill="none"/>
+  </g>
+</svg>

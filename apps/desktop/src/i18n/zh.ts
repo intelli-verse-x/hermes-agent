@@ -124,7 +124,7 @@ export const zh: Translations = {
     errors: {
       elevenLabsNeedsKey: 'ElevenLabs STT 需要 ELEVENLABS_API_KEY。',
       elevenLabsRejectedKey: 'ElevenLabs 拒绝了该 API key (401)。',
-      methodNotAllowed: '桌面后端拒绝了该请求 (405 Method Not Allowed)。请尝试重启 Hermes Desktop。',
+      methodNotAllowed: '桌面后端拒绝了该请求 (405 Method Not Allowed)。请尝试重启 IX Agency。',
       microphonePermission: '麦克风权限已被拒绝。',
       openaiRejectedApiKey: 'OpenAI 拒绝了该 API key。',
       openaiRejectedApiKeyWithStatus: status => `OpenAI 拒绝了该 API key (${status} invalid_api_key)。`,
@@ -352,7 +352,7 @@ export const zh: Translations = {
       advanced: '高级'
     },
     searchPlaceholder: {
-      about: '关于 Hermes Desktop',
+      about: '关于 IX Agency',
       config: '搜索设置…',
       gateway: '网关连接…',
       keys: '搜索 API 密钥…',
@@ -647,7 +647,7 @@ export const zh: Translations = {
       }
     }),
     about: {
-      heading: 'Hermes Desktop',
+      heading: 'IX Agency',
       version: value => `版本 ${value}`,
       versionUnavailable: '版本不可用',
       updates: '更新',
@@ -713,7 +713,7 @@ export const zh: Translations = {
       title: '网关连接',
       envOverride: '环境变量覆盖',
       intro:
-        'Hermes Desktop 默认会启动自己的本地网关。当你希望此应用控制另一台机器上或可信代理后的现有 Hermes 后端时，可以使用远程网关。下面可按 profile 指定各自的远程主机。',
+        'IX Agency 默认会启动自己的本地网关。当你希望此应用控制另一台机器上或可信代理后的现有 Hermes 后端时，可以使用远程网关。下面可按 profile 指定各自的远程主机。',
       appliesTo: '应用于',
       allProfiles: '所有 profile',
       defaultConnection: '默认连接会用于所有没有自定义覆盖的 profile。',
@@ -757,7 +757,7 @@ export const zh: Translations = {
       enterUrlFirst: '请先输入远程 URL。',
       restartingTitle: '网关连接正在重启',
       savedTitle: '网关设置已保存',
-      restartingMessage: 'Hermes Desktop 将使用已保存设置重新连接。',
+      restartingMessage: 'IX Agency 将使用已保存设置重新连接。',
       savedMessage: '已保存，下一次重启生效。',
       connectedTo: (baseUrl, version) => `已连接到 ${baseUrl}${version ? ` · Hermes ${version}` : ''}`,
       reachableTitle: '远程网关可访问',
@@ -2192,7 +2192,7 @@ export const zh: Translations = {
       update: '更新',
       updateInProgress: '正在更新',
       commitsBehind: (count, branch) => `落后 ${branch} ${count} 个提交`,
-      desktopVersion: version => `Hermes Desktop v${version}`,
+      desktopVersion: version => `IX Agency v${version}`,
       backendVersion: version => `后端 v${version}`,
       clientLabel: version => `客户端 v${version}`,
       backendLabel: version => `后端 v${version}`,

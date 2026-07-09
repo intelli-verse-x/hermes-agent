@@ -62,14 +62,14 @@ export const en: Translations = {
   },
 
   boot: {
-    ready: 'Hermes Desktop is ready',
+    ready: 'IX Agency is ready',
     desktopBootFailedWithMessage: message => `Desktop boot failed: ${message}`,
     steps: {
       connectingGateway: 'Connecting live desktop gateway',
       loadingSettings: 'Loading Hermes settings',
       loadingSessions: 'Loading recent sessions',
       startingDesktopConnection: 'Starting desktop connection',
-      startingHermesDesktop: 'Starting Hermes Desktop…'
+      startingHermesDesktop: 'Starting IX Agency…'
     },
     errors: {
       backgroundExited: 'Hermes background process exited.',
@@ -128,7 +128,7 @@ export const en: Translations = {
       elevenLabsNeedsKey: 'ElevenLabs STT needs ELEVENLABS_API_KEY.',
       elevenLabsRejectedKey: 'ElevenLabs rejected the API key (401).',
       methodNotAllowed:
-        'The desktop backend rejected that request (405 Method Not Allowed). Try restarting Hermes Desktop.',
+        'The desktop backend rejected that request (405 Method Not Allowed). Try restarting IX Agency.',
       microphonePermission: 'Microphone permission was denied.',
       openaiRejectedApiKey: 'OpenAI rejected the API key.',
       openaiRejectedApiKeyWithStatus: status => `OpenAI rejected the API key (${status} invalid_api_key).`,
@@ -362,7 +362,7 @@ export const en: Translations = {
       advanced: 'Advanced'
     },
     searchPlaceholder: {
-      about: 'About Hermes Desktop',
+      about: 'About IX Agency',
       config: 'Search settings...',
       gateway: 'Gateway connection...',
       keys: 'Search API keys...',
@@ -454,7 +454,7 @@ export const en: Translations = {
     fieldLabels: FIELD_LABELS,
     fieldDescriptions: FIELD_DESCRIPTIONS,
     about: {
-      heading: 'Hermes Desktop',
+      heading: 'IX Agency',
       version: value => `Version ${value}`,
       versionUnavailable: 'Version unavailable',
       updates: 'Updates',
@@ -521,7 +521,7 @@ export const en: Translations = {
       title: 'Gateway Connection',
       envOverride: 'env override',
       intro:
-        'Hermes Desktop starts its own local gateway by default. Use a remote gateway when you want this app to control an already-running Hermes backend on another machine or behind a trusted proxy. Pick a profile below to give it its own remote host.',
+        'IX Agency starts its own local gateway by default. Use a remote gateway when you want this app to control an already-running Hermes backend on another machine or behind a trusted proxy. Pick a profile below to give it its own remote host.',
       appliesTo: 'Applies to',
       allProfiles: 'All profiles',
       defaultConnection: 'Default connection for every profile that has no override of its own.',
@@ -568,7 +568,7 @@ export const en: Translations = {
       enterUrlFirst: 'Enter a remote URL first.',
       restartingTitle: 'Gateway connection restarting',
       savedTitle: 'Gateway settings saved',
-      restartingMessage: 'Hermes Desktop will reconnect using the saved settings.',
+      restartingMessage: 'IX Agency will reconnect using the saved settings.',
       savedMessage: 'Saved for the next restart.',
       connectedTo: (baseUrl, version) => `Connected to ${baseUrl}${version ? ` · Hermes ${version}` : ''}`,
       reachableTitle: 'Remote gateway reachable',
@@ -2024,7 +2024,7 @@ export const en: Translations = {
       update: 'update',
       updateInProgress: 'Update in progress',
       commitsBehind: (count, branch) => `${count} commit${count === 1 ? '' : 's'} behind ${branch}`,
-      desktopVersion: version => `Hermes Desktop v${version}`,
+      desktopVersion: version => `IX Agency v${version}`,
       backendVersion: version => `Backend v${version}`,
       clientLabel: version => `client v${version}`,
       backendLabel: version => `backend v${version}`,
@@ -2426,8 +2426,8 @@ export const en: Translations = {
     sessionExportFailed: 'Could not export session',
     imageSaved: 'Image saved',
     downloadStarted: 'Download started',
-    restartToUseSaveImage: 'Restart Hermes Desktop to use Save Image.',
-    restartToSaveImages: 'Restart Hermes Desktop to save images',
+    restartToUseSaveImage: 'Restart IX Agency to use Save Image.',
+    restartToSaveImages: 'Restart IX Agency to save images',
     imageDownloadFailed: 'Image download failed',
     openImage: 'Open image',
     downloadImage: 'Download image',
