@@ -21,6 +21,20 @@ import { TUTORX_NAME } from './tutorx'
 
 const bridge = () => window.hermesDesktop?.quizverse
 
+export function quizversePublicText(value: string): string {
+  return value
+    .replace(/deep[\s_-]*tutor/gi, TUTORX_NAME)
+    .replace(/\bhermes(?:[\s-]agent)?\b/gi, 'QuizVerse')
+}
+
+function publicTutorStatus(status: DeepTutorRendererStatus): DeepTutorRendererStatus {
+  return {
+    ...status,
+    detail: quizversePublicText(status.detail),
+    logTail: status.logTail.map(quizversePublicText)
+  }
+}
+
 export const $tutorStatus = atom<DeepTutorRendererStatus | null>(null)
 export const $qvSettings = atom<QuizverseRendererSettings | null>(null)
 export const $qvUpdate = atom<IxUpdateStatus | null>(null)
@@ -45,14 +59,14 @@ export function installTutorEvents() {
   }
 
   const qv = bridge()
-  const unsubscribe = qv?.onTutorEvent(status => $tutorStatus.set(status))
+  const unsubscribe = qv?.onTutorEvent(status => $tutorStatus.set(publicTutorStatus(status)))
 
   qv?.onProvisionEvent(payload => {
     const current = $qvProvision.get()
 
     $qvProvision.set({
-      error: payload.error ?? (payload.done ? null : current.error),
-      lines: payload.line ? [...current.lines.slice(-199), payload.line] : current.lines,
+      error: payload.error ? quizversePublicText(payload.error) : (payload.done ? null : current.error),
+      lines: payload.line ? [...current.lines.slice(-199), quizversePublicText(payload.line)] : current.lines,
       running: payload.done ? false : current.running
     })
   })
@@ -78,10 +92,10 @@ export async function provisionTutor() {
       await refreshTutorStatus()
     }
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error)
+    const message = quizversePublicText(error instanceof Error ? error.message : String(error))
 
     $qvProvision.set({ ...$qvProvision.get(), error: message, running: false })
-    notifyError(error, `${TUTORX_NAME} install failed`)
+    notifyError(new Error(message), `${TUTORX_NAME} install failed`)
   }
 }
 
@@ -93,7 +107,7 @@ export async function refreshTutorStatus() {
   }
 
   try {
-    $tutorStatus.set(await qv.tutorStatus())
+    $tutorStatus.set(publicTutorStatus(await qv.tutorStatus()))
   } catch {
     // Non-QuizVerse build or main not ready — the lamp stays grey.
   }
@@ -126,7 +140,7 @@ export async function startTutor() {
   }
 
   try {
-    $tutorStatus.set(await qv.tutorStart())
+    $tutorStatus.set(publicTutorStatus(await qv.tutorStart()))
   } catch (error) {
     notifyError(error, `Could not start ${TUTORX_NAME}`)
   }
@@ -140,7 +154,7 @@ export async function stopTutor() {
   }
 
   try {
-    $tutorStatus.set(await qv.tutorStop())
+    $tutorStatus.set(publicTutorStatus(await qv.tutorStop()))
   } catch (error) {
     notifyError(error, `Could not stop ${TUTORX_NAME}`)
   }
@@ -154,7 +168,7 @@ export async function restartTutor() {
   }
 
   try {
-    $tutorStatus.set(await qv.tutorRestart())
+    $tutorStatus.set(publicTutorStatus(await qv.tutorRestart()))
   } catch (error) {
     notifyError(error, `Could not restart ${TUTORX_NAME}`)
   }
@@ -180,9 +194,9 @@ export async function autoStartTutorOnce() {
     $qvSettings.set(settings)
 
     if (settings.tutorMode === 'local') {
-      $tutorStatus.set(await qv.tutorStart())
+      $tutorStatus.set(publicTutorStatus(await qv.tutorStart()))
     } else {
-      $tutorStatus.set(await qv.tutorStatus())
+      $tutorStatus.set(publicTutorStatus(await qv.tutorStatus()))
     }
   } catch (error) {
     notifyError(error, `Could not start ${TUTORX_NAME}`)

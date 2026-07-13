@@ -92,12 +92,19 @@ const stringArray: FieldValidator = value => Array.isArray(value) && value.every
 
 const FIELD_RULES: Record<string, FieldValidator> = {
   accuracy: value => numberValue(value) && (value as number) >= 0 && (value as number) <= 100,
-  answers: value => Array.isArray(value) && value.every(answer =>
-    exactObject(answer, {
+  answer: stringValue,
+  answers: value => Array.isArray(value) && (
+    (value.length === 10 && value.every(answer => integerValue(answer) && (answer as number) >= 0 && (answer as number) <= 3)) ||
+    value.every(answer => exactObject(answer, {
       latency_ms: value => integerValue(value) && (value as number) >= 0,
       question_id: stringValue,
       selected_index: value => integerValue(value) && (value as number) >= -1
-    }, ['latency_ms', 'question_id', 'selected_index'])
+    }, ['latency_ms', 'question_id', 'selected_index'])) ||
+    value.every(answer => exactObject(answer, {
+      answer: stringValue,
+      elapsedMs: value => integerValue(value) && (value as number) >= 0,
+      questionIdx: value => integerValue(value) && (value as number) >= 0
+    }, ['answer', 'elapsedMs', 'questionIdx']))
   ),
   categoryId: stringValue,
   categoryName: stringValue,
@@ -110,8 +117,15 @@ const FIELD_RULES: Record<string, FieldValidator> = {
   count: value => integerValue(value) && (value as number) >= 1 && (value as number) <= 50,
   country: value => stringValue(value) && (value as string).length >= 2 && (value as string).length <= 3,
   cursor: stringValue,
+  creatorId: stringValue,
   device_id: stringValue,
+  deviceId: stringValue,
+  displayName: stringValue,
   duration_ms: value => integerValue(value) && (value as number) >= 0,
+  elapsed_ms: value => integerValue(value) && (value as number) >= 0,
+  email: stringValue,
+  eventId: stringValue,
+  exam: value => ['gre', 'gmat', 'ielts'].includes(String(value)),
   friendUserId: stringValue,
   gameID: value => value === GAME_ID,
   game_id: value => value === GAME_ID,
@@ -137,11 +151,22 @@ const FIELD_RULES: Record<string, FieldValidator> = {
   lang_code: stringValue,
   leaderboard_id: stringValue,
   limit: value => integerValue(value) && (value as number) >= 1 && (value as number) <= 500,
+  honeypot_correct: value => integerValue(value) && (value as number) >= 0,
+  honeypot_total: value => integerValue(value) && (value as number) >= 0,
+  includePrivate: booleanValue,
+  latency_ms: value => integerValue(value) && (value as number) >= 0,
+  maxPages: value => integerValue(value) && (value as number) >= 1 && (value as number) <= 5,
   maxSize: value => integerValue(value) && (value as number) >= 2 && (value as number) <= 8,
   message: stringValue,
   mode: stringValue,
   paid_via: value => value === 'balance' || value === 'amoe',
+  pack_id: stringValue,
   partyId: stringValue,
+  picks: value => Array.isArray(value) && value.every(pick =>
+    exactObject(pick, { answer_id: stringValue, question_id: stringValue }, ['answer_id', 'question_id'])
+  ),
+  playerEmail: stringValue,
+  playerName: stringValue,
   playerDisplayName: stringValue,
   provider: stringValue,
   questionHistory: value => Array.isArray(value) && value.every(entry =>
@@ -161,13 +186,17 @@ const FIELD_RULES: Record<string, FieldValidator> = {
   shareCode: stringValue,
   slug: stringValue,
   state: value => integerValue(value) && (value as number) >= 0 && (value as number) <= 3,
+  status: value => ['published', 'live', 'ended'].includes(String(value)),
   targetUserId: stringValue,
   ticketId: stringValue,
   timeTaken: value => numberValue(value) && (value as number) >= 0,
   topic: stringValue,
+  track_id: stringValue,
   total: value => integerValue(value) && (value as number) >= 1,
   totalQuestions: value => integerValue(value) && (value as number) >= 1,
-  type: stringValue
+  type: stringValue,
+  view: value => ['around', 'top', 'friends', 'country', 'tier', 'activity'].includes(String(value)),
+  withParticipantScan: booleanValue
 }
 
 const POLICIES = QUIZVERSE_CONTRACTS as Readonly<Record<string, ToolPolicy>>

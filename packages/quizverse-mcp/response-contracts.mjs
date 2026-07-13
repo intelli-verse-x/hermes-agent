@@ -212,6 +212,67 @@ export const QUIZVERSE_RESPONSE_CONTRACTS = Object.freeze({
     nextCursor: nullable(string),
     tournaments: array(jsonObject)
   }, ['tournaments'], true)),
+  qv_tournament_get: sourceDataContract('tournament-detail-v1', object({
+    description: string,
+    format: string,
+    name: string,
+    pot_bc: number,
+    slug: string,
+    status: string
+  }, ['slug', 'name'], true)),
+  qv_tournament_bracket: sourceDataContract('tournament-bracket-v1', object({
+    bracket_id: string,
+    exists: boolean,
+    public_dashboard_url: string,
+    round: integer(),
+    total_rounds: integer()
+  }, ['exists'], true)),
+  qv_tournament_leaderboard: sourceDataUnionContract('tournament-leaderboard-v1', [
+    object({ records: array(object({
+      ownerId: string,
+      rank: integer(1),
+      score: number,
+      username: string
+    }, ['rank', 'score'], true)) }, ['records'], true),
+    object({ activity: array(object({
+      rank: integer(1),
+      score: number,
+      username: string
+    }, ['username', 'score'], true)) }, ['activity'], true)
+  ]),
+  qv_learning_track_get: sourceDataContract('learning-track-v1', object({
+    track: object({
+      amoe_unlock_threshold: integer(),
+      topic_tag: string,
+      track_id: string,
+      videos: array(jsonObject)
+    }, ['track_id', 'topic_tag', 'videos'], true)
+  }, ['track'], true)),
+  qv_words_duel_get: sourceDataContract('words-duel-v1', object({
+    already_submitted: boolean,
+    exam: enumeration(['gre', 'gmat', 'ielts']),
+    ok: boolean,
+    previous_score: nullable(number),
+    questions: array(object({
+      options: array(string),
+      word: string
+    }, ['word', 'options'], true)),
+    utc_day: string
+  }, ['ok', 'exam', 'questions'], true)),
+  qv_live_events_list: sourceDataContract('live-events-list-v1', object({
+    events: array(jsonObject),
+    hasMore: boolean,
+    server_time: integer(),
+    total: integer()
+  }, ['events', 'total', 'server_time', 'hasMore'], true)),
+  qv_live_event_get: sourceDataContract('live-event-detail-v1', object({
+    event: object({
+      id: string,
+      eventId: string,
+      status: string
+    }, ['status'], true),
+    server_time: integer()
+  }, ['event', 'server_time'], true)),
   qv_async_status: sessionContract('async-unity-session-v1'),
   qv_knowledge_map: contract('knowledge-map-v1', object({
     categories: { additionalProperties: object({
@@ -295,6 +356,34 @@ export const QUIZVERSE_RESPONSE_CONTRACTS = Object.freeze({
   qv_async_join: sessionContract('async-unity-join-v1'),
   qv_async_submit: sessionContract('async-unity-submit-v1'),
   qv_tournament_enter: envelopeContract('tournament-entry-v1', 'data', jsonObject),
+  qv_tournament_submit_pack: sourceDataContract('tournament-pack-submit-v1', object({
+    total_score: number
+  }, ['total_score'], true)),
+  qv_tournament_submit_picks: sourceDataContract('tournament-picks-submit-v1', object({
+    accepted: boolean
+  }, ['accepted'], true)),
+  qv_words_duel_submit: sourceDataContract('words-duel-submit-v1', object({
+    correct: integer(),
+    exam: enumeration(['gre', 'gmat', 'ielts']),
+    ok: boolean,
+    opponent: nullable(jsonObject),
+    score: integer(),
+    utc_day: string
+  }, ['ok', 'exam', 'score'], true)),
+  qv_live_event_join: sourceDataContract('live-event-join-v1', object({
+    eventId: string,
+    participantCount: integer(),
+    success: boolean
+  }, ['success', 'eventId'], true)),
+  qv_live_event_submit: sourceDataContract('live-event-answer-v1', object({
+    correct: boolean,
+    correctAnswer: string,
+    funFact: string,
+    score: number,
+    speedBonus: number,
+    status: string,
+    total_score: number
+  }, ['correct', 'score'], true)),
   qv_reward_claim: envelopeContract('arcade-daily-reward-v1', 'data', object({
     nextReward: integer(),
     rewardAmount: integer(),
@@ -407,6 +496,17 @@ function sessionContract(version) {
     object({ ...successError, data: asyncSession }, ['success', 'data']),
     object({ ...successError, ...asyncSession.properties }, ['success', ...asyncSession.required], true)
   ], value => value.session ?? value.data ?? value)
+}
+
+function sourceDataContract(version, schema) {
+  return sourceDataUnionContract(version, [schema])
+}
+
+function sourceDataUnionContract(version, schemas) {
+  return unionContract(version, [
+    ...schemas,
+    ...schemas.map(schema => object({ ...successError, data: schema }, ['success', 'data'], true))
+  ], value => value.data ?? value)
 }
 
 function validateSchema(schema, value, path) {

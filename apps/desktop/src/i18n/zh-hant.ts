@@ -878,7 +878,7 @@ export const zhHant = defineLocale({
     edit: '編輯',
     archive: '封存',
     skillArchivedTitle: '技能已封存',
-    skillArchivedMessage: '可透過 hermes curator restore 還原。'
+    skillArchivedMessage: '可從已封存技能中還原。'
   },
 
   starmap: {
@@ -1159,7 +1159,7 @@ export const zhHant = defineLocale({
       MATTERMOST_ALLOWED_USERS: { label: '允許的使用者 ID', help: '建議設定。逗號分隔的 Mattermost 使用者 ID。' },
       MATRIX_HOMESERVER: { label: 'Homeserver URL', placeholder: 'https://matrix.org' },
       MATRIX_ACCESS_TOKEN: { label: '存取 Token' },
-      MATRIX_USER_ID: { label: 'Bot 使用者 ID', placeholder: '@hermes:example.org' },
+      MATRIX_USER_ID: { label: 'Bot 使用者 ID', placeholder: '@agent:example.org' },
       MATRIX_ALLOWED_USERS: {
         label: '允許的 Matrix 使用者 ID',
         help: '建議設定。@user:server 格式的逗號分隔使用者 ID。'
@@ -1798,7 +1798,7 @@ export const zhHant = defineLocale({
     noOutput: '暫無輸出。',
     cancelling: '取消中...',
     cancelInstall: '取消安裝',
-    transcriptSaved: '完整記錄已儲存至',
+    transcriptSaved: '完整記錄已儲存至本機應用程式記錄檔資料夾。',
     copiedOutput: '已複製！',
     copyOutput: '複製輸出',
     reloadRetry: '重新載入並重試'
@@ -2175,7 +2175,7 @@ export const zhHant = defineLocale({
       reject: '拒絕',
       alwaysTitle: '一律允許此指令？',
       alwaysDescription: pattern =>
-        `這會將「${pattern}」模式加入永久允許清單（~/.hermes/config.yaml）。{brandName} 對類似指令將不再詢問，包括目前工作階段和未來工作階段。`,
+        `這會將「${pattern}」模式加入應用程式的永久允許清單。{brandName} 對類似指令將不再詢問，包括目前工作階段和未來工作階段。`,
       alwaysAllow: '一律允許'
     },
     clarify: {

@@ -1,0 +1,21 @@
+{
+  "manifest_version": 1,
+  "content_version": "2026.07.13-test",
+  "generated_at": "2026-07-13T00:00:00.000Z",
+  "expires_at": "2099-07-14T00:00:00.000Z",
+  "cache_max_age_seconds": 300,
+  "datasets": [
+    {
+      "id": "guess-5-shared-test",
+      "kind": "guess-5",
+      "skin": "shared",
+      "license": "QuizVerse first-party licensed content",
+      "provenance": "QuizVerse Words editorial pipeline",
+      "url": "/api/words/content/guess-5-shared-test",
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "bytes": 9,
+      "min_items": 1,
+      "etag": "\"guess-5-test\""
+    }
+  ]
+}

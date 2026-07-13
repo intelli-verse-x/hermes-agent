@@ -6,6 +6,8 @@ import os from 'node:os'
 import path from 'node:path'
 import test from 'node:test'
 
+import { validateAndNormalizeQuizverseResponse } from '../../../packages/quizverse-mcp/response-contracts.mjs'
+import { TOOLS } from '../../../packages/quizverse-mcp/server.mjs'
 import {
   EXTERNAL_PROVIDER_FIXTURES,
   QUIZ_FETCH_ROUTE_FIXTURES,
@@ -201,6 +203,195 @@ test('enforces and normalizes every routed quiz fetch contract', async t => {
 function withoutSource(args: Record<string, unknown>): Record<string, unknown> {
   return Object.fromEntries(Object.entries(args).filter(([key]) => key !== 'source'))
 }
+
+test('maps all native subdomain contracts through the broker exactly', async t => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'qv-broker-native-'))
+
+  const socketPath = process.platform === 'win32'
+    ? `\\\\.\\pipe\\qv-broker-native-${crypto.randomUUID()}`
+    : path.join(root, 'broker.sock')
+
+  const secret = crypto.randomBytes(48).toString('base64url')
+  const tournamentPackIdempotencyKey = crypto.randomUUID()
+  const tournamentPicksIdempotencyKey = crypto.randomUUID()
+
+  const cases = [
+    ['qv_tournament_get', { slug: 'weekly-cup' }, 'tournament_get', { slug: 'weekly-cup' }],
+    ['qv_tournament_bracket', { slug: 'weekly-cup' }, 'tournament_bracket_state', { slug: 'weekly-cup' }],
+    ['qv_tournament_leaderboard', { limit: 25, slug: 'weekly-cup', view: 'top' }, 'tournament_leaderboard_top', { limit: 25, slug: 'weekly-cup' }],
+    ['qv_learning_track_get', { track_id: 'featured' }, 'learning_track_get', { track_id: 'featured' }],
+    ['qv_words_duel_get', { exam: 'gre' }, 'quizverse_words_duel_get', { exam: 'gre' }],
+    ['qv_live_events_list', { maxPages: 2, status: 'published' }, 'creator_event_list', { maxPages: 2, status: 'published' }],
+    ['qv_live_event_get', { creatorId: 'creator-1', eventId: 'event-1' }, 'creator_event_get', { creatorId: 'creator-1', eventId: 'event-1' }],
+    ['qv_tournament_submit_pack', {
+      correct: 8,
+      duration_ms: 12_000,
+      idempotency_key: tournamentPackIdempotencyKey,
+      pack_id: 'pack-1',
+      slug: 'weekly-cup',
+      total: 10
+    }, 'tournament_submit_pack_result', {
+      correct: 8,
+      duration_ms: 12_000,
+      idempotency_key: tournamentPackIdempotencyKey,
+      pack_id: 'pack-1',
+      slug: 'weekly-cup',
+      total: 10
+    }],
+    ['qv_tournament_submit_picks', {
+      idempotency_key: tournamentPicksIdempotencyKey,
+      picks: [{ answer_id: 'a-1', question_id: 'q-1' }],
+      slug: 'weekly-cup'
+    }, 'tournament_submit_picks', {
+      idempotency_key: tournamentPicksIdempotencyKey,
+      picks: [{ answer_id: 'a-1', question_id: 'q-1' }],
+      slug: 'weekly-cup'
+    }],
+    ['qv_words_duel_submit', {
+      answers: [0, 1, 2, 3, 0, 1, 2, 3, 0, 1],
+      elapsed_ms: 15_000,
+      exam: 'gre',
+      idempotency_key: crypto.randomUUID()
+    }, 'quizverse_words_duel_submit', {
+      answers: [0, 1, 2, 3, 0, 1, 2, 3, 0, 1],
+      elapsed_ms: 15_000,
+      exam: 'gre'
+    }],
+    ['qv_live_event_join', {
+      creatorId: 'creator-1',
+      deviceId: 'desktop-device-1',
+      eventId: 'event-1',
+      idempotency_key: crypto.randomUUID(),
+      playerName: 'Player One'
+    }, 'creator_event_spa_join', {
+      creatorId: 'creator-1',
+      deviceId: 'desktop-device-1',
+      eventId: 'event-1',
+      playerName: 'Player One'
+    }],
+    ['qv_live_event_submit', {
+      answer: 'Mars',
+      answers: [{ answer: 'Mars', elapsedMs: 1200, questionIdx: 0 }],
+      creatorId: 'creator-1',
+      deviceId: 'desktop-device-1',
+      eventId: 'event-1',
+      idempotency_key: crypto.randomUUID(),
+      playerName: 'Player One'
+    }, 'creator_event_submit', {
+      answer: 'Mars',
+      answers: [{ answer: 'Mars', elapsedMs: 1200, questionIdx: 0 }],
+      creatorId: 'creator-1',
+      deviceId: 'desktop-device-1',
+      eventId: 'event-1',
+      playerName: 'Player One'
+    }]
+  ] as const
+
+  const calls: Array<{ name: string; payload: Record<string, unknown> }> = []
+
+  const typedTools = TOOLS as Array<{
+    map: (args: Record<string, unknown>) => { payload: Record<string, unknown>; rpc: string }
+    name: string
+    write?: boolean
+  }>
+
+  const toolByName = new Map(typedTools.map(tool => [tool.name, tool]))
+  const toolByRpc = new Map(cases.map(([tool, , rpc]) => [rpc, tool]))
+
+  const server = await startQuizverseMcpBroker({
+    auditPath: path.join(root, 'audit.jsonl'),
+    handlers: {
+      approve: async () => true,
+      capability: async () => ({ authKind: 'authenticated', playerId: 'player-1' }),
+      rpc: async (name, payload) => {
+        calls.push({ name, payload })
+
+        return RESPONSE_FIXTURES[toolByRpc.get(name)!]
+      },
+      tutor: async () => ({})
+    },
+    idempotencyPath: path.join(root, 'idempotency.json'),
+    secret,
+    socketPath
+  })
+
+  t.after(() => {
+    stopQuizverseMcpBroker(server, socketPath)
+    fs.rmSync(root, { force: true, recursive: true })
+  })
+
+  let requestId = 0
+
+  for (const [toolName, args, expectedRpc, expectedPayload] of cases) {
+    const tool = toolByName.get(toolName)!
+    const mapped = tool.map(args)
+    assert.equal(mapped.rpc, expectedRpc, toolName)
+
+    if (expectedPayload) {
+      assert.deepEqual(mapped.payload, expectedPayload, toolName)
+    }
+
+    if (!tool.write) {
+      const response = await send(socketPath, {
+        auth: secret,
+        id: String(requestId++),
+        operation: 'read',
+        payload: mapped.payload,
+        rpc: mapped.rpc,
+        tool: toolName
+      })
+
+      assert.equal(response.ok, true, `${toolName}: ${String(response.error ?? '')}`)
+      assert.deepEqual(
+        response.result,
+        validateAndNormalizeQuizverseResponse(
+          toolName,
+          RESPONSE_FIXTURES[toolName],
+          { payload: mapped.payload, rpc: mapped.rpc }
+        ),
+        `${toolName} response fixture`
+      )
+
+      continue
+    }
+
+    const idempotencyKey = String((args as Record<string, unknown>).idempotency_key)
+
+    const prepared = await send(socketPath, {
+      auth: secret,
+      hardConfirmation: true,
+      id: String(requestId++),
+      idempotencyKey,
+      operation: 'prepare',
+      payload: mapped.payload,
+      rpc: mapped.rpc,
+      tool: toolName
+    })
+
+    assert.equal(prepared.ok, true, toolName)
+    const challenge = (prepared.result as { approval_challenge: string }).approval_challenge
+
+    const executed = await send(socketPath, {
+      auth: secret,
+      challenge,
+      id: String(requestId++),
+      idempotencyKey,
+      operation: 'execute',
+      payload: mapped.payload,
+      rpc: mapped.rpc,
+      tool: toolName
+    })
+
+    assert.equal(executed.ok, true, toolName)
+    assert.deepEqual(
+      executed.result,
+      validateAndNormalizeQuizverseResponse(toolName, RESPONSE_FIXTURES[toolName]),
+      `${toolName} response fixture`
+    )
+  }
+
+  assert.equal(calls.length, cases.length)
+})
 
 test('authenticates clients and enforces broker-owned write approval', async t => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'qv-broker-'))

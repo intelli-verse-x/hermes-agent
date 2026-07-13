@@ -531,10 +531,7 @@ export function DesktopInstallOverlay({ enabled = true }: DesktopInstallOverlayP
         {failed && (
           <div className="flex-shrink-0 bg-card p-4">
             <div className="flex items-center justify-between gap-2">
-              <span className="text-xs text-muted-foreground">
-                {copy.transcriptSaved}{' '}
-                <code className="font-mono text-(--ui-text-secondary)">%LOCALAPPDATA%\hermes\logs\</code>
-              </span>
+              <span className="text-xs text-muted-foreground">{copy.transcriptSaved}</span>
               <div className="flex gap-2">
                 <Button
                   onClick={async () => {

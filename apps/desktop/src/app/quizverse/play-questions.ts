@@ -188,6 +188,7 @@ interface ExternalCard {
 function externalCards(provider: string, payload: unknown): ExternalCard[] {
   const data = (payload ?? {}) as Record<string, any>
   const titleCase = (value: string) => value.replace(/(^|[\s-])([a-z])/g, (_match, prefix, letter) => prefix + letter.toUpperCase())
+
   const adapters: Record<string, () => ExternalCard[]> = {
     countries: () => asArray(payload).map(item => {
       const country = item as Record<string, any>
@@ -255,6 +256,7 @@ export function externalToPlayQuestions(provider: string, payload: unknown, coun
     const articles = asArray((payload as Record<string, unknown>)?.articles)
       .map(item => item as Record<string, unknown>)
       .filter(item => string(item.title) && string(item.imageUrl ?? item.image))
+
     const titles = articles.map(item => string(item.title))
 
     return shuffled(articles).slice(0, count).map((article, index) => {
@@ -275,6 +277,7 @@ export function externalToPlayQuestions(provider: string, payload: unknown, coun
     const people = asArray((payload as Record<string, unknown>)?.results)
       .map(item => item as Record<string, unknown>)
       .filter(item => string(item.name) && string(item.eye_color) && string(item.eye_color) !== 'unknown')
+
     const colors = [...new Set(people.map(person => string(person.eye_color)))]
 
     return shuffled(people).slice(0, count).flatMap((person, index) => {
@@ -294,6 +297,7 @@ export function externalToPlayQuestions(provider: string, payload: unknown, coun
 
   const cards = externalCards(provider, payload)
   const labels = cards.map(card => card.label)
+
   const prompts: Record<string, string> = {
     countries: 'Which country does this flag belong to?',
     disney: 'Which Disney character is this?',

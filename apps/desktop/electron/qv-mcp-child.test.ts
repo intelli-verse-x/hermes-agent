@@ -19,9 +19,7 @@ const {
   scrubQuizverseMcpSecret,
   startQuizverseMcpChild,
   stopQuizverseMcpChild
-} = await import(
-  new URL('./qv-mcp-child.ts', import.meta.url).href
-)
+} = await import(new URL('./qv-mcp-child.ts', import.meta.url).href)
 
 test('scopes the broker secret to the directly managed MCP child', () => {
   const secret = 'x'.repeat(64)
@@ -45,22 +43,17 @@ test('scopes the broker secret to the directly managed MCP child', () => {
   ])
   assert.equal(env.HERMES_HOME, undefined)
   assert.equal(env.PATH, undefined)
-  assert.deepEqual(
-    scrubQuizverseMcpSecret({ KEEP_ME: 'yes', QUIZVERSE_MCP_BROKER_SECRET: secret }),
-    { KEEP_ME: 'yes' }
-  )
+  assert.deepEqual(scrubQuizverseMcpSecret({ KEEP_ME: 'yes', QUIZVERSE_MCP_BROKER_SECRET: secret }), { KEEP_ME: 'yes' })
 })
 
 test('starts, probes, and reaps the directly managed MCP child', async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'qv-mcp-child-'))
 
-  const serverSocket = process.platform === 'win32'
-    ? `\\\\.\\pipe\\qv-mcp-child-${crypto.randomUUID()}`
-    : path.join(root, 'server.sock')
+  const serverSocket =
+    process.platform === 'win32' ? `\\\\.\\pipe\\qv-mcp-child-${crypto.randomUUID()}` : path.join(root, 'server.sock')
 
-  const brokerSocket = process.platform === 'win32'
-    ? `\\\\.\\pipe\\qv-mcp-broker-${crypto.randomUUID()}`
-    : path.join(root, 'broker.sock')
+  const brokerSocket =
+    process.platform === 'win32' ? `\\\\.\\pipe\\qv-mcp-broker-${crypto.randomUUID()}` : path.join(root, 'broker.sock')
 
   const secret = crypto.randomBytes(48).toString('base64url')
 
@@ -81,12 +74,16 @@ test('starts, probes, and reaps the directly managed MCP child', async () => {
     brokerSecret: secret,
     brokerSocket,
     executable: process.execPath,
-    serverPath: path.resolve(path.dirname(new URL(import.meta.url).pathname), '../../../packages/quizverse-mcp/server.mjs'),
+    serverPath: path.resolve(
+      path.dirname(new URL(import.meta.url).pathname),
+      '../../../packages/quizverse-mcp/server.mjs'
+    ),
     serverSocket
   })
 
   const probe = await probeQuizverseMcp(serverSocket)
-  assert.equal(probe.toolIds.length, 27)
+  assert.ok(probe.toolIds.length >= 27)
+  assert.equal(new Set(probe.toolIds).size, probe.toolIds.length)
   assert.match(probe.profileText, /fixture-guest/)
   const exited = new Promise(resolve => child.once('exit', resolve))
 
@@ -97,7 +94,10 @@ test('starts, probes, and reaps the directly managed MCP child', async () => {
   ])
   assert.equal(child.exitCode === null, false)
 
-  if (process.platform !== 'win32') {assert.equal(fs.existsSync(serverSocket), false)}
+  if (process.platform !== 'win32') {
+    assert.equal(fs.existsSync(serverSocket), false)
+  }
+
   stopQuizverseMcpBroker(broker, brokerSocket)
   fs.rmSync(root, { force: true, recursive: true })
 })
@@ -106,12 +106,15 @@ test('escalates a hung child and defines both platform fallbacks', async () => {
   assert.equal(quizverseMcpKillFallback('win32'), 'taskkill')
   assert.equal(quizverseMcpKillFallback('darwin'), 'SIGKILL')
 
-  if (process.platform === 'win32') {return}
+  if (process.platform === 'win32') {
+    return
+  }
 
-  const child = spawn(process.execPath, [
-    '-e',
-    "process.on('SIGTERM',()=>{}); console.log('ready'); setInterval(()=>{},1000)"
-  ], { stdio: ['ignore', 'pipe', 'ignore'] })
+  const child = spawn(
+    process.execPath,
+    ['-e', "process.on('SIGTERM',()=>{}); console.log('ready'); setInterval(()=>{},1000)"],
+    { stdio: ['ignore', 'pipe', 'ignore'] }
+  )
 
   await new Promise(resolve => child.stdout?.once('data', resolve))
   await stopQuizverseMcpChild(child, '/tmp/qv-hung-child-test.sock', { graceMs: 25 })

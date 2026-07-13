@@ -53,6 +53,12 @@ export interface QuizverseSettings {
   litellmUrl: string
   /** LiteLLM API key for local TutorX (stored via safeStorage). */
   litellmKey: string
+  /** Cognito Hosted UI domain used by native account linking. */
+  cognitoDomain: string
+  /** Public Cognito app client id used by native PKCE. */
+  cognitoClientId: string
+  /** Cognito user-pool OIDC issuer used for signature discovery. */
+  cognitoIssuer: string
 }
 
 /** Port sentinel: 0 means "allocate a free port when the servers spawn". */
@@ -67,7 +73,10 @@ export const DEFAULT_QUIZVERSE_SETTINGS: QuizverseSettings = {
   webPort: AUTO_PORT,
   apiKey: '',
   litellmUrl: 'https://litellm.intelli-verse-x.ai',
-  litellmKey: ''
+  litellmKey: '',
+  cognitoDomain: '',
+  cognitoClientId: '',
+  cognitoIssuer: ''
 }
 
 /** 0 (auto) and 1–65535 (explicit) are valid; anything else → fallback. */
@@ -99,7 +108,10 @@ export function readQuizverseSettings(filePath: string, decryptSecret: (value: u
     webPort: clampPort(raw.webPort, DEFAULT_QUIZVERSE_SETTINGS.webPort),
     apiKey: decryptSecret(raw.apiKey) || '',
     litellmUrl: String(raw.litellmUrl || '').trim() || DEFAULT_QUIZVERSE_SETTINGS.litellmUrl,
-    litellmKey: decryptSecret(raw.litellmKey) || ''
+    litellmKey: decryptSecret(raw.litellmKey) || '',
+    cognitoDomain: String(raw.cognitoDomain || '').trim(),
+    cognitoClientId: String(raw.cognitoClientId || '').trim(),
+    cognitoIssuer: String(raw.cognitoIssuer || '').trim()
   }
 }
 
@@ -118,7 +130,10 @@ export function writeQuizverseSettings(
     webPort: settings.webPort,
     apiKey: settings.apiKey ? encryptSecret(settings.apiKey) : null,
     litellmUrl: settings.litellmUrl,
-    litellmKey: settings.litellmKey ? encryptSecret(settings.litellmKey) : null
+    litellmKey: settings.litellmKey ? encryptSecret(settings.litellmKey) : null,
+    cognitoDomain: settings.cognitoDomain,
+    cognitoClientId: settings.cognitoClientId,
+    cognitoIssuer: settings.cognitoIssuer
   }
 
   fs.mkdirSync(path.dirname(filePath), { recursive: true })
@@ -129,7 +144,7 @@ export function writeQuizverseSettings(
 export function sanitizeQuizverseSettingsInput(input: unknown, current: QuizverseSettings): QuizverseSettings {
   const source = (input && typeof input === 'object' ? input : {}) as Record<string, unknown>
 
-  const pick = (key: 'apiKey' | 'litellmKey' | 'localCommand' | 'localDirectory' | 'remoteUrl'): string =>
+  const pick = (key: 'apiKey' | 'cognitoClientId' | 'cognitoDomain' | 'cognitoIssuer' | 'litellmKey' | 'localCommand' | 'localDirectory' | 'remoteUrl'): string =>
     typeof source[key] === 'string' ? String(source[key]).trim() : current[key]
 
   return {
@@ -141,7 +156,10 @@ export function sanitizeQuizverseSettingsInput(input: unknown, current: Quizvers
     webPort: clampPort(source.webPort, current.webPort),
     apiKey: pick('apiKey'),
     litellmUrl: typeof source.litellmUrl === 'string' ? String(source.litellmUrl).trim() || current.litellmUrl : current.litellmUrl,
-    litellmKey: pick('litellmKey')
+    litellmKey: pick('litellmKey'),
+    cognitoDomain: pick('cognitoDomain'),
+    cognitoClientId: pick('cognitoClientId'),
+    cognitoIssuer: pick('cognitoIssuer')
   }
 }
 
@@ -156,7 +174,10 @@ export function quizverseSettingsForRenderer(settings: QuizverseSettings) {
     webPort: settings.webPort,
     apiKeySet: Boolean(settings.apiKey),
     litellmUrl: settings.litellmUrl,
-    litellmKeySet: Boolean(settings.litellmKey)
+    litellmKeySet: Boolean(settings.litellmKey),
+    cognitoDomain: settings.cognitoDomain,
+    cognitoClientId: settings.cognitoClientId,
+    cognitoIssuer: settings.cognitoIssuer
   }
 }
 

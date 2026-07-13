@@ -565,9 +565,9 @@ export function SkillsTab({ onRunNatively, query }: { onRunNatively?: () => void
               <PanelMeta
                 rows={[
                   {
-                    label: 'Lives at',
+                    label: 'Storage',
                     value: (
-                      <code className="font-mono text-[0.68rem]">~/.hermes/skills/ix-user/{selectedUser.id}/SKILL.md</code>
+                      <span className="text-[0.68rem]">Intelliverse local skills / {selectedUser.id}</span>
                     )
                   },
                   {

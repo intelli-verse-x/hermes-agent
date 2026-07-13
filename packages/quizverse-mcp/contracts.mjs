@@ -23,6 +23,20 @@ const REQUEST_CONTRACTS = {
   qv_entitlements_get: read('quizverse_get_entitlements', [], [], true),
   qv_friends_list: read('friends_list', ['limit', 'cursor', 'state'], [], true),
   qv_tournaments_list: read('tournament_list', ['limit', 'cursor']),
+  qv_tournament_get: read('tournament_get', ['slug'], ['slug']),
+  qv_tournament_bracket: read('tournament_bracket_state', ['slug'], ['slug']),
+  qv_tournament_leaderboard: readMany([
+    'tournament_leaderboard_around_me',
+    'tournament_leaderboard_top',
+    'tournament_leaderboard_friends',
+    'tournament_leaderboard_country',
+    'tournament_leaderboard_tier_league',
+    'tournament_leaderboard_activity_feed'
+  ], ['slug', 'limit'], ['slug']),
+  qv_learning_track_get: read('learning_track_get', ['track_id'], ['track_id']),
+  qv_words_duel_get: read('quizverse_words_duel_get', ['exam'], ['exam']),
+  qv_live_events_list: read('creator_event_list', ['status', 'includePrivate', 'maxPages', 'withParticipantScan']),
+  qv_live_event_get: read('creator_event_get', ['eventId', 'creatorId'], ['eventId']),
   qv_async_status: read('async_challenge_get', ['sessionId', 'shareCode']),
   qv_knowledge_map: read('quizverse_knowledge_map', ['game_id'], ['game_id']),
   qv_tutorx_progress: tutor(/^\/api\/v1\/learning\/progress$/),
@@ -35,6 +49,11 @@ const REQUEST_CONTRACTS = {
   qv_async_join: write('async_challenge_join', ['shareCode', 'playerDisplayName'], ['shareCode']),
   qv_async_submit: write('async_challenge_submit', ['sessionId', 'score', 'correctAnswers', 'totalQuestions', 'timeTaken', 'accuracy', 'categoryName', 'categoryId', 'questionHistory', 'idempotency_key'], ['sessionId', 'score', 'correctAnswers', 'totalQuestions', 'timeTaken', 'idempotency_key']),
   qv_tournament_enter: write('tournament_enter', ['slug', 'paid_via', 'idempotency_key'], ['slug', 'paid_via', 'idempotency_key'], true, true),
+  qv_tournament_submit_pack: write('tournament_submit_pack_result', ['slug', 'pack_id', 'correct', 'total', 'duration_ms', 'latency_ms', 'honeypot_correct', 'honeypot_total', 'idempotency_key'], ['slug', 'pack_id', 'correct', 'total', 'duration_ms', 'idempotency_key'], true, true),
+  qv_tournament_submit_picks: write('tournament_submit_picks', ['slug', 'picks', 'idempotency_key'], ['slug', 'picks', 'idempotency_key'], true, true),
+  qv_words_duel_submit: write('quizverse_words_duel_submit', ['exam', 'answers', 'elapsed_ms'], ['exam', 'answers', 'elapsed_ms'], true, true),
+  qv_live_event_join: write('creator_event_spa_join', ['eventId', 'creatorId', 'playerName', 'playerEmail', 'email', 'deviceId'], ['eventId', 'playerName', 'deviceId'], true, true),
+  qv_live_event_submit: write('creator_event_submit', ['eventId', 'creatorId', 'answer', 'answers', 'playerName', 'displayName', 'playerEmail', 'email', 'deviceId'], ['eventId', 'answer', 'playerName', 'deviceId'], true, true),
   qv_reward_claim: write('quizverse_claim_daily_reward', ['gameID'], ['gameID'], true, true),
   qv_party_create: write('matchmaking_create_party', ['gameId', 'maxSize'], ['gameId', 'maxSize'], true),
   qv_party_join: write('matchmaking_join_party', ['gameId', 'partyId'], ['gameId', 'partyId'], true),
@@ -50,6 +69,10 @@ export const QUIZVERSE_CONTRACTS = Object.freeze(Object.fromEntries(
 
 function read(rpc, allowedKeys = [], required = [], authenticated = false) {
   return Object.freeze({ allowedKeys, authenticated, required, rpc, write: false })
+}
+
+function readMany(rpcs, allowedKeys = [], required = [], authenticated = false) {
+  return Object.freeze({ allowedKeys, authenticated, required, rpcs: Object.freeze(rpcs), write: false })
 }
 
 function tutor(tutorPath) {
