@@ -1,6 +1,6 @@
 ---
 name: ivx-agent-vault
-description: How to fetch secrets from Infisical (the Agent Vault pattern) at runtime instead of reading them from baked-in env vars / k8s secrets. Use this whenever an agent needs a credential and the operator wants rotation+audit+per-secret access control. The benefit over plain env: rotate one secret in Infisical UI/API and every agent sees the new value within seconds, no redeploy.
+description: Fetch rotatable agent secrets from Infisical securely.
 version: 1.0.0
 metadata:
   hermes:
