@@ -386,6 +386,32 @@ export const RESPONSE_FIXTURES = Object.freeze({
     success: true,
     data: { served_at: 1_700_000_000, tournaments: [] }
   },
+  qv_tournament_get: { success: true, data: { name: 'Weekly Cup', slug: 'weekly-cup', status: 'ACTIVE' } },
+  qv_tournament_bracket: { success: true, data: { bracket_id: 'br_fixture', exists: true, public_dashboard_url: '', round: 1, total_rounds: 6 } },
+  qv_tournament_leaderboard: { success: true, data: { records: [] } },
+  qv_learning_track_get: {
+    success: true,
+    data: { track: { amoe_unlock_threshold: 6, topic_tag: 'general', track_id: 'featured', videos: [] } }
+  },
+  qv_words_duel_get: {
+    success: true,
+    data: {
+      already_submitted: false,
+      exam: 'gre',
+      ok: true,
+      previous_score: null,
+      questions: [{ options: ['Brief', 'Noisy', 'Slow', 'Wide'], word: 'TERSE' }],
+      utc_day: '2026-07-13'
+    }
+  },
+  qv_live_events_list: {
+    success: true,
+    data: { events: [], hasMore: false, server_time: 1_700_000_000, total: 0 }
+  },
+  qv_live_event_get: {
+    success: true,
+    data: { event: { eventId: 'event-fixture', status: 'published' }, server_time: 1_700_000_000 }
+  },
   qv_async_status: session,
   qv_knowledge_map: {
     categories: {},
@@ -469,6 +495,20 @@ export const RESPONSE_FIXTURES = Object.freeze({
       founder_member: false,
       idempotent: false
     }
+  },
+  qv_tournament_submit_pack: { success: true, data: { total_score: 100 } },
+  qv_tournament_submit_picks: { success: true, data: { accepted: true } },
+  qv_words_duel_submit: {
+    success: true,
+    data: { correct: 8, exam: 'gre', ok: true, opponent: null, score: 8, utc_day: '2026-07-13' }
+  },
+  qv_live_event_join: {
+    success: true,
+    data: { eventId: 'event-fixture', participantCount: 4, success: true }
+  },
+  qv_live_event_submit: {
+    success: true,
+    data: { correct: true, correctAnswer: 'Mars', funFact: 'Mars is red.', score: 100, speedBonus: 10 }
   },
   qv_reward_claim: {
     success: true,

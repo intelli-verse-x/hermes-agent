@@ -1011,7 +1011,7 @@ export const zh: Translations = {
     edit: '编辑',
     archive: '归档',
     skillArchivedTitle: '技能已归档',
-    skillArchivedMessage: '可通过 hermes curator restore 恢复。',
+    skillArchivedMessage: '可从已归档技能中恢复。',
     hub: {
       searchPlaceholder: '搜索技能中心',
       search: '搜索',
@@ -1390,7 +1390,7 @@ export const zh: Translations = {
       MATTERMOST_ALLOWED_USERS: { label: '允许的用户 ID', help: '推荐。逗号分隔的 Mattermost 用户 ID。' },
       MATRIX_HOMESERVER: { label: 'Homeserver URL', placeholder: 'https://matrix.org' },
       MATRIX_ACCESS_TOKEN: { label: '访问令牌' },
-      MATRIX_USER_ID: { label: 'Bot 用户 ID', placeholder: '@hermes:example.org' },
+      MATRIX_USER_ID: { label: 'Bot 用户 ID', placeholder: '@agent:example.org' },
       MATRIX_ALLOWED_USERS: { label: '允许的 Matrix 用户 ID', help: '推荐。@user:server 格式的逗号分隔用户 ID。' },
       SIGNAL_HTTP_URL: {
         label: 'Signal 桥接 URL',
@@ -2049,7 +2049,7 @@ export const zh: Translations = {
     noOutput: '暂无输出。',
     cancelling: '取消中...',
     cancelInstall: '取消安装',
-    transcriptSaved: '完整记录已保存到',
+    transcriptSaved: '完整记录已保存到本地应用日志文件夹。',
     copiedOutput: '已复制！',
     copyOutput: '复制输出',
     reloadRetry: '重新加载并重试'
@@ -2429,7 +2429,7 @@ export const zh: Translations = {
       reject: '拒绝',
       alwaysTitle: '始终允许此命令？',
       alwaysDescription: pattern =>
-        `这会将“${pattern}”模式加入永久允许列表 (~/.hermes/config.yaml)。{brandName} 对类似命令将不再询问，包括当前会话和未来会话。`,
+        `这会将“${pattern}”模式加入应用的永久允许列表。{brandName} 对类似命令将不再询问，包括当前会话和未来会话。`,
       alwaysAllow: '始终允许'
     },
     clarify: {

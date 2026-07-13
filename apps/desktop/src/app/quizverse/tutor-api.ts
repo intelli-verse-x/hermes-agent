@@ -50,6 +50,7 @@ export async function tutorFetch<T>(path: string, init: RequestInit = {}): Promi
 
     if (init.body instanceof FormData) {
       form = []
+
       for (const [name, value] of init.body.entries()) {
         if (value instanceof File) {
           form.push({
@@ -62,6 +63,7 @@ export async function tutorFetch<T>(path: string, init: RequestInit = {}): Promi
           form.push({ name, value })
         }
       }
+
       body = undefined
     }
 
@@ -111,9 +113,11 @@ export async function createTutorSocket(path: string): Promise<TutorSocket> {
   let id = ''
   let state: number = WebSocket.CONNECTING
   const queued: TutorWsBridgeEvent[] = []
+
   const socket: TutorSocket = {
     close: () => {
       state = WebSocket.CLOSING
+
       if (id) {
         void bridge.tutorWsClose(id)
       }
@@ -133,6 +137,7 @@ export async function createTutorSocket(path: string): Promise<TutorSocket> {
       void bridge.tutorWsSend(id, data).catch(() => socket.onerror?.())
     }
   }
+
   const dispatch = (event: TutorWsBridgeEvent) => {
     if (!id) {
       queued.push(event)
@@ -157,6 +162,7 @@ export async function createTutorSocket(path: string): Promise<TutorSocket> {
       unsubscribe()
     }
   }
+
   const unsubscribe = bridge.onTutorWsEvent(dispatch)
 
   id = await bridge.tutorWsConnect(path, tutorTenantId())
@@ -174,6 +180,7 @@ export async function tutorStream(path: string, onEvent: (event: Record<string, 
     return new Promise((resolve, reject) => {
       let id = ''
       const queued: { data?: unknown; id: string; type: 'data' | 'done' | 'error' }[] = []
+
       const dispatch = (event: { data?: unknown; id: string; type: 'data' | 'done' | 'error' }) => {
         if (!id) {
           queued.push(event)
@@ -203,6 +210,7 @@ export async function tutorStream(path: string, onEvent: (event: Record<string, 
         const frames = buffer.split('\n\n')
 
         buffer = frames.pop() ?? ''
+
         for (const frame of frames) {
           const raw = frame.split('\n').find(line => line.startsWith('data:'))?.slice(5).trim()
 
@@ -215,6 +223,7 @@ export async function tutorStream(path: string, onEvent: (event: Record<string, 
           }
         }
       }
+
       const unsubscribe = bridge.onTutorStreamEvent(dispatch)
 
       void bridge.tutorStreamStart(path).then(streamId => {
@@ -249,6 +258,7 @@ export async function tutorStream(path: string, onEvent: (event: Record<string, 
     const frames = buffer.split('\n\n')
 
     buffer = frames.pop() ?? ''
+
     for (const frame of frames) {
       const raw = frame.split('\n').find(line => line.startsWith('data:'))?.slice(5).trim()
 

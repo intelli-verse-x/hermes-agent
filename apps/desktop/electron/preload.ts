@@ -377,12 +377,36 @@ contextBridge.exposeInMainWorld('hermesDesktop', {
           playRealtimeSend: (id, opCode, payload) =>
             ipcRenderer.invoke('hermes:quizverse:play:realtime:send', id, opCode, payload),
           playRealtimeClose: id => ipcRenderer.invoke('hermes:quizverse:play:realtime:close', id),
+          authStart: () => ipcRenderer.invoke('hermes:quizverse:auth:start'),
+          authStatus: () => ipcRenderer.invoke('hermes:quizverse:auth:status'),
+          productRequest: input => ipcRenderer.invoke('hermes:quizverse:product:request', input),
+          productStream: (input, onChunk) => {
+            const streamId = input.streamId ?? crypto.randomUUID()
+
+            const listener = (_event, payload) => {
+              if (payload?.streamId === streamId && typeof payload.chunk === 'string') {
+                onChunk(payload.chunk)
+              }
+            }
+
+            ipcRenderer.on('hermes:quizverse:product:chunk', listener)
+
+            return ipcRenderer.invoke('hermes:quizverse:product:request', { ...input, streamId })
+              .finally(() => ipcRenderer.removeListener('hermes:quizverse:product:chunk', listener))
+          },
+          productCancel: streamId => ipcRenderer.invoke('hermes:quizverse:product:cancel', streamId),
           mcpStatus: () => ipcRenderer.invoke('hermes:quizverse:mcp:status'),
           onPlayRealtimeEvent: callback => {
             const listener = (_event, payload) => callback(payload)
             ipcRenderer.on('hermes:quizverse:play:realtime:event', listener)
 
             return () => ipcRenderer.removeListener('hermes:quizverse:play:realtime:event', listener)
+          },
+          onAuthEvent: callback => {
+            const listener = (_event, payload) => callback(payload)
+            ipcRenderer.on('hermes:quizverse:auth:event', listener)
+
+            return () => ipcRenderer.removeListener('hermes:quizverse:auth:event', listener)
           },
           // Update lamp for the status strip (same poller as the tray).
           updateCheck: () => ipcRenderer.invoke('hermes:quizverse:update:check'),

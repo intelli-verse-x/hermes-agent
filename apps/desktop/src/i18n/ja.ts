@@ -906,7 +906,7 @@ export const ja = defineLocale({
     edit: '編集',
     archive: 'アーカイブ',
     skillArchivedTitle: 'スキルをアーカイブしました',
-    skillArchivedMessage: 'hermes curator restore で復元できます。'
+    skillArchivedMessage: 'アーカイブ済みスキルから復元できます。'
   },
 
   starmap: {
@@ -1200,7 +1200,7 @@ export const ja = defineLocale({
       },
       MATRIX_HOMESERVER: { label: 'ホームサーバー URL', placeholder: 'https://matrix.org' },
       MATRIX_ACCESS_TOKEN: { label: 'アクセストークン' },
-      MATRIX_USER_ID: { label: 'ボットユーザー ID', placeholder: '@hermes:example.org' },
+      MATRIX_USER_ID: { label: 'ボットユーザー ID', placeholder: '@agent:example.org' },
       MATRIX_ALLOWED_USERS: {
         label: '許可する Matrix ユーザー ID',
         help: '推奨。@user:server 形式のカンマ区切りユーザー ID。'
@@ -1854,7 +1854,7 @@ export const ja = defineLocale({
     noOutput: 'まだ出力がありません。',
     cancelling: 'キャンセル中...',
     cancelInstall: 'インストールをキャンセル',
-    transcriptSaved: 'フルトランスクリプトを保存しました:',
+    transcriptSaved: 'フルトランスクリプトをローカルアプリのログフォルダーに保存しました。',
     copiedOutput: 'コピーしました！',
     copyOutput: '出力をコピー',
     reloadRetry: '再読み込みして再試行'
@@ -2242,7 +2242,7 @@ export const ja = defineLocale({
       reject: '拒否',
       alwaysTitle: 'このコマンドを常に許可しますか？',
       alwaysDescription: pattern =>
-        `これにより "${pattern}" パターンが永続的な許可リスト (~/.hermes/config.yaml) に追加されます。{brandName} はこのセッションや将来のセッションで、このようなコマンドについて再度尋ねません。`,
+        `これにより "${pattern}" パターンがアプリケーションの永続的な許可リストに追加されます。{brandName} はこのセッションや将来のセッションで、このようなコマンドについて再度尋ねません。`,
       alwaysAllow: '常に許可'
     },
     clarify: {

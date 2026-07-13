@@ -9,15 +9,13 @@ import test from 'node:test'
 
 import { RESPONSE_FIXTURES } from '../../../packages/quizverse-mcp/test/response-fixtures.mjs'
 
-const {
-  startQuizverseMcpBroker,
-  stopQuizverseMcpBroker
-} = await import(new URL('./qv-mcp-broker.ts', import.meta.url).href)
+const { startQuizverseMcpBroker, stopQuizverseMcpBroker } = await import(
+  new URL('./qv-mcp-broker.ts', import.meta.url).href
+)
 
-const {
-  startQuizverseMcpChild,
-  stopQuizverseMcpChild
-} = await import(new URL('./qv-mcp-child.ts', import.meta.url).href)
+const { startQuizverseMcpChild, stopQuizverseMcpChild } = await import(
+  new URL('./qv-mcp-child.ts', import.meta.url).href
+)
 
 test('guest broker through secretless relay reads a normalized profile', async t => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'qv-mcp-e2e-'))
@@ -39,7 +37,10 @@ test('guest broker through secretless relay reads a normalized profile', async t
           return RESPONSE_FIXTURES.qv_quiz_submit
         }
 
-        if (name === 'player_get_full_profile') {return RESPONSE_FIXTURES.qv_profile_get}
+        if (name === 'player_get_full_profile') {
+          return RESPONSE_FIXTURES.qv_profile_get
+        }
+
         throw new Error(`Unexpected E2E RPC: ${name}`)
       },
       tutor: async () => RESPONSE_FIXTURES.qv_tutorx_sessions
@@ -50,11 +51,16 @@ test('guest broker through secretless relay reads a normalized profile', async t
   })
 
   assert.equal((await brokerRequest(brokerSocket, { id: 'missing', operation: 'capability' })).ok, false)
-  assert.equal((await brokerRequest(brokerSocket, {
-    auth: 'wrong-secret',
-    id: 'wrong',
-    operation: 'capability'
-  })).ok, false)
+  assert.equal(
+    (
+      await brokerRequest(brokerSocket, {
+        auth: 'wrong-secret',
+        id: 'wrong',
+        operation: 'capability'
+      })
+    ).ok,
+    false
+  )
 
   const packageRoot = path.resolve(path.dirname(new URL(import.meta.url).pathname), '../../../packages/quizverse-mcp')
 
@@ -71,8 +77,14 @@ test('guest broker through secretless relay reads a normalized profile', async t
     stdio: ['pipe', 'pipe', 'pipe']
   })
 
-  assert.equal(relay.spawnargs.some(argument => argument.includes(secret)), false)
-  assert.equal(relay.spawnargs.some(argument => argument.includes('BROKER_SECRET')), false)
+  assert.equal(
+    relay.spawnargs.some(argument => argument.includes(secret)),
+    false
+  )
+  assert.equal(
+    relay.spawnargs.some(argument => argument.includes('BROKER_SECRET')),
+    false
+  )
 
   t.after(async () => {
     relay.kill('SIGTERM')
@@ -98,7 +110,8 @@ test('guest broker through secretless relay reads a normalized profile', async t
 
   assert.equal(initialized.result.protocolVersion, '2025-03-26')
   const tools = await request({ id: 3, jsonrpc: '2.0', method: 'tools/list' })
-  assert.equal(tools.result.tools.length, 27)
+  assert.ok(tools.result.tools.length >= 27)
+  assert.equal(new Set(tools.result.tools.map(tool => tool.name)).size, tools.result.tools.length)
 
   const profile = await request({
     id: 4,
@@ -185,8 +198,9 @@ function relayRequester(child: ReturnType<typeof spawn>) {
     }
   })
 
-  return (message: Record<string, any>) => new Promise<Record<string, any>>(resolve => {
-    waiters.set(message.id, resolve)
-    child.stdin?.write(`${JSON.stringify(message)}\n`)
-  })
+  return (message: Record<string, any>) =>
+    new Promise<Record<string, any>>(resolve => {
+      waiters.set(message.id, resolve)
+      child.stdin?.write(`${JSON.stringify(message)}\n`)
+    })
 }

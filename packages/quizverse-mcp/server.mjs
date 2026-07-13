@@ -93,6 +93,40 @@ const TOOLS = [
     cursor: str('Opaque pagination cursor.'),
     limit: integer('Page size.', { maximum: 100, minimum: 1 })
   })),
+  read('qv_tournament_get', 'Read tournament detail and eligibility.', 'tournament_get',
+    object({ slug: str('Tournament slug.') }, ['slug'])),
+  read('qv_tournament_bracket', 'Read native tournament bracket state.', 'tournament_bracket_state',
+    object({ slug: str('Tournament slug.') }, ['slug'])),
+  {
+    description: 'Read one source-defined tournament leaderboard view.',
+    inputSchema: object({
+      limit: integer('Maximum rows.', { maximum: 100, minimum: 1 }),
+      view: str('Leaderboard view.', { enum: ['around', 'top', 'friends', 'country', 'tier', 'activity'] }),
+      slug: str('Tournament slug.')
+    }, ['slug', 'view']),
+    map: args => route({
+      activity: 'tournament_leaderboard_activity_feed',
+      around: 'tournament_leaderboard_around_me',
+      country: 'tournament_leaderboard_country',
+      friends: 'tournament_leaderboard_friends',
+      tier: 'tournament_leaderboard_tier_league',
+      top: 'tournament_leaderboard_top'
+    }[args.view], { limit: args.limit ?? 25, slug: args.slug }),
+    name: 'qv_tournament_leaderboard'
+  },
+  read('qv_learning_track_get', 'Read a tournament learning track.', 'learning_track_get',
+    object({ track_id: str('Learning track id.') }, ['track_id'])),
+  read('qv_words_duel_get', 'Read today’s source-authoritative Words duel.', 'quizverse_words_duel_get',
+    object({ exam: str('Vocabulary exam scope.', { enum: ['gre', 'gmat', 'ielts'] }) }, ['exam'])),
+  read('qv_live_events_list', 'Read source-visible QuizVerse live events.', 'creator_event_list',
+    object({
+      includePrivate: { description: 'Include private creator events.', type: 'boolean' },
+      maxPages: integer('Storage pages to scan.', { maximum: 5, minimum: 1 }),
+      status: str('Optional event status.', { enum: ['published', 'live', 'ended'] }),
+      withParticipantScan: { description: 'Include participant count scan.', type: 'boolean' }
+    })),
+  read('qv_live_event_get', 'Read one live event and current timing state.', 'creator_event_get',
+    object({ creatorId: str('Optional creator id.'), eventId: str('Live event id.') }, ['eventId'])),
   {
     description: 'Read an async challenge by session or share code.',
     inputSchema: object({ sessionId: str('Challenge session id.'), shareCode: str('Challenge share code.') }),
@@ -183,6 +217,56 @@ const TOOLS = [
     }, ['sessionId', 'score', 'correctAnswers', 'totalQuestions', 'timeTaken'])),
   write('qv_tournament_enter', 'Enter a tournament using an approved payment path.', 'tournament_enter',
     writeSchema({ paid_via: str('Entry payment path.', { enum: ['balance', 'amoe'] }), slug: str('Tournament slug.') }, ['slug', 'paid_via']), true, true),
+  write('qv_tournament_submit_pack', 'Submit a completed tournament question pack.', 'tournament_submit_pack_result',
+    writeSchema({
+      correct: integer('Correct answer count.', { minimum: 0 }),
+      duration_ms: integer('Total play duration.', { minimum: 0 }),
+      honeypot_correct: integer('Correct honeypot count.', { minimum: 0 }),
+      honeypot_total: integer('Honeypot question count.', { minimum: 0 }),
+      latency_ms: integer('Aggregate answer latency.', { minimum: 0 }),
+      pack_id: str('Server-issued content pack id.'),
+      slug: str('Tournament slug.'),
+      total: integer('Question count.', { minimum: 1 })
+    }, ['slug', 'pack_id', 'correct', 'total', 'duration_ms']), true, true),
+  write('qv_tournament_submit_picks', 'Submit tournament pick selections.', 'tournament_submit_picks',
+    writeSchema({
+      picks: array('Tournament pick objects.', object({
+        answer_id: str('Selected answer id.'),
+        question_id: str('Question id.')
+      }, ['question_id', 'answer_id'])),
+      slug: str('Tournament slug.')
+    }, ['slug', 'picks']), true, true),
+  write('qv_words_duel_submit', 'Submit today’s completed Words duel.', 'quizverse_words_duel_submit',
+    writeSchema({
+      answers: array('Exactly ten option indices.', integer('Selected option index.', { maximum: 3, minimum: 0 })),
+      elapsed_ms: integer('Total play duration.', { minimum: 0 }),
+      exam: str('Vocabulary exam scope.', { enum: ['gre', 'gmat', 'ielts'] })
+    }, ['exam', 'answers', 'elapsed_ms']), true, true),
+  write('qv_live_event_join', 'Join a published live event.', 'creator_event_spa_join',
+    writeSchema({
+      creatorId: str('Optional creator id.'),
+      deviceId: str('Stable Desktop device id.'),
+      email: str('Player email mirror.'),
+      eventId: str('Live event id.'),
+      playerEmail: str('Player email.'),
+      playerName: str('Player display name.')
+    }, ['eventId', 'playerName', 'deviceId']), true, true),
+  write('qv_live_event_submit', 'Submit source-shaped live-event answers.', 'creator_event_submit',
+    writeSchema({
+      answer: str('Aggregate answer string.'),
+      answers: array('Per-question raw answers.', object({
+        answer: str('Player answer.'),
+        elapsedMs: integer('Answer duration.', { minimum: 0 }),
+        questionIdx: integer('Question index.', { minimum: 0 })
+      }, ['questionIdx', 'answer', 'elapsedMs'])),
+      creatorId: str('Optional creator id.'),
+      deviceId: str('Stable Desktop device id.'),
+      displayName: str('Player display name mirror.'),
+      email: str('Player email mirror.'),
+      eventId: str('Live event id.'),
+      playerEmail: str('Player email.'),
+      playerName: str('Player display name.')
+    }, ['eventId', 'answer', 'playerName', 'deviceId']), true, true),
   {
     description: 'Claim the current earned daily reward.',
     hardConfirmation: true,
@@ -235,7 +319,9 @@ function write(name, description, rpc, inputSchema, requiresAuthenticated = fals
     'async_challenge_submit',
     'quiz_submit_result_v2',
     'submit_score_and_sync',
-    'tournament_enter'
+    'tournament_enter',
+    'tournament_submit_pack_result',
+    'tournament_submit_picks'
   ]).has(rpc)
   return {
     description,

@@ -327,7 +327,7 @@ test('stdio protocol negotiates, validates, and shuts down', async () => {
     assert.equal(unsupported.error.code, -32602)
     assert.equal((await fx.request(init)).result.protocolVersion, '2025-03-26')
     const listed = await fx.request({ id: 4, jsonrpc: '2.0', method: 'tools/list' })
-    assert.equal(listed.result.tools.length, 27)
+    assert.equal(listed.result.tools.length, TOOLS.length)
     assert.ok(listed.result.tools.some(tool => tool.name === 'qv_party_create'))
     const prompt = await fx.request({ id: 5, jsonrpc: '2.0', method: 'prompts/get', params: { name: 'quiz-coach', arguments: {} } })
     assert.equal(prompt.error.code, -32602)
@@ -540,7 +540,7 @@ test('secretless relay reaches the Electron-managed socket server', async () => 
     throw new Error('relay response timed out')
   }
   assert.equal((await request(init)).result.protocolVersion, '2025-03-26')
-  assert.equal((await request({ id: 2, jsonrpc: '2.0', method: 'tools/list' })).result.tools.length, 27)
+  assert.equal((await request({ id: 2, jsonrpc: '2.0', method: 'tools/list' })).result.tools.length, TOOLS.length)
   const relayExited = new Promise(resolve => relay.once('exit', resolve))
   const serverExited = new Promise(resolve => server.once('exit', resolve))
   relay.kill('SIGTERM')
@@ -633,7 +633,7 @@ test('socket clients isolate initialization, cancellation, and shutdown', async 
   assert.match(secondResult.result.contents[0].text, /fixture-guest/)
 
   assert.deepEqual((await first.request({ id: 10, jsonrpc: '2.0', method: 'shutdown' })).result, {})
-  assert.equal((await second.request({ id: 10, jsonrpc: '2.0', method: 'tools/list' })).result.tools.length, 27)
+  assert.equal((await second.request({ id: 10, jsonrpc: '2.0', method: 'tools/list' })).result.tools.length, TOOLS.length)
 })
 
 test('Unity and web mutation fixtures map without invented payload keys', async () => {
