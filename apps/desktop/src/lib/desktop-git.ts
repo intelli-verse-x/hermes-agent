@@ -6,6 +6,7 @@ import type {
   HermesReviewShipInfo
 } from '@/global'
 
+import { BRAND_NAME } from './brand'
 import { desktopFsProfile, isDesktopFsRemoteMode } from './desktop-fs'
 
 // Remote-aware git facade. Locally the desktop runs git through Electron
@@ -20,7 +21,7 @@ function desktopApi<T>(path: string, body?: Record<string, unknown>): Promise<T>
   const desktop = window.hermesDesktop
 
   if (!desktop) {
-    throw new Error('IX Agency bridge is unavailable')
+    throw new Error(`${BRAND_NAME} bridge is unavailable`)
   }
 
   return desktop.api<T>(

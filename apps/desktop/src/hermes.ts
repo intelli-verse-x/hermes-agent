@@ -1,5 +1,6 @@
 import { JsonRpcGatewayClient } from '@hermes/shared'
 
+import { BRAND_NAME } from '@/lib/brand'
 import type {
   ActionResponse,
   ActionStatusResponse,
@@ -170,10 +171,10 @@ export type {
 export class HermesGateway extends JsonRpcGatewayClient {
   constructor() {
     super({
-      closedErrorMessage: 'IX Agency gateway connection closed',
-      connectErrorMessage: 'Could not connect to IX Agency gateway',
+      closedErrorMessage: `${BRAND_NAME} gateway connection closed`,
+      connectErrorMessage: `Could not connect to ${BRAND_NAME} gateway`,
       createRequestId: nextId => nextId,
-      notConnectedErrorMessage: 'IX Agency gateway is not connected',
+      notConnectedErrorMessage: `${BRAND_NAME} gateway is not connected`,
       requestTimeoutMs: DEFAULT_GATEWAY_REQUEST_TIMEOUT_MS
     })
   }

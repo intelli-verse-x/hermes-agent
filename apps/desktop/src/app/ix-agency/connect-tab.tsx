@@ -192,11 +192,11 @@ export function ConnectTab() {
       const result = await bridge.hermesInit()
 
       setInitLog(result.log)
-      notify({ message: 'Hermes initialized', detail: 'LiteLLM gateway wired as the model provider' })
+      notify({ message: 'Agent runtime initialized', detail: 'LiteLLM gateway wired as the model provider' })
       setHermes(await bridge.hermesStatus())
       setSettings(await bridge.getSettings())
     } catch (error) {
-      notifyError(error, 'Hermes init failed')
+      notifyError(error, 'Agent runtime init failed')
     } finally {
       setInitBusy(false)
     }
@@ -369,7 +369,7 @@ export function ConnectTab() {
         {/* ── Hermes init (Cognito S2S) ── */}
         <section className="space-y-3">
           <h3 className="text-xs font-semibold tracking-wider text-muted-foreground/70 uppercase">
-            Hermes init (Cognito S2S)
+            Agent runtime init (Cognito S2S)
           </h3>
           <div className="flex items-center gap-2 rounded-md bg-(--ui-bg-quinary) px-3 py-2.5">
             <Codicon
@@ -378,7 +378,7 @@ export function ConnectTab() {
               size="0.875rem"
             />
             <span className="min-w-0 flex-1 text-xs">
-              {hermes ? `${hermes.detail} (${hermes.configPath})` : 'Checking local Hermes…'}
+              {hermes ? `${hermes.detail} (${hermes.configPath})` : 'Checking local agent runtime…'}
             </span>
           </div>
           <Field label="Cognito OAuth2 token endpoint">
@@ -419,7 +419,7 @@ export function ConnectTab() {
               onClick={() => void runHermesInit()}
               size="sm"
             >
-              {initBusy ? 'Installing…' : hermes?.installerAvailable ? 'Install local Hermes' : 'Initialize ~/.hermes'}
+              {initBusy ? 'Installing…' : hermes?.installerAvailable ? 'Install local agent runtime' : 'Initialize ~/.hermes'}
             </Button>
           </div>
           {initLog && (
@@ -430,8 +430,8 @@ export function ConnectTab() {
           <p className="text-[0.68rem] leading-relaxed text-muted-foreground/70">
             Runs automatically after your first sign-in (the secret is provisioned from the portal; the buttons stay
             for re-runs and overrides): validates the S2S credentials with a real client-credentials grant (token
-            verified against the pool's JWKS), stores them keychain-backed (safeStorage), then initializes local
-            Hermes — via hermes-deployment's install-local.sh when its checkout exists, else a minimal
+            verified against the pool's JWKS), stores them keychain-backed (safeStorage), then initializes the local
+            agent runtime — via hermes-deployment's install-local.sh when its checkout exists, else a minimal
             ~/.hermes/config.yaml pointed at the LiteLLM gateway. Your gateway token / LiteLLM key land in
             ~/.hermes/.env (0600).
           </p>

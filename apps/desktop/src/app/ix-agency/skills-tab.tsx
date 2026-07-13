@@ -237,7 +237,7 @@ export function SkillsTab({ onRunNatively, query }: { onRunNatively?: () => void
     try {
       const saved = await api.skillsSave(draft)
 
-      notify({ message: `Skill saved — Hermes and the Copilot tab see it now`, detail: `skills/ix-user/${saved.id}/SKILL.md` })
+      notify({ message: `Skill saved — the agent and the Copilot tab see it now`, detail: `skills/ix-user/${saved.id}/SKILL.md` })
       await refresh()
       openUserSkill(saved)
     } catch (error) {
@@ -585,7 +585,7 @@ export function SkillsTab({ onRunNatively, query }: { onRunNatively?: () => void
               />
             )}
             <p className="text-[0.68rem] leading-relaxed text-muted-foreground/70">
-              Saving makes the skill available immediately to local Hermes and the Copilot tab. Publishing pushes it
+              Saving makes the skill available immediately to the local agent and the Copilot tab. Publishing pushes it
               to the admin portal&apos;s team catalog (requires the signed-in OTP session) where the whole org sees it.
             </p>
           </div>

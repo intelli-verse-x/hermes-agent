@@ -109,7 +109,7 @@ function Harness() {
     handleGatewayEvent: () => undefined,
     onConnectionReady: () => undefined,
     onGatewayReady: () => undefined,
-    refreshHermesConfig: async () => undefined,
+    refreshAgentConfig: async () => undefined,
     refreshSessions: async () => undefined
   })
 

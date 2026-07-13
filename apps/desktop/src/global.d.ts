@@ -274,8 +274,112 @@ declare global {
         connectorsParseImport: (json: string) => Promise<{ connectors: IxConnectorDraftInput[]; errors: string[] }>
         connectorsExport: () => Promise<{ json: string; count: number }>
       }
+      // QuizVerse: DeepTutor platform supervisor + settings + surface catalog.
+      // Present in every build's preload, but the main-process handlers only
+      // register for the QuizVerse brand (other brands reject every invoke).
+      quizverse?: {
+        getSettings: () => Promise<QuizverseRendererSettings>
+        saveSettings: (payload: QuizverseSettingsInput) => Promise<QuizverseRendererSettings>
+        tutorStatus: () => Promise<DeepTutorRendererStatus>
+        tutorStart: () => Promise<DeepTutorRendererStatus>
+        tutorStop: () => Promise<DeepTutorRendererStatus>
+        tutorRestart: () => Promise<DeepTutorRendererStatus>
+        validateLitellm: (payload?: { key?: string; url?: string }) => Promise<{ model: string; modelCount: number; provider: string }>
+        tutorRequest: (payload: QuizverseTutorRequest) => Promise<{ body: string; contentType: string; status: number }>
+        tutorStreamStart: (path: string) => Promise<string>
+        tutorStreamStop: (id: string) => Promise<void>
+        onTutorStreamEvent: (callback: (event: { data?: unknown; id: string; type: 'data' | 'done' | 'error' }) => void) => () => void
+        tutorWsConnect: (path: string, userId: string) => Promise<string>
+        tutorWsSend: (id: string, data: string) => Promise<void>
+        tutorWsClose: (id: string) => Promise<void>
+        onTutorWsEvent: (callback: (event: QuizverseTutorWsEvent) => void) => () => void
+        // Managed install: venv + `pip install -U deeptutor` under userData.
+        provisionTutor: () => Promise<{ error: string; ok: false } | { ok: true }>
+        onProvisionEvent: (callback: (payload: QuizverseProvisionEvent) => void) => () => void
+        pickTutorDirectory: () => Promise<{ canceled: boolean; dir: null | string }>
+        playSession: () => Promise<{ deviceId: string; userId: string; username: string }>
+        playRpc: <T = unknown>(name: string, payload?: Record<string, unknown>) => Promise<T>
+        playRealtimeConnect: () => Promise<{ id: string; userId: string }>
+        playRealtimeListMatches: (id: string, query: string) => Promise<{ match_id?: string }[]>
+        playRealtimeJoinMatch: (id: string, matchId: string) => Promise<{
+          matchId: string
+          presences: { sessionId?: string; userId?: string; username?: string }[]
+        }>
+        playRealtimeCreateMatch: (id: string, payload: Record<string, unknown>) => Promise<{ matchId: string }>
+        playRealtimeSend: (id: string, opCode: number, payload: Record<string, unknown>) => Promise<void>
+        playRealtimeClose: (id: string) => Promise<void>
+        onPlayRealtimeEvent: (callback: (event: QuizversePlayRealtimeEvent) => void) => () => void
+        updateCheck: () => Promise<IxUpdateStatus>
+        updateApply: () => Promise<{ opened: boolean; detail: string }>
+        onTutorEvent: (callback: (status: DeepTutorRendererStatus) => void) => () => void
+      }
     }
   }
+}
+
+export interface QuizversePlayRealtimeEvent {
+  data?: unknown
+  id: string
+  type: 'disconnect' | 'error' | 'match-data' | 'match-presence' | 'matchmaker-matched'
+}
+
+export interface QuizverseRendererSettings {
+  tutorMode: 'local' | 'remote'
+  remoteUrl: string
+  localCommand: string
+  localDirectory: string
+  /** 0 = allocate a free port at spawn time (the default). */
+  apiPort: number
+  /** 0 = allocate a free port at spawn time (the default). */
+  webPort: number
+  // The raw API key never crosses back into the renderer.
+  apiKeySet: boolean
+  litellmUrl: string
+  // The raw LiteLLM key never crosses back into the renderer.
+  litellmKeySet: boolean
+}
+
+export interface QuizverseProvisionEvent {
+  done?: boolean
+  error?: string
+  line?: string
+}
+
+export interface QuizverseTutorRequest {
+  body?: string
+  form?: { data?: ArrayBuffer; filename?: string; name: string; type?: string; value?: string }[]
+  headers?: Record<string, string>
+  method?: string
+  path: string
+}
+
+export interface QuizverseTutorWsEvent {
+  data?: unknown
+  id: string
+  type: 'close' | 'error' | 'message' | 'open'
+}
+
+export interface QuizverseSettingsInput {
+  tutorMode?: 'local' | 'remote'
+  remoteUrl?: string
+  localCommand?: string
+  localDirectory?: string
+  apiPort?: number
+  webPort?: number
+  apiKey?: string
+  litellmUrl?: string
+  litellmKey?: string
+}
+
+export interface DeepTutorRendererStatus {
+  state: 'error' | 'remote' | 'running' | 'starting' | 'stopped'
+  mode: 'local' | 'remote'
+  webUrl: string
+  apiUrl: string
+  pid: null | number
+  detail: string
+  logTail: string[]
+  reachable?: boolean
 }
 
 export interface IxAgencyRendererSettings {

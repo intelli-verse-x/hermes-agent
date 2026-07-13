@@ -1,0 +1,1 @@
+export { QuizverseView } from './quizverse'

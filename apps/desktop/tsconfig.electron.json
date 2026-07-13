@@ -19,6 +19,11 @@
     "outDir": "build/electron-types"
   },
   "include": ["electron"],
-  "files": ["src/app/ix-agency/data/mcp-tiles.json", "src/app/ix-agency/data/skills.json"],
+  "files": [
+    "src/app/ix-agency/data/mcp-tiles.json",
+    "src/app/ix-agency/data/skills.json",
+    "brands/ix-agency.json",
+    "brands/quizverse.json"
+  ],
   "exclude": ["src"]
 }

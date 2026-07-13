@@ -5,6 +5,7 @@ import { writeAgentTerminalChunk } from '@/app/right-sidebar/terminal/agent-term
 import { readActiveTerminal } from '@/app/right-sidebar/terminal/buffer'
 import { closeAgentTerminalByProc } from '@/app/right-sidebar/terminal/terminals'
 import { translateNow } from '@/i18n'
+import { BRAND_NAME } from '@/lib/brand'
 import { type GatewayEventPayload, textPart } from '@/lib/chat-messages'
 import { coerceGatewayText, coerceThinkingText, normalizePersonalityValue } from '@/lib/chat-runtime'
 import { playCompletionSound } from '@/lib/completion-sound'
@@ -58,7 +59,7 @@ interface GatewayEventDeps {
   failAssistantMessage: (sessionId: string, errorMessage: string) => void
   flushQueuedDeltas: (sessionId?: string) => void
   queryClient: QueryClient
-  refreshHermesConfig: () => Promise<void>
+  refreshAgentConfig: () => Promise<void>
   sessionInterrupted: (sessionId: string) => boolean
   updateSessionState: (
     sessionId: string,
@@ -86,7 +87,7 @@ export function useGatewayEventHandler(deps: GatewayEventDeps) {
     failAssistantMessage,
     flushQueuedDeltas,
     queryClient,
-    refreshHermesConfig,
+    refreshAgentConfig,
     sessionInterrupted,
     updateSessionState,
     upsertToolCall
@@ -221,7 +222,7 @@ export function useGatewayEventHandler(deps: GatewayEventDeps) {
           reportInstallMethodWarning(payload?.install_warning)
         }
 
-        void refreshHermesConfig()
+        void refreshAgentConfig()
 
         if (modelChanged || providerChanged) {
           void queryClient.invalidateQueries({
@@ -589,7 +590,7 @@ export function useGatewayEventHandler(deps: GatewayEventDeps) {
           }))
         }
       } else if (event.type === 'error') {
-        const errorMessage = payload?.message || 'IX Agency reported an error'
+        const errorMessage = payload?.message || `${BRAND_NAME} reported an error`
         const looksLikeProviderSetup = isProviderSetupErrorMessage(errorMessage)
 
         // A turn that errors out has also ended — drop any open blocking prompt
@@ -608,12 +609,16 @@ export function useGatewayEventHandler(deps: GatewayEventDeps) {
           flashPetActivity({ error: true })
         }
 
-        dispatchNativeNotification({
-          body: errorMessage,
-          kind: 'turnError',
-          sessionId,
-          title: translateNow('notifications.native.turnErrorTitle')
-        })
+        // Provider-setup errors open the branded onboarding flow instead — don't
+        // mirror the backend's raw (unbranded) copy into the OS notification center.
+        if (!looksLikeProviderSetup) {
+          dispatchNativeNotification({
+            body: errorMessage,
+            kind: 'turnError',
+            sessionId,
+            title: translateNow('notifications.native.turnErrorTitle')
+          })
+        }
 
         if (looksLikeProviderSetup) {
           requestDesktopOnboarding(errorMessage)
@@ -625,7 +630,7 @@ export function useGatewayEventHandler(deps: GatewayEventDeps) {
           notify({
             id: `gateway-error:${errorMessage}`,
             kind: 'error',
-            title: 'IX Agency error',
+            title: `${BRAND_NAME} error`,
             message: errorMessage
           })
         }
@@ -651,7 +656,7 @@ export function useGatewayEventHandler(deps: GatewayEventDeps) {
       lastCwdInfoSessionRef,
       nativeSubagentSessionsRef,
       queryClient,
-      refreshHermesConfig,
+      refreshAgentConfig,
       sessionInterrupted,
       updateSessionState,
       upsertToolCall

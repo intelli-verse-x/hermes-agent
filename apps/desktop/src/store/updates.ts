@@ -154,7 +154,7 @@ export function reportBackendContract(contract: number | undefined): void {
 
   notify({
     action: {
-      label: translateNow('notifications.updateHermes'),
+      label: translateNow('notifications.updateBrand'),
       onClick: () => {
         snoozeSkewToast()
         void applyBackendUpdate()

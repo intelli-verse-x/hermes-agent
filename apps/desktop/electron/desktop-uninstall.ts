@@ -28,6 +28,8 @@
 
 import path from 'node:path'
 
+import { BRAND } from './brand'
+
 const UNINSTALL_MODES = ['gui', 'lite', 'full']
 
 /**
@@ -93,10 +95,14 @@ function resolveRemovableAppPath(execPath, platform, env: any = {}) {
 
   if (platform === 'win32') {
     // NSIS per-user installs the exe directly in the install dir
-    // (Programs\IX Agency; pre-0.17.1 builds used Programs\Hermes).
+    // (Programs\<productName> for the active brand; pre-0.17.1 builds used
+    // Programs\Hermes). Recognizing only the active brand's dir keeps a
+    // QuizVerse uninstall from ever touching an IX Agency install dir.
     const dir = p.dirname(exe)
 
-    if (/[\\/]IX Agency$/i.test(dir) || /[\\/]Hermes$/i.test(dir) || /[\\/]hermes-desktop$/i.test(dir)) {
+    const installDirNames = [BRAND.productName, 'Hermes', 'hermes-desktop']
+
+    if (installDirNames.some(name => new RegExp(`[\\\\/]${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i').test(dir))) {
       return dir
     }
 

@@ -3,6 +3,9 @@
  * Add new themes here — no code changes needed elsewhere.
  */
 
+import { IS_QUIZVERSE_BRAND } from '@/lib/brand'
+import { quizverseTheme } from '@/themes/quizverse-theme'
+
 import type { DesktopTheme, DesktopThemeTypography } from './types'
 
 // Color-emoji fonts to append to every stack as a last resort. None of the UI
@@ -283,10 +286,12 @@ export const BUILTIN_THEMES: Record<string, DesktopTheme> = {
   ember: emberTheme,
   mono: monoTheme,
   cyberpunk: cyberpunkTheme,
-  slate: slateTheme
+  slate: slateTheme,
+  ...(quizverseTheme ? { quizverse: quizverseTheme } : {})
 }
 
 export const BUILTIN_THEME_LIST = Object.values(BUILTIN_THEMES)
 
-/** Skin used when nothing is persisted or the persisted name is retired. */
-export const DEFAULT_SKIN_NAME = 'nous'
+/** Skin used when nothing is persisted or the persisted name is retired.
+ *  Brand-resolved: the QuizVerse build defaults to its brand theme. */
+export const DEFAULT_SKIN_NAME = IS_QUIZVERSE_BRAND ? 'quizverse' : 'nous'

@@ -4,6 +4,13 @@ import tailwindcss from '@tailwindcss/vite'
 import path from 'path'
 import fs from 'fs'
 
+// Build flavor (ix-agency | quizverse). Defined as a compile-time constant so
+// the renderer bundle bakes the brand in and dead-code-eliminates the other
+// brand's workspace. See scripts/apply-brand.mjs + src/lib/brand.ts.
+import { loadBrand, resolveBrandId } from './scripts/apply-brand.mjs'
+
+const brandId = resolveBrandId()
+
 // `hgui` symlinks a worktree's node_modules to the main checkout. Vite realpaths
 // those before enforcing server.fs.allow, so codicon/font assets resolve outside
 // the worktree root and 404. Whitelist the real node_modules locations.
@@ -27,7 +34,51 @@ const fsAllow = [
 
 export default defineConfig({
   base: './',
-  plugins: [react(), tailwindcss()],
+  define: {
+    'import.meta.env.VITE_DESKTOP_BRAND': JSON.stringify(resolveBrandId())
+  },
+  plugins: [
+    react(),
+    tailwindcss(),
+    {
+      name: 'brand-index-html',
+      transformIndexHtml(html: string) {
+        const touchIcon = loadBrand().touchIcon || loadBrand().markSvg
+        const withTitle = html.replace(/<title>[^<]*<\/title>/, `<title>${loadBrand().productName}</title>`)
+        const withFavicon = withTitle
+          .replace(/href="(\.\/)?\/apple-touch-icon\.png"/g, `href="/${touchIcon}"`)
+          .replace(/href="(\.\/)?\/quizverse\/mark-512\.png"/g, `href="/${touchIcon}"`)
+          .replace(/href="\.\/apple-touch-icon\.png"/g, `href="./${touchIcon}"`)
+
+        if (brandId === 'quizverse') {
+          return withFavicon.replace(
+            '</head>',
+            '    <link rel="preconnect" href="https://fonts.googleapis.com" />\n' +
+              '    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />\n' +
+              '    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700;900&display=swap" rel="stylesheet" />\n' +
+              '  </head>'
+          )
+        }
+
+        return withFavicon
+      }
+    },
+    {
+      name: 'brand-intro-copy',
+      transform(code, id) {
+        if (!id.includes('intro-copy.jsonl')) {
+          return null
+        }
+
+        const productName = loadBrand().productName
+
+        return {
+          code: code.replace(/Hermes Agent/g, productName).replace(/\bHermes\b/g, productName),
+          map: null
+        }
+      }
+    }
+  ],
   css: {
     // Pin an explicit (empty) PostCSS config. Tailwind is handled entirely by
     // `@tailwindcss/vite`, so the renderer needs no PostCSS plugins — and
@@ -56,14 +107,35 @@ export default defineConfig({
     }
   },
   resolve: {
-    alias: {
-      '@': path.resolve(__dirname, './src'),
-      '@hermes/shared': path.resolve(__dirname, '../shared/src'),
-      react: path.resolve(__dirname, '../../node_modules/react'),
-      'react-dom': path.resolve(__dirname, '../../node_modules/react-dom'),
-      'react/jsx-dev-runtime': path.resolve(__dirname, '../../node_modules/react/jsx-dev-runtime.js'),
-      'react/jsx-runtime': path.resolve(__dirname, '../../node_modules/react/jsx-runtime.js')
-    },
+    alias: [
+      {
+        find: '@/app/quizverse-brand',
+        replacement: path.resolve(
+          __dirname,
+          brandId === 'quizverse' ? './src/app/quizverse/index.tsx' : './src/app/quizverse.stub.tsx'
+        )
+      },
+      ...(brandId === 'quizverse'
+        ? []
+        : [
+            {
+              find: '@/themes/quizverse-theme',
+              replacement: path.resolve(__dirname, './src/themes/quizverse-theme.stub.ts')
+            }
+          ]),
+      { find: '@', replacement: path.resolve(__dirname, './src') },
+      { find: '@hermes/shared', replacement: path.resolve(__dirname, '../shared/src') },
+      { find: 'react', replacement: path.resolve(__dirname, '../../node_modules/react') },
+      { find: 'react-dom', replacement: path.resolve(__dirname, '../../node_modules/react-dom') },
+      {
+        find: 'react/jsx-dev-runtime',
+        replacement: path.resolve(__dirname, '../../node_modules/react/jsx-dev-runtime.js')
+      },
+      {
+        find: 'react/jsx-runtime',
+        replacement: path.resolve(__dirname, '../../node_modules/react/jsx-runtime.js')
+      }
+    ],
     dedupe: ['react', 'react-dom']
   },
   server: {

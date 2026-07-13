@@ -112,6 +112,7 @@ export function classifyToolAccess(toolName, args?: Record<string, unknown>): 'r
       // (find_many_* / get_* are reads; execute_tool itself says nothing).
       if (inner.toLowerCase() === 'execute_tool') {
         const innerArgs = args?.arguments
+
         const innerToolName =
           innerArgs && typeof innerArgs === 'object' ? (innerArgs as Record<string, unknown>).toolName : undefined
 
@@ -351,6 +352,7 @@ function compactToolCatalog(text: string): string | null {
       const desc = String(tool?.description ?? '')
         .replace(/\s+/g, ' ')
         .trim()
+
       const line = `- ${tool?.name}${desc ? ` — ${desc.slice(0, 90)}` : ''}`
 
       if (out.length + line.length > 24_000) {

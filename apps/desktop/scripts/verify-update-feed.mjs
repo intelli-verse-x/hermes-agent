@@ -11,11 +11,15 @@
 //
 // Usage:  node scripts/verify-update-feed.mjs
 //         EXPECT_VERSION=0.17.1 node scripts/verify-update-feed.mjs
+//         DESKTOP_BRAND=quizverse node scripts/verify-update-feed.mjs
 //
 // Exits non-zero on any failure — run by .github/workflows on every merge
-// and at the end of every desktop release.
+// and at the end of every desktop release. The feed defaults to the active
+// DESKTOP_BRAND's manifest feed; UPDATE_FEED_URL overrides it.
 
-const FEED = (process.env.UPDATE_FEED_URL || 'https://intelliverse-x-desktop.s3.amazonaws.com/ix-agency').replace(/\/+$/, '')
+import { loadBrand } from './apply-brand.mjs'
+
+const FEED = (process.env.UPDATE_FEED_URL || loadBrand().updateFeedUrl).replace(/\/+$/, '')
 const EXPECT_VERSION = (process.env.EXPECT_VERSION || '').trim()
 
 const CHANNELS = [

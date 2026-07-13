@@ -4,6 +4,7 @@ import type {
   HermesReadFileTextResult,
   HermesSelectPathsOptions
 } from '@/global'
+import { BRAND_NAME } from '@/lib/brand'
 import { $connection } from '@/store/session'
 
 export interface DesktopFsRemotePicker {
@@ -46,7 +47,7 @@ function bridge() {
   const desktop = window.hermesDesktop
 
   if (!desktop) {
-    throw new Error('IX Agency bridge is unavailable')
+    throw new Error(`${BRAND_NAME} bridge is unavailable`)
   }
 
   return desktop

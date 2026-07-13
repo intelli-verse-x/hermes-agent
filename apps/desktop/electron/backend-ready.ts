@@ -1,5 +1,7 @@
 import fs from 'node:fs'
 
+import { BRAND } from './brand'
+
 // `hermes serve` announces HERMES_BACKEND_READY; the legacy `hermes dashboard`
 // backend announces HERMES_DASHBOARD_READY. Accept either so the desktop spawn
 // works against both the headless backend and old/dashboard runtimes.
@@ -60,6 +62,7 @@ function waitForDashboardPort(child, timeoutMs = resolvePortAnnounceTimeoutMs())
       if (done) {
         return
       }
+
       done = true
       clearTimeout(timer)
       child.stdout.off('data', onData)
@@ -87,7 +90,7 @@ function waitForDashboardPort(child, timeoutMs = resolvePortAnnounceTimeoutMs())
 
     function onExit(code, signal) {
       cleanup()
-      reject(new Error(`Hermes backend: exited before port announcement (${signal || code})`))
+      reject(new Error(`${BRAND.productName} backend: exited before port announcement (${signal || code})`))
     }
 
     function onError(err) {
@@ -97,7 +100,7 @@ function waitForDashboardPort(child, timeoutMs = resolvePortAnnounceTimeoutMs())
 
     const timer = setTimeout(() => {
       cleanup()
-      reject(new Error(`Timed out waiting for Hermes backend port announcement (${timeoutMs}ms)`))
+      reject(new Error(`Timed out waiting for the ${BRAND.productName} backend port announcement (${timeoutMs}ms)`))
     }, timeoutMs)
 
     child.stdout.on('data', onData)
@@ -130,12 +133,14 @@ function waitForDashboardReadyFile(readyFile, child, timeoutMs = resolvePortAnno
       if (done) {
         return
       }
+
       done = true
       clearTimeout(timer)
 
       if (interval) {
         clearInterval(interval)
       }
+
       child.off('exit', onExit)
       child.off('error', onError)
     }
@@ -151,7 +156,7 @@ function waitForDashboardReadyFile(readyFile, child, timeoutMs = resolvePortAnno
 
     function onExit(code, signal) {
       cleanup()
-      reject(new Error(`Hermes backend: exited before port announcement (${signal || code})`))
+      reject(new Error(`${BRAND.productName} backend: exited before port announcement (${signal || code})`))
     }
 
     function onError(err) {
@@ -161,7 +166,7 @@ function waitForDashboardReadyFile(readyFile, child, timeoutMs = resolvePortAnno
 
     const timer = setTimeout(() => {
       cleanup()
-      reject(new Error(`Timed out waiting for Hermes backend port announcement (${timeoutMs}ms)`))
+      reject(new Error(`Timed out waiting for the ${BRAND.productName} backend port announcement (${timeoutMs}ms)`))
     }, timeoutMs)
 
     child.on('exit', onExit)
@@ -171,6 +176,7 @@ function waitForDashboardReadyFile(readyFile, child, timeoutMs = resolvePortAnno
     if (typeof interval.unref === 'function') {
       interval.unref()
     }
+
     check()
   })
 }

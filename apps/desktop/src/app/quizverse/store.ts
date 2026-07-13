@@ -1,0 +1,230 @@
+import { atom } from 'nanostores'
+
+import type {
+  DeepTutorRendererStatus,
+  IxUpdateStatus,
+  QuizverseRendererSettings,
+  QuizverseSettingsInput
+} from '@/global'
+import { notifyError } from '@/store/notifications'
+
+import { TUTORX_NAME } from './tutorx'
+
+// QuizVerse workspace state — DeepTutor supervisor status, locally-persisted
+// settings and the update lamp. Everything
+// flows through the brand's preload bridge (window.hermesDesktop.quizverse);
+// the main-process handlers behind it only exist in QuizVerse builds.
+//
+// This view is brand-specific (not upstream), so its strings stay plain
+// English — same posture as the ix-agency workspace.
+
+const bridge = () => window.hermesDesktop?.quizverse
+
+export const $tutorStatus = atom<DeepTutorRendererStatus | null>(null)
+export const $qvSettings = atom<QuizverseRendererSettings | null>(null)
+export const $qvUpdate = atom<IxUpdateStatus | null>(null)
+
+export interface QvProvisionState {
+  running: boolean
+  lines: string[]
+  error: null | string
+}
+
+/** Managed-install progress (Setup tab's "Install DeepTutor" flow). */
+export const $qvProvision = atom<QvProvisionState>({ error: null, lines: [], running: false })
+
+let tutorEventsInstalled = false
+let autoStartAttempted = false
+
+/** Live supervisor pushes → the status atom. Installed once per window. */
+export function installTutorEvents() {
+  if (tutorEventsInstalled) {
+    return
+  }
+
+  const qv = bridge()
+  const unsubscribe = qv?.onTutorEvent(status => $tutorStatus.set(status))
+
+  qv?.onProvisionEvent(payload => {
+    const current = $qvProvision.get()
+
+    $qvProvision.set({
+      error: payload.error ?? (payload.done ? null : current.error),
+      lines: payload.line ? [...current.lines.slice(-199), payload.line] : current.lines,
+      running: payload.done ? false : current.running
+    })
+  })
+
+  tutorEventsInstalled = Boolean(unsubscribe)
+}
+
+/** Kick off (or join) the managed DeepTutor install, then reload settings. */
+export async function provisionTutor() {
+  const qv = bridge()
+
+  if (!qv || $qvProvision.get().running) {
+    return
+  }
+
+  $qvProvision.set({ error: null, lines: [], running: true })
+
+  try {
+    const result = await qv.provisionTutor()
+
+    if (result.ok) {
+      await loadQuizverseSettings()
+      await refreshTutorStatus()
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error)
+
+    $qvProvision.set({ ...$qvProvision.get(), error: message, running: false })
+    notifyError(error, `${TUTORX_NAME} install failed`)
+  }
+}
+
+export async function refreshTutorStatus() {
+  const qv = bridge()
+
+  if (!qv) {
+    return
+  }
+
+  try {
+    $tutorStatus.set(await qv.tutorStatus())
+  } catch {
+    // Non-QuizVerse build or main not ready — the lamp stays grey.
+  }
+}
+
+export async function startTutor() {
+  const qv = bridge()
+
+  if (!qv) {
+    return
+  }
+
+  try {
+    $tutorStatus.set(await qv.tutorStart())
+  } catch (error) {
+    notifyError(error, `Could not start ${TUTORX_NAME}`)
+  }
+}
+
+export async function stopTutor() {
+  const qv = bridge()
+
+  if (!qv) {
+    return
+  }
+
+  try {
+    $tutorStatus.set(await qv.tutorStop())
+  } catch (error) {
+    notifyError(error, `Could not stop ${TUTORX_NAME}`)
+  }
+}
+
+export async function restartTutor() {
+  const qv = bridge()
+
+  if (!qv) {
+    return
+  }
+
+  try {
+    $tutorStatus.set(await qv.tutorRestart())
+  } catch (error) {
+    notifyError(error, `Could not restart ${TUTORX_NAME}`)
+  }
+}
+
+/** Boot the local DeepTutor once per app session when the workspace opens.
+ *  Remote mode and already-running servers are no-ops inside the supervisor. */
+export async function autoStartTutorOnce() {
+  if (autoStartAttempted) {
+    return
+  }
+
+  autoStartAttempted = true
+  const qv = bridge()
+
+  if (!qv) {
+    return
+  }
+
+  try {
+    const settings = await qv.getSettings()
+
+    $qvSettings.set(settings)
+
+    if (settings.tutorMode === 'local') {
+      $tutorStatus.set(await qv.tutorStart())
+    } else {
+      $tutorStatus.set(await qv.tutorStatus())
+    }
+  } catch (error) {
+    notifyError(error, `Could not start ${TUTORX_NAME}`)
+  }
+}
+
+export async function loadQuizverseSettings() {
+  const qv = bridge()
+
+  if (!qv) {
+    return
+  }
+
+  try {
+    $qvSettings.set(await qv.getSettings())
+  } catch {
+    // Settings pane shows its own empty state.
+  }
+}
+
+export async function saveQuizverseSettings(input: QuizverseSettingsInput): Promise<boolean> {
+  const qv = bridge()
+
+  if (!qv) {
+    return false
+  }
+
+  try {
+    $qvSettings.set(await qv.saveSettings(input))
+    await refreshTutorStatus()
+
+    return true
+  } catch (error) {
+    notifyError(error, 'Could not save QuizVerse settings')
+
+    return false
+  }
+}
+
+export async function refreshQvUpdate() {
+  const qv = bridge()
+
+  if (!qv) {
+    return
+  }
+
+  try {
+    $qvUpdate.set(await qv.updateCheck())
+  } catch {
+    // Update lamp stays hidden.
+  }
+}
+
+export async function applyQvUpdate() {
+  const qv = bridge()
+
+  if (!qv) {
+    return
+  }
+
+  try {
+    await qv.updateApply()
+  } catch (error) {
+    notifyError(error, 'Update failed')
+  }
+}

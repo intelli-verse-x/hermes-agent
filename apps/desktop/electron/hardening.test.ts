@@ -54,6 +54,22 @@ test('encryptDesktopSecret stores safeStorage base64 payload', () => {
   })
 })
 
+test('encryptDesktopSecret rejects Linux basic_text storage', () => {
+  assert.throws(
+    () =>
+      encryptDesktopSecret(
+        'token',
+        {
+          encryptString: value => Buffer.from(value),
+          getSelectedStorageBackend: () => 'basic_text',
+          isEncryptionAvailable: () => true
+        },
+        'linux'
+      ),
+    /insecure basic_text backend/
+  )
+})
+
 test('sensitiveFileBlockReason blocks obvious secret file patterns', () => {
   assert.match(String(sensitiveFileBlockReason('/tmp/.env')), /\.env/)
   assert.equal(sensitiveFileBlockReason('/tmp/.env.example'), null)

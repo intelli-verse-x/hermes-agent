@@ -27,6 +27,7 @@ import {
   waitForDashboardPortAnnouncement,
   waitForDashboardReadyFile
 } from './backend-ready'
+import { BRAND } from './brand'
 
 type FakeChildProcess = EventEmitter & {
   stdout: EventEmitter
@@ -124,7 +125,7 @@ test('rejects with the timeout message after the deadline', async () => {
   const child = makeFakeChild()
   await assert.rejects(
     waitForDashboardPort(child, 20),
-    /Timed out waiting for Hermes backend port announcement \(20ms\)/
+    new RegExp(`Timed out waiting for the ${BRAND.productName} backend port announcement \\(20ms\\)`)
   )
 })
 

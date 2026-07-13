@@ -10,6 +10,7 @@ import path from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { promisify } from 'node:util'
 
+import { Client as NakamaClient, Session as NakamaSession, type Socket as NakamaSocket } from '@heroiclabs/nakama-js'
 import {
   app,
   BrowserWindow,
@@ -41,6 +42,7 @@ import { canImportHermesCli, verifyHermesCli } from './backend-probes'
 import { waitForDashboardPortAnnouncement } from './backend-ready'
 import { detectRemoteDisplay, isWindowsBinaryPathInWsl, isWslEnvironment } from './bootstrap-platform'
 import { runBootstrap } from './bootstrap-runner'
+import { BRAND, IS_IX_AGENCY_BRAND, IS_QUIZVERSE_BRAND } from './brand'
 import {
   authModeFromStatus,
   buildGatewayWsUrl,
@@ -57,6 +59,7 @@ import {
   tokenPreview
 } from './connection-config'
 import { adoptServedDashboardToken } from './dashboard-token'
+import { provisionDesktopBrand } from './desktop-brand-provision'
 import {
   buildPosixCleanupScript,
   buildWindowsCleanupScript,
@@ -169,6 +172,16 @@ import {
 import { createLinkTitleWindow, guardLinkTitleSession, readLinkTitleWindowTitle } from './link-title-window'
 import { serializeJsonBody, setJsonRequestHeaders } from './oauth-net-request'
 import {
+  DeepTutorSupervisor,
+  injectTutorXLitellmConfig,
+  managedLocalCommand,
+  provisionDeepTutor,
+  quizverseSettingsForRenderer,
+  readQuizverseSettings,
+  sanitizeQuizverseSettingsInput,
+  writeQuizverseSettings
+} from './qv-deeptutor'
+import {
   buildSessionWindowUrl,
   chatWindowWebPreferences,
   createSessionWindowRegistry,
@@ -207,6 +220,18 @@ if (USER_DATA_OVERRIDE) {
   const resolvedUserData = path.resolve(USER_DATA_OVERRIDE)
   fs.mkdirSync(resolvedUserData, { recursive: true })
   app.setPath('userData', resolvedUserData)
+} else if (!app.isPackaged) {
+  // Unpackaged runs derive userData from the repo package.json productName
+  // ("IX Agency"), so an `electron .` against a QuizVerse dist would silently
+  // read and mutate the IX Agency profile. Rebase userData onto the active
+  // brand's product name before anything reads it. Packaged builds already
+  // separate via the brand overlay's extraMetadata.productName, so this only
+  // fires for dev/QA runs with a mismatched derived name.
+  const derivedUserData = app.getPath('userData')
+
+  if (path.basename(derivedUserData) !== BRAND.productName) {
+    app.setPath('userData', path.join(path.dirname(derivedUserData), BRAND.productName))
+  }
 }
 
 const DEV_SERVER = process.env.HERMES_DESKTOP_DEV_SERVER
@@ -408,6 +433,22 @@ function resolveHermesHome() {
 
 const HERMES_HOME = resolveHermesHome()
 
+function ensureDesktopBrandProvision() {
+  try {
+    const result = provisionDesktopBrand({
+      hermesHome: HERMES_HOME,
+      brandId: BRAND.id,
+      productName: BRAND.productName
+    })
+
+    rememberLog(
+      `[brand] provisioned skin at ${result.skinPath}${result.configTouched ? ' (config updated)' : ''}`
+    )
+  } catch (error) {
+    rememberLog(`[brand] provision failed: ${error instanceof Error ? error.message : String(error)}`)
+  }
+}
+
 function hermesManagedNodePathEntries() {
   // NOTE: keep this ordering in sync with iter_hermes_node_dirs() in
   // hermes_constants.py — this Node main process cannot import the Python
@@ -497,11 +538,11 @@ const BOOT_FAKE_STEP_MS = (() => {
   return Math.max(120, raw)
 })()
 
-// IX Agency brand — as of 0.17.1 it is also the bundle/executable identity
-// (productName "IX Agency", appId ai.intelli-verse-x.ix-agency, linux binary
-// ix-agency), so electron-updater and the relaunch/uninstall paths key off
-// the same name users see.
-const APP_NAME = 'IX Agency'
+// Desktop brand — as of 0.17.1 the brand is also the bundle/executable
+// identity (productName, appId, linux binary), so electron-updater and the
+// relaunch/uninstall paths key off the same name users see. The active brand
+// (IX Agency or QuizVerse) is baked in at bundle time — see electron/brand.ts.
+const APP_NAME = BRAND.productName
 const TITLEBAR_HEIGHT = 34
 const MACOS_TRAFFIC_LIGHTS_HEIGHT = 14
 
@@ -515,9 +556,11 @@ const WINDOW_BUTTON_POSITION = {
 // It's only the pre-layout fallback — the renderer measures the exact overlay
 // width live via the Window Controls Overlay API.
 const APP_ICON_PATHS = [
+  path.join(APP_ROOT, 'public', BRAND.touchIcon || BRAND.markSvg),
+  path.join(APP_ROOT, 'dist', BRAND.touchIcon || BRAND.markSvg),
+  path.join(unpackedPathFor(APP_ROOT), 'dist', BRAND.touchIcon || BRAND.markSvg),
   path.join(APP_ROOT, 'public', 'apple-touch-icon.png'),
-  path.join(APP_ROOT, 'dist', 'apple-touch-icon.png'),
-  path.join(unpackedPathFor(APP_ROOT), 'dist', 'apple-touch-icon.png')
+  path.join(APP_ROOT, 'dist', 'apple-touch-icon.png')
 ]
 
 let rendererTitleBarTheme = null
@@ -794,12 +837,12 @@ app.setName(APP_NAME)
 // Windows toast notifications silently no-op unless an AppUserModelID is set:
 // `new Notification().show()` returns without error and nothing appears. The
 // AUMID must match the installed Start Menu shortcut's AUMID, which
-// electron-builder derives from the build `appId` (ai.intelli-verse-x.ix-agency)
-// — keep this string in sync with package.json `build.appId`. macOS/Linux don't
-// need this, so gate it on Windows. (Fixes: desktop approval/turn notifications
-// never firing on Windows.)
+// electron-builder derives from the build `appId` — sourced from the same
+// brand manifest here so the two can't drift. macOS/Linux don't need this, so
+// gate it on Windows. (Fixes: desktop approval/turn notifications never
+// firing on Windows.)
 if (IS_WINDOWS) {
-  app.setAppUserModelId('ai.intelli-verse-x.ix-agency')
+  app.setAppUserModelId(BRAND.appId)
 }
 
 // Seed the native About panel with the live Hermes version. This is refreshed
@@ -809,7 +852,7 @@ if (IS_WINDOWS) {
 app.setAboutPanelOptions({
   applicationName: APP_NAME,
   applicationVersion: resolveHermesVersion(),
-  copyright: 'Copyright © 2026 Nous Research'
+  copyright: BRAND.copyright
 })
 
 // Custom scheme for streaming local media (video/audio) into the renderer.
@@ -929,7 +972,7 @@ let nativeThemeListenerInstalled = false
 let bootProgressState = {
   error: null,
   fakeMode: BOOT_FAKE_MODE,
-  message: 'Waiting to start IX Agency backend',
+  message: `Waiting to start ${APP_NAME} backend`,
   phase: 'idle',
   progress: 0,
   running: false,
@@ -1456,7 +1499,7 @@ async function waitForUpdateToFinish() {
   while (marker && Date.now() < deadline) {
     await advanceBootProgress(
       'backend.update-wait',
-      'An update is finishing — IX Agency will start automatically when it completes…',
+      `An update is finishing — ${APP_NAME} will start automatically when it completes…`,
       12
     )
     await new Promise(r => setTimeout(r, UPDATE_WAIT_POLL_MS))
@@ -1575,7 +1618,7 @@ function unwrapWindowsVenvHermesCommand(command, backendArgs) {
   }
 
   return {
-    label: `existing Hermes Python at ${python}`,
+    label: `existing runtime Python at ${python}`,
     command: python,
     args: ['-m', 'hermes_cli.main', ...backendArgs],
     bootstrap: false,
@@ -2632,7 +2675,7 @@ async function applyUpdates(opts = {}) {
     emitUpdateProgress({
       stage: 'restart',
       message:
-        'Updating IX Agency — this window will close and the updater will open. Don’t reopen IX Agency yourself; it restarts automatically when the update finishes.',
+        `Updating ${APP_NAME} — this window will close and the updater will open. Don’t reopen ${APP_NAME} yourself; it restarts automatically when the update finishes.`,
       percent: 100
     })
     repairMacUpdaterHelper(updater)
@@ -2662,8 +2705,8 @@ async function applyUpdates(opts = {}) {
       // user close the holder and retry. Restart our own backend so the app
       // keeps working after the failed attempt.
       const message =
-        'Update aborted: another process is holding the IX Agency install open ' +
-        '(a second IX Agency window or a terminal running hermes?). Close it and retry.'
+        `Update aborted: another process is holding the ${APP_NAME} install open ` +
+        `(a second ${APP_NAME} window or a terminal running hermes?). Close it and retry.`
 
       emitUpdateProgress({ stage: 'error', message, percent: null })
       startHermes().catch(() => {})
@@ -2920,7 +2963,7 @@ async function applyUpdatesPosixInApp(opts: any) {
     // best effort
   }
 
-  emitUpdateProgress({ stage: 'update', message: 'Updating IX Agency (git + dependencies)…', percent: 10 })
+  emitUpdateProgress({ stage: 'update', message: `Updating ${APP_NAME} (git + dependencies)…`, percent: 10 })
 
   const updated = (await runStreamedUpdate(hermes, ['update', '--yes', ...branchArgs], {
     cwd: updateRoot,
@@ -2950,7 +2993,7 @@ async function applyUpdatesPosixInApp(opts: any) {
   if (rebuilt.code !== 0) {
     emitUpdateProgress({
       stage: 'error',
-      message: 'Backend updated, but the desktop rebuild failed. Restart IX Agency to retry.',
+      message: `Backend updated, but the desktop rebuild failed. Restart ${APP_NAME} to retry.`,
       error: rebuilt.error || 'rebuild-failed'
     })
 
@@ -2997,7 +3040,7 @@ async function applyUpdatesPosixInApp(opts: any) {
     const outcome = decideRelaunchOutcome({ underUnpacked, sandboxOk })
 
     if (outcome === 'relaunch') {
-      emitUpdateProgress({ stage: 'restart', message: 'Restarting IX Agency…', percent: 100 })
+      emitUpdateProgress({ stage: 'restart', message: `Restarting ${APP_NAME}…`, percent: 100 })
       // Preserve launch context across the re-exec: replay the original args
       // (filtered of Electron internals) and the env/cwd that define which
       // backend/profile/root this instance talks to. Without this the
@@ -3035,7 +3078,7 @@ async function applyUpdatesPosixInApp(opts: any) {
           backendUpdated: true,
           guiUpdated: false,
           manualRestart: true,
-          message: 'Backend updated. Quit and reopen IX Agency to load the new version.'
+          message: `Backend updated. Quit and reopen ${APP_NAME} to load the new version.`
         }
       }
     }
@@ -3045,7 +3088,7 @@ async function applyUpdatesPosixInApp(opts: any) {
         stage: 'guiSkew',
         message:
           'Backend updated, but the desktop app package was not changed. ' +
-          'Update or reinstall the IX Agency desktop app to match.',
+          `Update or reinstall the ${APP_NAME} desktop app to match.`,
         percent: 100
       })
       rememberLog(
@@ -3071,13 +3114,13 @@ async function applyUpdatesPosixInApp(opts: any) {
       sandboxBlocked: true,
       message:
         'Backend updated. The rebuilt app can’t relaunch automatically ' +
-        '(sandbox helper needs root). Quit and reopen IX Agency to finish.'
+        `(sandbox helper needs root). Quit and reopen ${APP_NAME} to finish.`
     }
   }
 
   const rebuiltApp = [
-    path.join(updateRoot, 'apps', 'desktop', 'release', 'mac-arm64', 'IX Agency.app'),
-    path.join(updateRoot, 'apps', 'desktop', 'release', 'mac', 'IX Agency.app'),
+    path.join(updateRoot, 'apps', 'desktop', 'release', 'mac-arm64', `${APP_NAME}.app`),
+    path.join(updateRoot, 'apps', 'desktop', 'release', 'mac', `${APP_NAME}.app`),
     // Trees built before the 0.17.1 rebrand.
     path.join(updateRoot, 'apps', 'desktop', 'release', 'mac-arm64', 'Hermes.app'),
     path.join(updateRoot, 'apps', 'desktop', 'release', 'mac', 'Hermes.app')
@@ -3090,7 +3133,7 @@ async function applyUpdatesPosixInApp(opts: any) {
   if (!rebuiltApp || !targetApp) {
     emitUpdateProgress({
       stage: 'done',
-      message: 'Backend updated. Restart IX Agency to load the new version.',
+      message: `Backend updated. Restart ${APP_NAME} to load the new version.`,
       percent: 100
     })
 
@@ -3129,7 +3172,7 @@ fi
   } catch (err) {
     emitUpdateProgress({
       stage: 'done',
-      message: 'Backend + app updated. Restart IX Agency to load the new version.',
+      message: `Backend + app updated. Restart ${APP_NAME} to load the new version.`,
       percent: 100
     })
     rememberLog(`[updates] could not write swap script: ${err.message}; rebuilt app at ${rebuiltApp}`)
@@ -3435,7 +3478,7 @@ function createActiveBackend(backendArgs) {
 
   return {
     kind: 'python',
-    label: `Hermes at ${ACTIVE_HERMES_ROOT}`,
+    label: `${APP_NAME} runtime at ${ACTIVE_HERMES_ROOT}`,
     command,
     args: ['-m', 'hermes_cli.main', ...backendArgs],
     env: buildDesktopBackendEnv({
@@ -3455,7 +3498,7 @@ function resolveHermesBackend(backendArgs) {
   const overrideRoot = process.env.HERMES_DESKTOP_HERMES_ROOT && path.resolve(process.env.HERMES_DESKTOP_HERMES_ROOT)
 
   if (overrideRoot && isHermesSourceRoot(overrideRoot)) {
-    const backend = createPythonBackend(overrideRoot, `Hermes source at ${overrideRoot}`, backendArgs)
+    const backend = createPythonBackend(overrideRoot, `backend source at ${overrideRoot}`, backendArgs)
 
     if (backend) {
       return backend
@@ -3467,7 +3510,7 @@ function resolveHermesBackend(backendArgs) {
   //    installed `hermes` on PATH so local Python edits are actually exercised.
   //    (In dev with no checkout, SOURCE_REPO_ROOT won't pass isHermesSourceRoot.)
   if (!IS_PACKAGED && isHermesSourceRoot(SOURCE_REPO_ROOT)) {
-    const backend = createPythonBackend(SOURCE_REPO_ROOT, `Hermes source at ${SOURCE_REPO_ROOT}`, backendArgs)
+    const backend = createPythonBackend(SOURCE_REPO_ROOT, `backend source at ${SOURCE_REPO_ROOT}`, backendArgs)
 
     if (backend) {
       return backend
@@ -3533,7 +3576,7 @@ function resolveHermesBackend(backendArgs) {
       if (verifyHermesCli(hermesCommand, { shell: shellForProbe })) {
         return (
           unwrapWindowsVenvHermesCommand(hermesCommand, backendArgs) || {
-            label: `existing Hermes CLI at ${hermesCommand}`,
+            label: `existing backend CLI at ${hermesCommand}`,
             command: hermesCommand,
             args: backendArgs,
             bootstrap: false,
@@ -3591,7 +3634,7 @@ function resolveHermesBackend(backendArgs) {
   //    is a recoverable state the GUI can drive through.
   return {
     kind: 'bootstrap-needed',
-    label: 'Hermes Agent not installed yet; bootstrap required',
+    label: `${APP_NAME} backend not installed yet; bootstrap required`,
     command: null,
     args: backendArgs,
     bootstrap: true,
@@ -3626,7 +3669,7 @@ async function ensureRuntime(backend) {
 
     if (await handOffWindowsBootstrapRecovery('bootstrap-needed')) {
       const handoffError: Error & { isBootstrapFailure?: boolean; bootstrapHandedOff?: boolean } = new Error(
-        'IX Agency recovery was handed off to the setup helper (Hermes-Setup). The desktop will restart when recovery completes.'
+        `${APP_NAME} recovery was handed off to the setup helper. The desktop will restart when recovery completes.`
       )
 
       handoffError.isBootstrapFailure = true
@@ -3683,7 +3726,7 @@ async function ensureRuntime(backend) {
     bootstrapAbortController = null
 
     if (bootstrapResult.cancelled) {
-      const cancelledError = new Error('IX Agency install was cancelled.') as any
+      const cancelledError = new Error(`${APP_NAME} install was cancelled.`) as any
       cancelledError.isBootstrapFailure = true
       cancelledError.bootstrapCancelled = true
       bootstrapFailure = cancelledError
@@ -3692,7 +3735,7 @@ async function ensureRuntime(backend) {
 
     if (!bootstrapResult.ok) {
       const bootstrapError = new Error(
-        `IX Agency bootstrap failed${bootstrapResult.failedStage ? ` at stage '${bootstrapResult.failedStage}'` : ''}: ` +
+        `${APP_NAME} bootstrap failed${bootstrapResult.failedStage ? ` at stage '${bootstrapResult.failedStage}'` : ''}: ` +
           `${bootstrapResult.error || 'unknown error'}. ` +
           `Check ${path.join(HERMES_HOME, 'logs', 'desktop.log')} for the full transcript.`
       ) as any
@@ -3721,7 +3764,7 @@ async function ensureRuntime(backend) {
   // attests they ran successfully).
   if (!isHermesSourceRoot(ACTIVE_HERMES_ROOT)) {
     throw new Error(
-      `IX Agency install at ${ACTIVE_HERMES_ROOT} is missing or incomplete. ` +
+      `${APP_NAME} install at ${ACTIVE_HERMES_ROOT} is missing or incomplete. ` +
         'Reinstall via the desktop installer or scripts/install.ps1.'
     )
   }
@@ -3734,10 +3777,10 @@ async function ensureRuntime(backend) {
   // here via an external `hermes` on PATH, this check still helps.
   if (IS_WINDOWS && !findGitBash()) {
     throw new Error(
-      'Git for Windows is required for IX Agency on Windows (provides Git Bash, ' +
+      `Git for Windows is required for ${APP_NAME} on Windows (provides Git Bash, ` +
         "which the agent's terminal tool uses). Install it from " +
         'https://git-scm.com/download/win or run `winget install -e --id Git.Git`, ' +
-        'then relaunch IX Agency.'
+        `then relaunch ${APP_NAME}.`
     )
   }
 
@@ -3752,7 +3795,7 @@ async function ensureRuntime(backend) {
     // install.ps1 succeeds. If we hit this, the user (or a deleted venv)
     // broke the invariant; tell them to re-run the install.
     throw new Error(
-      `IX Agency venv missing at ${VENV_ROOT}. Re-run the desktop installer or ` + '`scripts/install.ps1` to rebuild it.'
+      `${APP_NAME} venv missing at ${VENV_ROOT}. Re-run the desktop installer or ` + '`scripts/install.ps1` to rebuild it.'
     )
   }
 
@@ -3760,7 +3803,7 @@ async function ensureRuntime(backend) {
   backend.label = `Hermes at ${ACTIVE_HERMES_ROOT} (venv: ${VENV_ROOT})`
   updateBootProgress({
     phase: 'runtime.ready',
-    message: 'IX Agency runtime is ready',
+    message: `${APP_NAME} runtime is ready`,
     progress: 82,
     running: true,
     error: null
@@ -3777,7 +3820,7 @@ function fetchJson(url, token, options: any = {}) {
     const timeoutMs = resolveTimeoutMs(options.timeoutMs, DEFAULT_FETCH_TIMEOUT_MS)
 
     if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
-      reject(new Error(`Unsupported IX Agency backend URL protocol: ${parsed.protocol}`))
+      reject(new Error(`Unsupported ${APP_NAME} backend URL protocol: ${parsed.protocol}`))
 
       return
     }
@@ -3822,7 +3865,7 @@ function fetchJson(url, token, options: any = {}) {
             reject(
               new Error(
                 `Expected JSON from ${url} but got HTML (status ${res.statusCode}). ` +
-                  'The endpoint is likely missing on the IX Agency backend.'
+                  `The endpoint is likely missing on the ${APP_NAME} backend.`
               )
             )
 
@@ -3840,7 +3883,7 @@ function fetchJson(url, token, options: any = {}) {
 
     req.on('error', reject)
     req.setTimeout(timeoutMs, () => {
-      req.destroy(new Error(`Timed out connecting to IX Agency backend after ${timeoutMs}ms`))
+      req.destroy(new Error(`Timed out connecting to ${APP_NAME} backend after ${timeoutMs}ms`))
     })
 
     if (body) {
@@ -3873,7 +3916,7 @@ function fetchPublicJson(url, options: any = {}) {
     const timeoutMs = resolveTimeoutMs(options.timeoutMs, DEFAULT_FETCH_TIMEOUT_MS)
 
     if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
-      reject(new Error(`Unsupported IX Agency backend URL protocol: ${parsed.protocol}`))
+      reject(new Error(`Unsupported ${APP_NAME} backend URL protocol: ${parsed.protocol}`))
 
       return
     }
@@ -3912,7 +3955,7 @@ function fetchPublicJson(url, options: any = {}) {
             reject(
               new Error(
                 `Expected JSON from ${url} but got HTML (status ${res.statusCode}). ` +
-                  'The endpoint is likely missing on the IX Agency backend.'
+                  `The endpoint is likely missing on the ${APP_NAME} backend.`
               )
             )
 
@@ -3930,7 +3973,7 @@ function fetchPublicJson(url, options: any = {}) {
 
     req.on('error', reject)
     req.setTimeout(timeoutMs, () => {
-      req.destroy(new Error(`Timed out connecting to IX Agency backend after ${timeoutMs}ms`))
+      req.destroy(new Error(`Timed out connecting to ${APP_NAME} backend after ${timeoutMs}ms`))
     })
 
     if (body) {
@@ -4579,7 +4622,7 @@ async function waitForHermes(baseUrl, token) {
     }
   }
 
-  throw new Error(`IX Agency backend did not become ready: ${lastError?.message || 'timeout'}`)
+  throw new Error(`${APP_NAME} backend did not become ready: ${lastError?.message || 'timeout'}`)
 }
 
 function getWindowButtonPosition() {
@@ -5287,7 +5330,7 @@ function openOauthLoginWindow(baseUrl) {
       win = new BrowserWindow({
         width: 520,
         height: 720,
-        title: 'Sign in to IX Agency gateway',
+        title: `Sign in to ${APP_NAME} gateway`,
         autoHideMenuBar: true,
         webPreferences: {
           contextIsolation: true,
@@ -5351,7 +5394,7 @@ function fetchJsonViaOauthSession(url, options: any = {}) {
     }
 
     if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
-      reject(new Error(`Unsupported IX Agency backend URL protocol: ${parsed.protocol}`))
+      reject(new Error(`Unsupported ${APP_NAME} backend URL protocol: ${parsed.protocol}`))
 
       return
     }
@@ -5380,7 +5423,7 @@ function fetchJsonViaOauthSession(url, options: any = {}) {
         // already finished
       }
 
-      reject(new Error(`Timed out connecting to IX Agency backend after ${timeoutMs}ms`))
+      reject(new Error(`Timed out connecting to ${APP_NAME} backend after ${timeoutMs}ms`))
     }, timeoutMs)
 
     request.on('response', res => {
@@ -5754,7 +5797,7 @@ async function buildRemoteConnection(rawUrl, authMode, token, source) {
     // the authoritative liveness check.
     if (!(await hasLiveOauthSession(baseUrl))) {
       const err = new Error(
-        'Remote IX Agency gateway uses OAuth, but you are not signed in. ' +
+        `Remote ${APP_NAME} gateway uses OAuth, but you are not signed in. ` +
           'Open Settings → Gateway and click "Sign in", or switch back to Local.'
       ) as any
 
@@ -5789,7 +5832,7 @@ async function buildRemoteConnection(rawUrl, authMode, token, source) {
 
   if (!token) {
     throw new Error(
-      'Remote IX Agency gateway is selected, but no session token is saved. ' +
+      `Remote ${APP_NAME} gateway is selected, but no session token is saved. ` +
         'Open Settings → Gateway and save a token, or switch back to Local.'
     )
   }
@@ -5833,7 +5876,7 @@ async function resolveRemoteBackend(profile) {
     if (!rawEnvToken) {
       throw new Error(
         'HERMES_DESKTOP_REMOTE_URL is set but HERMES_DESKTOP_REMOTE_TOKEN is not. ' +
-          'Both must be provided to connect to a remote IX Agency backend.'
+          `Both must be provided to connect to a remote ${APP_NAME} backend.`
       )
     }
 
@@ -6248,7 +6291,7 @@ async function spawnPoolBackend(profile, entry) {
   const webDist = resolveWebDist()
   const readyFile = backend.readyFile ? makeDashboardReadyFile() : null
 
-  rememberLog(`Starting IX Agency backend for profile "${profile}" via ${backend.label}`)
+  rememberLog(`Starting ${APP_NAME} backend for profile "${profile}" via ${backend.label}`)
 
   const child = spawn(
     backend.command,
@@ -6289,17 +6332,17 @@ async function spawnPoolBackend(profile, entry) {
   })
 
   child.once('error', error => {
-    rememberLog(`IX Agency backend for profile "${profile}" failed to start: ${error.message}`)
+    rememberLog(`${APP_NAME} backend for profile "${profile}" failed to start: ${error.message}`)
     backendPool.delete(profile)
     rejectStart?.(error)
   })
   child.once('exit', (code, signal) => {
-    rememberLog(`IX Agency backend for profile "${profile}" exited (${signal || code})`)
+    rememberLog(`${APP_NAME} backend for profile "${profile}" exited (${signal || code})`)
     backendPool.delete(profile)
 
     if (!ready) {
       rejectStart?.(
-        new Error(`IX Agency backend for profile "${profile}" exited before it became ready (${signal || code}).`)
+        new Error(`${APP_NAME} backend for profile "${profile}" exited before it became ready (${signal || code}).`)
       )
     }
   })
@@ -6319,7 +6362,7 @@ async function spawnPoolBackend(profile, entry) {
 
   const authToken = await adoptServedDashboardToken(baseUrl, token, {
     childAlive: () => child.exitCode === null && !child.killed,
-    label: `IX Agency backend for profile "${profile}"`,
+    label: `${APP_NAME} backend for profile "${profile}"`,
     rememberLog
   })
 
@@ -6444,17 +6487,17 @@ async function startHermes() {
   }
 
   connectionPromise = (async () => {
-    await advanceBootProgress('backend.resolve', 'Resolving IX Agency backend', 8)
+    await advanceBootProgress('backend.resolve', `Resolving ${APP_NAME} backend`, 8)
     // Resolve for the desktop's primary profile so a per-profile remote
     // override on the active profile is honored (falls back to env / global).
     const remote = await resolveRemoteBackend(primaryProfileKey())
 
     if (remote) {
-      await advanceBootProgress('backend.remote', `Connecting to remote IX Agency backend at ${remote.baseUrl}`, 24)
+      await advanceBootProgress('backend.remote', `Connecting to remote ${APP_NAME} backend at ${remote.baseUrl}`, 24)
       await waitForHermes(remote.baseUrl, remote.token)
       updateBootProgress({
         phase: 'backend.ready',
-        message: 'Remote IX Agency backend is ready',
+        message: `Remote ${APP_NAME} backend is ready`,
         progress: 94,
         running: true,
         error: null
@@ -6494,7 +6537,7 @@ async function startHermes() {
       backendArgs.unshift('--profile', activeProfile)
     }
 
-    await advanceBootProgress('backend.runtime', 'Resolving Hermes runtime', 28)
+    await advanceBootProgress('backend.runtime', `Resolving ${APP_NAME} runtime`, 28)
     const backend = await ensureRuntime(resolveHermesBackend(backendArgs))
     // Route old runtimes (no `serve`) through the legacy `dashboard --no-open`.
     backend.args = getBackendArgsForRuntime(backend)
@@ -6502,8 +6545,8 @@ async function startHermes() {
     const webDist = resolveWebDist()
     const readyFile = backend.readyFile ? makeDashboardReadyFile() : null
 
-    await advanceBootProgress('backend.spawn', `Starting IX Agency backend via ${backend.label}`, 84)
-    rememberLog(`Starting IX Agency backend via ${backend.label}`)
+    await advanceBootProgress('backend.spawn', `Starting ${APP_NAME} backend via ${backend.label}`, 84)
+    rememberLog(`Starting ${APP_NAME} backend via ${backend.label}`)
 
     hermesProcess = spawn(
       backend.command,
@@ -6545,11 +6588,11 @@ async function startHermes() {
     })
 
     hermesProcess.once('error', error => {
-      rememberLog(`IX Agency backend failed to start: ${error.message}`)
+      rememberLog(`${APP_NAME} backend failed to start: ${error.message}`)
       updateBootProgress(
         {
           error: error.message,
-          message: `IX Agency backend failed to start: ${error.message}`,
+          message: `${APP_NAME} backend failed to start: ${error.message}`,
           phase: 'backend.error',
           running: false
         },
@@ -6561,13 +6604,13 @@ async function startHermes() {
       rejectBackendStart?.(error)
     })
     hermesProcess.once('exit', (code, signal) => {
-      rememberLog(`IX Agency backend exited (${signal || code})`)
+      rememberLog(`${APP_NAME} backend exited (${signal || code})`)
       hermesProcess = null
       connectionPromise = null
       sendBackendExit({ code, signal })
 
       if (!backendReady) {
-        const message = `IX Agency backend exited before it became ready (${signal || code}).`
+        const message = `${APP_NAME} backend exited before it became ready (${signal || code}).`
         updateBootProgress(
           {
             error: message,
@@ -6579,13 +6622,13 @@ async function startHermes() {
         )
         rejectBackendStart?.(
           new Error(
-            `IX Agency backend exited before it became ready (${signal || code}). Log: ${DESKTOP_LOG_PATH}\n${recentHermesLog()}`
+            `${APP_NAME} backend exited before it became ready (${signal || code}). Log: ${DESKTOP_LOG_PATH}\n${recentHermesLog()}`
           )
         )
       }
     })
 
-    await advanceBootProgress('backend.port', 'Waiting for IX Agency backend to launch', 86)
+    await advanceBootProgress('backend.port', `Waiting for ${APP_NAME} backend to launch`, 86)
 
     // Discover the ephemeral port the child bound to
     const port = await Promise.race([
@@ -6598,7 +6641,7 @@ async function startHermes() {
     }
 
     const baseUrl = `http://127.0.0.1:${port}`
-    await advanceBootProgress('backend.wait', 'Waiting for IX Agency backend to become ready', 90)
+    await advanceBootProgress('backend.wait', `Waiting for ${APP_NAME} backend to become ready`, 90)
     await Promise.race([waitForHermes(baseUrl, token), backendStartFailed])
     backendReady = true
     backendStartFailure = null
@@ -6611,7 +6654,7 @@ async function startHermes() {
 
     updateBootProgress({
       phase: 'backend.ready',
-      message: 'IX Agency backend is ready. Finalizing desktop startup',
+      message: `${APP_NAME} backend is ready. Finalizing desktop startup`,
       progress: 94,
       running: true,
       error: null
@@ -7084,7 +7127,7 @@ ipcMain.handle('hermes:connection:revalidate', async () => {
     // Unreachable remote: drop the stale cache so the renderer's next reconnect
     // tick rebuilds a fresh, reachable descriptor. resetHermesConnection only
     // nulls connectionPromise for a remote (no child to SIGTERM).
-    rememberLog('Cached remote IX Agency backend failed liveness probe; dropping stale connection.')
+    rememberLog(`Cached remote ${APP_NAME} backend failed liveness probe; dropping stale connection.`)
     resetHermesConnection()
 
     return { ok: true, rebuilt: true }
@@ -7604,7 +7647,7 @@ ipcMain.handle('hermes:notify', (_event, payload) => {
   const actions = Array.isArray(payload?.actions) ? payload.actions : []
 
   const notification = new Notification({
-    title: payload?.title || 'IX Agency',
+    title: payload?.title || `${APP_NAME}`,
     body: payload?.body || '',
     silent: Boolean(payload?.silent),
     actions: actions.map(action => ({ type: 'button', text: String(action?.text || '') }))
@@ -7851,10 +7894,305 @@ ipcMain.handle('hermes:setting:defaultProjectDir:pick', async () => {
   return { canceled: false, dir: result.filePaths[0] }
 })
 
+// ── Update poller + tray (all brands) ───────────────────────────────────────
+// In-place auto-update (electron-updater, generic provider over the S3 feed
+// published by CI — see package.json > build.publish and
+// .github/workflows/desktop-release.yml). The button stays NON-BLOCKING: the
+// 4-hour poller only flips `updateAvailable`; download + install happen when
+// the user clicks. Legacy hand-published latest.json feeds keep the old
+// poll-and-open-URL behavior (no fake in-place states).
+//
+// Brand-neutral by construction: every brand polls its own feed (from BRAND).
+// IX Agency layers its settings override + VPN/MCP tray lamps on top through
+// the two hooks below, assigned inside the IS_IX_AGENCY_BRAND block — so the
+// QuizVerse bundle carries none of the IX portal/VPN estate.
+let ixUpdateStatus: null | UpdateStatus = null
+
+const ixAutoUpdater = electronUpdater.autoUpdater
+
+ixAutoUpdater.autoDownload = false
+ixAutoUpdater.autoInstallOnAppQuit = true
+ixAutoUpdater.logger = null
+
+let ixUpdateFeedBase = ''
+
+let ixUpdateDownloaded = false
+
+let ixUpdateDownloadPromise: null | Promise<unknown> = null
+
+ixAutoUpdater.on('update-downloaded', () => {
+  ixUpdateDownloaded = true
+
+  if (ixUpdateStatus?.updateAvailable) {
+    ixUpdateStatus.detail = `Update ${ixUpdateStatus.latestVersion} downloaded — restarting installs it`
+  }
+
+  updateIxTray()
+})
+
+// Which feed this build updates from. IX Agency supports a user-overridable
+// manifest URL from its settings (hook installed in the IX block); other
+// brands (QuizVerse) always use their brand feed — a brand can never consume
+// another brand's channel files.
+let updateManifestUrlOverride: null | (() => string) = null
+
+function currentUpdateManifestUrl(): string {
+  return updateManifestUrlOverride?.() ?? ''
+}
+
+function ixConfigureUpdateFeed(): string {
+  const feedBase = normalizeUpdateFeedUrl(currentUpdateManifestUrl(), BRAND.updateFeedUrl)
+
+  if (feedBase !== ixUpdateFeedBase) {
+    ixAutoUpdater.setFeedURL({ provider: 'generic', url: feedBase })
+    ixUpdateFeedBase = feedBase
+    ixUpdateDownloaded = false
+    ixUpdateDownloadPromise = null
+  }
+
+  return feedBase
+}
+
+async function refreshIxUpdateStatus() {
+  const configured = currentUpdateManifestUrl()
+  const currentVersion = app.getVersion()
+
+  // Custom hand-published latest.json → old poll-and-open-URL path.
+  if (isLegacyJsonManifest(configured)) {
+    ixUpdateStatus = await fetchUpdateStatus(configured, currentVersion)
+    updateIxTray()
+
+    return
+  }
+
+  if (!app.isPackaged) {
+    ixUpdateStatus = {
+      updateAvailable: false,
+      currentVersion,
+      latestVersion: '',
+      url: '',
+      notes: '',
+      detail: 'Dev build — in-place auto-update runs only in packaged builds'
+    }
+    updateIxTray()
+
+    return
+  }
+
+  const feedBase = ixConfigureUpdateFeed()
+
+  try {
+    const result = await ixAutoUpdater.checkForUpdates()
+    const info = result?.updateInfo
+    const latestVersion = String(info?.version ?? '').trim()
+    const updateAvailable = Boolean(latestVersion) && compareVersions(latestVersion, currentVersion) > 0
+
+    // MSI / deb / rpm installs can't quitAndInstall — the check still runs
+    // everywhere and the Update button becomes a download link instead.
+    const support = inPlaceUpdateSupport()
+    const artifactUrl = updateAvailable ? pickDownloadUrl(info?.files ?? [], feedBase) : ''
+
+    ixUpdateStatus = {
+      updateAvailable,
+      inPlace: support.supported,
+      currentVersion,
+      latestVersion,
+      url:
+        updateAvailable && !support.supported
+          ? pickFallbackUrl(feedBase, artifactUrl, BRAND.updateFeedUrl, BRAND.downloadPageUrl)
+          : artifactUrl,
+      notes: releaseNotesText(info?.releaseNotes),
+      detail: updateAvailable
+        ? ixUpdateDownloaded
+          ? `Update ${latestVersion} downloaded — restarting installs it`
+          : support.supported
+            ? `Update available: ${currentVersion} → ${latestVersion}`
+            : `Update available: ${currentVersion} → ${latestVersion} (${support.reason})`
+        : `Up to date (${currentVersion}${latestVersion ? `; feed ${latestVersion}` : ''})`
+    }
+  } catch (error) {
+    ixUpdateStatus = {
+      updateAvailable: false,
+      currentVersion,
+      latestVersion: '',
+      url: '',
+      notes: '',
+      detail: `Update check failed: ${error instanceof Error ? error.message : String(error)} (feed ${feedBase})`
+    }
+  }
+
+  updateIxTray()
+}
+
+async function applyIxUpdate(): Promise<{ opened: boolean; detail: string }> {
+  if (!ixUpdateStatus?.updateAvailable) {
+    return { opened: false, detail: 'No update available' }
+  }
+
+  const configured = currentUpdateManifestUrl()
+  const support = inPlaceUpdateSupport()
+
+  // In-place path: download from the electron-updater feed, then restart into
+  // the new version. Only where quitAndInstall genuinely works (NSIS, signed
+  // Squirrel.Mac, AppImage) — anything else falls through to the download URL.
+  if (!isLegacyJsonManifest(configured) && app.isPackaged && support.supported) {
+    try {
+      ixConfigureUpdateFeed()
+
+      if (!ixUpdateDownloaded) {
+        ixUpdateDownloadPromise ??= ixAutoUpdater.downloadUpdate()
+        await ixUpdateDownloadPromise
+      }
+
+      const version = ixUpdateStatus.latestVersion
+
+      // Let the IPC reply reach the renderer before the app quits.
+      setImmediate(() => ixAutoUpdater.quitAndInstall())
+
+      return { opened: true, detail: `Installing ${version} and restarting…` }
+    } catch (error) {
+      ixUpdateDownloadPromise = null
+      console.warn(
+        `[ix-updater] in-place install failed, falling back to the download URL: ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      )
+    }
+  }
+
+  // Notify-and-link path: unsigned mac (in-place attempt threw above), MSI,
+  // deb/rpm, and legacy feeds. Official feed → the download landing page.
+  const fallbackUrl = pickFallbackUrl(
+    normalizeUpdateFeedUrl(configured, BRAND.updateFeedUrl),
+    ixUpdateStatus.url,
+    BRAND.updateFeedUrl,
+    BRAND.downloadPageUrl
+  )
+
+  if (!fallbackUrl) {
+    return {
+      opened: false,
+      detail: `No in-place update possible (${support.reason}) and the feed has no download URL for this platform`
+    }
+  }
+
+  await shell.openExternal(fallbackUrl)
+
+  return { opened: true, detail: `Opened ${fallbackUrl}` }
+}
+
+// Tray: brand-neutral shell — update entry + open. IX Agency swaps in its
+// VPN/MCP lamp menu via ixTrayMenuOverride (assigned in the IX block below).
+let ixTray: null | Tray = null
+
+function ixTrayIcon() {
+  for (const candidate of APP_ICON_PATHS) {
+    if (fileExists(candidate)) {
+      const image = nativeImage.createFromPath(candidate)
+
+      if (!image.isEmpty()) {
+        return image.resize({ width: 18, height: 18 })
+      }
+    }
+  }
+
+  return nativeImage.createEmpty()
+}
+
+let ixTrayMenuOverride: null | (() => void) = null
+
+function updateIxTray() {
+  if (!ixTray) {
+    return
+  }
+
+  if (ixTrayMenuOverride) {
+    ixTrayMenuOverride()
+
+    return
+  }
+
+  // Brand-neutral tray: update entry + open, no IX lamps.
+  ixTray.setToolTip(
+    `${APP_NAME}${ixUpdateStatus?.updateAvailable ? ` · Update ${ixUpdateStatus.latestVersion} available` : ''}`
+  )
+  ixTray.setContextMenu(
+    Menu.buildFromTemplate([
+      ...(ixUpdateStatus?.updateAvailable
+        ? [
+            {
+              label: `⬆ Update available (${ixUpdateStatus.latestVersion}) — ${
+                ixUpdateStatus.inPlace ? 'Restart to update' : 'Open the download page'
+              }`,
+              click: () => {
+                void applyIxUpdate().catch(() => {
+                  // surfaced via the status detail on the next poll
+                })
+              }
+            },
+            { type: 'separator' as const }
+          ]
+        : []),
+      {
+        label: `Open ${APP_NAME}`,
+        click: () => {
+          const win = BrowserWindow.getAllWindows().find(w => !w.isDestroyed())
+
+          if (win) {
+            win.show()
+            win.focus()
+          }
+        }
+      }
+    ])
+  )
+}
+
+void app.whenReady().then(() => {
+  try {
+    ixTray = new Tray(ixTrayIcon())
+    updateIxTray()
+  } catch {
+    // Headless/CI environments can lack a tray — the in-window strip still works.
+  }
+
+  // Launch check + steady-state polling — the update poller runs for every
+  // brand. The IX VPN/MCP lamps register their own poller in the IX block.
+  void refreshIxUpdateStatus()
+  setInterval(() => void refreshIxUpdateStatus(), 4 * 60 * 60_000)
+})
+
 // ── IX Agency: settings + WireGuard VPN + admin-mcp gateway ────────────────
 // Settings live in userData/ix-agency.json; the gateway bearer token is
 // encrypted with safeStorage (same posture as the remote connection token).
+//
+// The whole region sits in one compile-time-gated block: IS_IX_AGENCY_BRAND
+// constant-folds (see brand-gates.ts), so non-IX bundles carry none of it —
+// no `hermes:ix-agency:*` channels, no portal/VPN/OTP/provisioning code.
+// check-brand-separation.mjs asserts that on dist/electron-main.mjs.
+//
+// Two DCE requirements here (verified empirically against esbuild):
+//  - The condition reads process.env.HERMES_DESKTOP_BRAND DIRECTLY (not the
+//    imported IS_IX_AGENCY_BRAND): the define folds same-file comparisons at
+//    parse time, BEFORE tree-shaking decides module inclusion — that is what
+//    lets the ix-* helper modules drop out of the QuizVerse bundle. Imported
+//    constants fold only at print time, which removes the code but still
+//    bundles every module it referenced.
+//  - The IIFE: function declarations directly inside an `if` block get
+//    Annex-B hoisted outer bindings from esbuild, which keeps the whole
+//    folded block alive. Inside a function body they stay function-scoped.
+if (process.env.HERMES_DESKTOP_BRAND !== 'quizverse') {
+  ;(() => {
 const execFileAsync = promisify(execFile)
+
+// Brand separation: the whole `hermes:ix-agency:*` IPC surface only exists in
+// the IX Agency build. Other brands (QuizVerse) never register these handlers,
+// so a stray renderer invoke rejects instead of touching IX portal/VPN state.
+function ixIpcHandle(channel: string, handler: Parameters<typeof ipcMain.handle>[1]) {
+  if (IS_IX_AGENCY_BRAND) {
+    ipcMain.handle(channel, handler)
+  }
+}
 
 const IX_AGENCY_SETTINGS_PATH = path.join(app.getPath('userData'), 'ix-agency.json')
 
@@ -7862,9 +8200,9 @@ function currentIxAgencySettings() {
   return readIxAgencySettings(IX_AGENCY_SETTINGS_PATH, decryptDesktopSecret)
 }
 
-ipcMain.handle('hermes:ix-agency:settings:get', async () => ixAgencySettingsForRenderer(currentIxAgencySettings()))
+ixIpcHandle('hermes:ix-agency:settings:get', async () => ixAgencySettingsForRenderer(currentIxAgencySettings()))
 
-ipcMain.handle('hermes:ix-agency:settings:save', async (_event, input) => {
+ixIpcHandle('hermes:ix-agency:settings:save', async (_event, input) => {
   const next = sanitizeIxAgencySettingsInput(input, currentIxAgencySettings())
 
   writeIxAgencySettings(IX_AGENCY_SETTINGS_PATH, next, encryptDesktopSecret)
@@ -7872,7 +8210,7 @@ ipcMain.handle('hermes:ix-agency:settings:save', async (_event, input) => {
   return ixAgencySettingsForRenderer(next)
 })
 
-ipcMain.handle('hermes:ix-agency:vpn:pick-conf', async () => {
+ixIpcHandle('hermes:ix-agency:vpn:pick-conf', async () => {
   const current = currentIxAgencySettings()
 
   const result = await dialog.showOpenDialog({
@@ -7924,16 +8262,16 @@ async function withIxVpnConf<T>(fn: (confPath: string) => Promise<T>): Promise<T
   return fn(settings.vpnConfPath)
 }
 
-ipcMain.handle('hermes:ix-agency:vpn:status', async () => ixVpnBaseStatus())
+ixIpcHandle('hermes:ix-agency:vpn:status', async () => ixVpnBaseStatus())
 
-ipcMain.handle('hermes:ix-agency:vpn:connect', async () => {
+ixIpcHandle('hermes:ix-agency:vpn:connect', async () => {
   await withIxVpnConf(confPath => ixVpnConnect(confPath))
   void refreshIxVpnLamp()
 
   return ixVpnBaseStatus()
 })
 
-ipcMain.handle('hermes:ix-agency:vpn:disconnect', async () => {
+ixIpcHandle('hermes:ix-agency:vpn:disconnect', async () => {
   await withIxVpnConf(confPath => ixVpnDisconnect(confPath))
   void refreshIxVpnLamp()
 
@@ -7942,7 +8280,7 @@ ipcMain.handle('hermes:ix-agency:vpn:disconnect', async () => {
 
 // One-time import: file picker → validate → store the CONTENTS via
 // safeStorage (Keychain-backed on macOS). The .conf never persists on disk.
-ipcMain.handle('hermes:ix-agency:vpn:import-conf', async () => {
+ixIpcHandle('hermes:ix-agency:vpn:import-conf', async () => {
   const result = await dialog.showOpenDialog({
     title: 'Import usa-vpn.conf into the keychain',
     properties: ['openFile'],
@@ -8019,11 +8357,11 @@ async function requireIxPortalAuth() {
   const status = await probeIxPortalAuth()
 
   if (!status.authenticated) {
-    throw new Error('Sign in to IX Agency first — the admin portal OTP session is not active.')
+    throw new Error(`Sign in to ${APP_NAME} first — the admin portal OTP session is not active.`)
   }
 }
 
-ipcMain.handle('hermes:ix-agency:auth:status', async (_event, input) => {
+ixIpcHandle('hermes:ix-agency:auth:status', async (_event, input) => {
   const status = await probeIxPortalAuth(Boolean(input?.force))
 
   return { authenticated: status.authenticated, detail: status.detail, portalUrl: currentIxAgencySettings().portalUrl }
@@ -8039,13 +8377,13 @@ function ixPortalSessionFetch(): typeof fetch {
   return ((input, init) => portalSession.fetch(input, init)) as typeof fetch
 }
 
-ipcMain.handle('hermes:ix-agency:auth:send-otp', async (_event, input) => {
+ixIpcHandle('hermes:ix-agency:auth:send-otp', async (_event, input) => {
   const settings = currentIxAgencySettings()
 
   return ixLoginSendOtp(settings.portalUrl, String(input?.email ?? ''), ixPortalSessionFetch())
 })
 
-ipcMain.handle('hermes:ix-agency:auth:verify-otp', async (_event, input) => {
+ixIpcHandle('hermes:ix-agency:auth:verify-otp', async (_event, input) => {
   const settings = currentIxAgencySettings()
 
   await ixLoginVerifyOtp(
@@ -8077,7 +8415,7 @@ ipcMain.handle('hermes:ix-agency:auth:verify-otp', async (_event, input) => {
   return status
 })
 
-ipcMain.handle('hermes:ix-agency:mcp:list', async () => {
+ixIpcHandle('hermes:ix-agency:mcp:list', async () => {
   await requireIxPortalAuth()
 
   return fetchIxMcpDirectory(currentIxAgencySettings())
@@ -8170,9 +8508,9 @@ async function runIxAgencySync(): Promise<IxAgencySyncState> {
   return ixSyncInFlight
 }
 
-ipcMain.handle('hermes:ix-agency:sync:get', async () => ixSyncState)
+ixIpcHandle('hermes:ix-agency:sync:get', async () => ixSyncState)
 
-ipcMain.handle('hermes:ix-agency:sync:run', async () => {
+ixIpcHandle('hermes:ix-agency:sync:run', async () => {
   await requireIxPortalAuth()
 
   return runIxAgencySync()
@@ -8181,18 +8519,20 @@ ipcMain.handle('hermes:ix-agency:sync:run', async () => {
 // Boot-time auto-attach: when a valid portal session already exists, wire
 // everything up without any user action (including zero-touch provisioning
 // for any credential slot still empty — e.g. after a settings wipe).
-void app.whenReady().then(async () => {
-  try {
-    const status = await probeIxPortalAuth()
+if (IS_IX_AGENCY_BRAND) {
+  void app.whenReady().then(async () => {
+    try {
+      const status = await probeIxPortalAuth()
 
-    if (status.authenticated) {
-      void runIxAutoProvision().catch(() => {})
-      await runIxAgencySync()
+      if (status.authenticated) {
+        void runIxAutoProvision().catch(() => {})
+        await runIxAgencySync()
+      }
+    } catch {
+      // No session yet — the login flow triggers the sync instead.
     }
-  } catch {
-    // No session yet — the login flow triggers the sync instead.
-  }
-})
+  })
+}
 
 // ── IX Agency per-MCP health lamps ──────────────────────────────────────────
 // Probes every tile (gateway directory + dynamic connectors) concurrently
@@ -8220,7 +8560,7 @@ function bundledIxMcpTiles(): { id: string; mcpUrl: string }[] {
     .map(item => ({ id: String(item.id), mcpUrl: String(item.mcpUrl ?? '') }))
 }
 
-ipcMain.handle('hermes:ix-agency:mcp:health', async (_event, input) => {
+ixIpcHandle('hermes:ix-agency:mcp:health', async (_event, input) => {
   const refresh = Boolean(input?.refresh)
 
   if (!refresh && ixMcpHealthCache && Date.now() - ixMcpHealthCache.at < IX_MCP_HEALTH_CACHE_MS) {
@@ -8254,7 +8594,7 @@ ipcMain.handle('hermes:ix-agency:mcp:health', async (_event, input) => {
 // Everything runs through the OTP session's cookie jar in this process; the
 // connector token passes straight through to the portal on save/test and is
 // never persisted or logged here.
-ipcMain.handle('hermes:ix-agency:connectors:list', async () => {
+ixIpcHandle('hermes:ix-agency:connectors:list', async () => {
   await requireIxPortalAuth()
 
   const connectors = await listIxConnectors(currentIxAgencySettings().portalUrl, ixPortalSessionFetch())
@@ -8264,7 +8604,7 @@ ipcMain.handle('hermes:ix-agency:connectors:list', async () => {
   return connectors
 })
 
-ipcMain.handle('hermes:ix-agency:connectors:save', async (_event, input) => {
+ixIpcHandle('hermes:ix-agency:connectors:save', async (_event, input) => {
   await requireIxPortalAuth()
 
   const saved = await saveIxConnector(
@@ -8282,7 +8622,7 @@ ipcMain.handle('hermes:ix-agency:connectors:save', async (_event, input) => {
   return saved
 })
 
-ipcMain.handle('hermes:ix-agency:connectors:patch', async (_event, input) => {
+ixIpcHandle('hermes:ix-agency:connectors:patch', async (_event, input) => {
   await requireIxPortalAuth()
 
   const updated = await setIxConnectorEnabled(
@@ -8300,7 +8640,7 @@ ipcMain.handle('hermes:ix-agency:connectors:patch', async (_event, input) => {
   return updated
 })
 
-ipcMain.handle('hermes:ix-agency:connectors:delete', async (_event, input) => {
+ixIpcHandle('hermes:ix-agency:connectors:delete', async (_event, input) => {
   await requireIxPortalAuth()
 
   const id = String(input?.id ?? '')
@@ -8312,7 +8652,7 @@ ipcMain.handle('hermes:ix-agency:connectors:delete', async (_event, input) => {
   return { deleted: true }
 })
 
-ipcMain.handle('hermes:ix-agency:connectors:test', async (_event, input) => {
+ixIpcHandle('hermes:ix-agency:connectors:test', async (_event, input) => {
   await requireIxPortalAuth()
 
   return testIxConnector(
@@ -8328,11 +8668,11 @@ ipcMain.handle('hermes:ix-agency:connectors:test', async (_event, input) => {
 })
 
 // Import/export live main-side so the parsing rules stay in one module.
-ipcMain.handle('hermes:ix-agency:connectors:parse-import', async (_event, input) =>
+ixIpcHandle('hermes:ix-agency:connectors:parse-import', async (_event, input) =>
   parseConnectorImport(String(input?.json ?? ''))
 )
 
-ipcMain.handle('hermes:ix-agency:connectors:export', async () => {
+ixIpcHandle('hermes:ix-agency:connectors:export', async () => {
   await requireIxPortalAuth()
 
   const connectors = ixSyncState.connectors.length
@@ -8351,12 +8691,12 @@ function ixUserSkillsDir() {
   return userSkillsDir(ixHermesHome())
 }
 
-ipcMain.handle('hermes:ix-agency:skills:list', async () => ({
+ixIpcHandle('hermes:ix-agency:skills:list', async () => ({
   skills: listUserSkills(ixUserSkillsDir()),
   templates: IX_SKILL_TEMPLATES
 }))
 
-ipcMain.handle('hermes:ix-agency:skills:save', async (_event, input) =>
+ixIpcHandle('hermes:ix-agency:skills:save', async (_event, input) =>
   saveUserSkill(ixUserSkillsDir(), {
     id: typeof input?.id === 'string' ? input.id : null,
     title: String(input?.title ?? ''),
@@ -8365,11 +8705,11 @@ ipcMain.handle('hermes:ix-agency:skills:save', async (_event, input) =>
   })
 )
 
-ipcMain.handle('hermes:ix-agency:skills:delete', async (_event, input) => ({
+ixIpcHandle('hermes:ix-agency:skills:delete', async (_event, input) => ({
   deleted: deleteUserSkill(ixUserSkillsDir(), String(input?.id ?? ''))
 }))
 
-ipcMain.handle('hermes:ix-agency:skills:publish', async (_event, input) => {
+ixIpcHandle('hermes:ix-agency:skills:publish', async (_event, input) => {
   await requireIxPortalAuth()
 
   const settings = currentIxAgencySettings()
@@ -8414,7 +8754,7 @@ function ixChatModelList(settings: ReturnType<typeof currentIxAgencySettings>) {
   return { models: [...IX_CHAT_MODELS, ...custom], defaultModel: DEFAULT_IX_CHAT_MODEL }
 }
 
-ipcMain.handle('hermes:ix-agency:chat:models', async () => {
+ixIpcHandle('hermes:ix-agency:chat:models', async () => {
   const settings = currentIxAgencySettings()
   const fallback = ixChatModelList(settings)
   // Live model list from the LiteLLM gateway — every model the key routes to,
@@ -8440,7 +8780,7 @@ ipcMain.handle('hermes:ix-agency:chat:models', async () => {
   return { models, defaultModel }
 })
 
-ipcMain.handle('hermes:ix-agency:chat:list', async () => {
+ixIpcHandle('hermes:ix-agency:chat:list', async () => {
   const store = readIxChatStore(IX_CHAT_STORE_PATH)
 
   return store.conversations
@@ -8448,7 +8788,7 @@ ipcMain.handle('hermes:ix-agency:chat:list', async () => {
     .sort((a, b) => b.updatedAt - a.updatedAt)
 })
 
-ipcMain.handle('hermes:ix-agency:chat:get', async (_event, conversationId) => {
+ixIpcHandle('hermes:ix-agency:chat:get', async (_event, conversationId) => {
   const store = readIxChatStore(IX_CHAT_STORE_PATH)
   const conversation = store.conversations.find(c => c.id === conversationId)
 
@@ -8465,14 +8805,14 @@ ipcMain.handle('hermes:ix-agency:chat:get', async (_event, conversationId) => {
   }
 })
 
-ipcMain.handle('hermes:ix-agency:chat:send', async (event, input) => {
+ixIpcHandle('hermes:ix-agency:chat:send', async (event, input) => {
   // Login gate first: credentials alone never unlock the native chat.
   await requireIxPortalAuth()
 
   const settings = currentIxAgencySettings()
 
   if (!settings.litellmKey) {
-    throw new Error('No LiteLLM API key configured — add one in IX Agency settings.')
+    throw new Error(`No LiteLLM API key configured — add one in ${APP_NAME} settings.`)
   }
 
   const text = typeof input?.text === 'string' ? input.text.trim() : ''
@@ -8586,7 +8926,7 @@ ipcMain.handle('hermes:ix-agency:chat:send', async (event, input) => {
   return { conversationId: conversation.id }
 })
 
-ipcMain.handle('hermes:ix-agency:chat:confirm', async (_event, input) => {
+ixIpcHandle('hermes:ix-agency:chat:confirm', async (_event, input) => {
   await requireIxPortalAuth()
 
   const nonce = typeof input?.nonce === 'string' ? input.nonce : ''
@@ -8608,19 +8948,19 @@ ipcMain.handle('hermes:ix-agency:chat:confirm', async (_event, input) => {
   return { ok, state: ok && approve ? 'approved' : 'denied' }
 })
 
-// ── IX Agency status lamps, update poller and tray ──────────────────────────
+// ── IX Agency status lamps + tray lamps ─────────────────────────────────────
 // Main-process pollers keep the tray truthful even with no IX view open:
 //  - VPN lamp: tunnel artifact + `wg show` handshake + exit-IP egress check
 //    (green ONLY when egress goes through the company Lightsail exit).
 //  - MCP lamp: /healthz + authenticated tools/list every 60s.
-//  - Update: S3 latest.json manifest on launch + every 4 hours (non-blocking
-//    button; clicking opens the release URL — no silent installs, no fake
-//    update states).
+// The update poller itself is brand-neutral and lives above; IX layers its
+// settings-driven feed override + lamp tray menu on via the hooks below.
 let ixVpnLamp: null | VpnDeepStatus = null
 
 let ixMcpLamp: McpLampStatus | null = null
 
-let ixUpdateStatus: null | UpdateStatus = null
+// IX Agency supports a user-overridable update manifest URL from settings.
+updateManifestUrlOverride = () => currentIxAgencySettings().updateManifestUrl
 
 async function computeIxVpnDeepStatus(): Promise<VpnDeepStatus> {
   const settings = currentIxAgencySettings()
@@ -8681,116 +9021,7 @@ async function refreshIxMcpLamp() {
   updateIxTray()
 }
 
-// ── In-place auto-update (electron-updater, generic provider over the S3
-// feed published by CI — see package.json > build.publish and
-// .github/workflows/desktop-release.yml). The button stays NON-BLOCKING:
-// the 4-hour poller only flips `updateAvailable`; download + install happen
-// when the user clicks. Legacy hand-published latest.json feeds keep the old
-// poll-and-open-URL behavior (no fake in-place states).
-const ixAutoUpdater = electronUpdater.autoUpdater
-
-ixAutoUpdater.autoDownload = false
-ixAutoUpdater.autoInstallOnAppQuit = true
-ixAutoUpdater.logger = null
-
-let ixUpdateFeedBase = ''
-
-let ixUpdateDownloaded = false
-
-let ixUpdateDownloadPromise: null | Promise<unknown> = null
-
-ixAutoUpdater.on('update-downloaded', () => {
-  ixUpdateDownloaded = true
-
-  if (ixUpdateStatus?.updateAvailable) {
-    ixUpdateStatus.detail = `Update ${ixUpdateStatus.latestVersion} downloaded — restarting installs it`
-  }
-
-  updateIxTray()
-})
-
-function ixConfigureUpdateFeed(): string {
-  const feedBase = normalizeUpdateFeedUrl(currentIxAgencySettings().updateManifestUrl)
-
-  if (feedBase !== ixUpdateFeedBase) {
-    ixAutoUpdater.setFeedURL({ provider: 'generic', url: feedBase })
-    ixUpdateFeedBase = feedBase
-    ixUpdateDownloaded = false
-    ixUpdateDownloadPromise = null
-  }
-
-  return feedBase
-}
-
-async function refreshIxUpdateStatus() {
-  const configured = currentIxAgencySettings().updateManifestUrl
-  const currentVersion = app.getVersion()
-
-  // Custom hand-published latest.json → old poll-and-open-URL path.
-  if (isLegacyJsonManifest(configured)) {
-    ixUpdateStatus = await fetchUpdateStatus(configured, currentVersion)
-    updateIxTray()
-
-    return
-  }
-
-  if (!app.isPackaged) {
-    ixUpdateStatus = {
-      updateAvailable: false,
-      currentVersion,
-      latestVersion: '',
-      url: '',
-      notes: '',
-      detail: 'Dev build — in-place auto-update runs only in packaged builds'
-    }
-    updateIxTray()
-
-    return
-  }
-
-  const feedBase = ixConfigureUpdateFeed()
-
-  try {
-    const result = await ixAutoUpdater.checkForUpdates()
-    const info = result?.updateInfo
-    const latestVersion = String(info?.version ?? '').trim()
-    const updateAvailable = Boolean(latestVersion) && compareVersions(latestVersion, currentVersion) > 0
-
-    // MSI / deb / rpm installs can't quitAndInstall — the check still runs
-    // everywhere and the Update button becomes a download link instead.
-    const support = inPlaceUpdateSupport()
-    const artifactUrl = updateAvailable ? pickDownloadUrl(info?.files ?? [], feedBase) : ''
-
-    ixUpdateStatus = {
-      updateAvailable,
-      inPlace: support.supported,
-      currentVersion,
-      latestVersion,
-      url: updateAvailable && !support.supported ? pickFallbackUrl(feedBase, artifactUrl) : artifactUrl,
-      notes: releaseNotesText(info?.releaseNotes),
-      detail: updateAvailable
-        ? ixUpdateDownloaded
-          ? `Update ${latestVersion} downloaded — restarting installs it`
-          : support.supported
-            ? `Update available: ${currentVersion} → ${latestVersion}`
-            : `Update available: ${currentVersion} → ${latestVersion} (${support.reason})`
-        : `Up to date (${currentVersion}${latestVersion ? `; feed ${latestVersion}` : ''})`
-    }
-  } catch (error) {
-    ixUpdateStatus = {
-      updateAvailable: false,
-      currentVersion,
-      latestVersion: '',
-      url: '',
-      notes: '',
-      detail: `Update check failed: ${error instanceof Error ? error.message : String(error)} (feed ${feedBase})`
-    }
-  }
-
-  updateIxTray()
-}
-
-ipcMain.handle('hermes:ix-agency:status:summary', async (_event, input) => {
+ixIpcHandle('hermes:ix-agency:status:summary', async (_event, input) => {
   if (input?.refresh) {
     await Promise.all([refreshIxVpnLamp(), refreshIxMcpLamp()])
   } else {
@@ -8810,84 +9041,17 @@ ipcMain.handle('hermes:ix-agency:status:summary', async (_event, input) => {
   return { vpn: ixVpnLamp, mcp: ixMcpLamp, update: ixUpdateStatus }
 })
 
-ipcMain.handle('hermes:ix-agency:update:check', async () => {
+ixIpcHandle('hermes:ix-agency:update:check', async () => {
   await refreshIxUpdateStatus()
 
   return ixUpdateStatus
 })
 
-async function applyIxUpdate(): Promise<{ opened: boolean; detail: string }> {
-  if (!ixUpdateStatus?.updateAvailable) {
-    return { opened: false, detail: 'No update available' }
-  }
+ixIpcHandle('hermes:ix-agency:update:apply', async () => applyIxUpdate())
 
-  const configured = currentIxAgencySettings().updateManifestUrl
-  const support = inPlaceUpdateSupport()
-
-  // In-place path: download from the electron-updater feed, then restart into
-  // the new version. Only where quitAndInstall genuinely works (NSIS, signed
-  // Squirrel.Mac, AppImage) — anything else falls through to the download URL.
-  if (!isLegacyJsonManifest(configured) && app.isPackaged && support.supported) {
-    try {
-      ixConfigureUpdateFeed()
-
-      if (!ixUpdateDownloaded) {
-        ixUpdateDownloadPromise ??= ixAutoUpdater.downloadUpdate()
-        await ixUpdateDownloadPromise
-      }
-
-      const version = ixUpdateStatus.latestVersion
-
-      // Let the IPC reply reach the renderer before the app quits.
-      setImmediate(() => ixAutoUpdater.quitAndInstall())
-
-      return { opened: true, detail: `Installing ${version} and restarting…` }
-    } catch (error) {
-      ixUpdateDownloadPromise = null
-      console.warn(
-        `[ix-updater] in-place install failed, falling back to the download URL: ${
-          error instanceof Error ? error.message : String(error)
-        }`
-      )
-    }
-  }
-
-  // Notify-and-link path: unsigned mac (in-place attempt threw above), MSI,
-  // deb/rpm, and legacy feeds. Official feed → the download landing page.
-  const fallbackUrl = pickFallbackUrl(normalizeUpdateFeedUrl(configured), ixUpdateStatus.url)
-
-  if (!fallbackUrl) {
-    return {
-      opened: false,
-      detail: `No in-place update possible (${support.reason}) and the feed has no download URL for this platform`
-    }
-  }
-
-  await shell.openExternal(fallbackUrl)
-
-  return { opened: true, detail: `Opened ${fallbackUrl}` }
-}
-
-ipcMain.handle('hermes:ix-agency:update:apply', async () => applyIxUpdate())
-
-// Tray: lamp glyphs + tooltip for VPN and the admin-mcp gateway, and the
-// non-blocking update entry.
-let ixTray: null | Tray = null
-
-function ixTrayIcon() {
-  for (const candidate of APP_ICON_PATHS) {
-    if (fileExists(candidate)) {
-      const image = nativeImage.createFromPath(candidate)
-
-      if (!image.isEmpty()) {
-        return image.resize({ width: 18, height: 18 })
-      }
-    }
-  }
-
-  return nativeImage.createEmpty()
-}
-
+// Tray: lamp glyphs + tooltip for VPN and the admin-mcp gateway. Installed as
+// the tray-menu override so the brand-neutral tray shell above renders the IX
+// lamp menu instead of the plain update/open menu.
 function ixLampGlyph(kind: 'green' | 'grey' | 'red' | 'yellow') {
   return kind === 'green' ? '🟢' : kind === 'red' ? '🔴' : kind === 'yellow' ? '🟡' : '⚪'
 }
@@ -8910,7 +9074,7 @@ function ixVpnLampColor(): 'green' | 'grey' | 'red' | 'yellow' {
   }
 }
 
-function updateIxTray() {
+ixTrayMenuOverride = () => {
   if (!ixTray) {
     return
   }
@@ -8919,7 +9083,7 @@ function updateIxTray() {
   const mcpColor = ixMcpLamp?.state ?? 'grey'
 
   ixTray.setToolTip(
-    `IX Agency — VPN: ${ixVpnLamp?.state ?? 'unknown'} (${ixVpnLamp?.detail ?? 'not checked yet'}) · ` +
+    `${APP_NAME} — VPN: ${ixVpnLamp?.state ?? 'unknown'} (${ixVpnLamp?.detail ?? 'not checked yet'}) · ` +
       `MCP: ${ixMcpLamp?.state ?? 'unknown'} (${ixMcpLamp?.detail ?? 'not checked yet'})` +
       (ixUpdateStatus?.updateAvailable ? ` · Update ${ixUpdateStatus.latestVersion} available` : '')
   )
@@ -8955,7 +9119,7 @@ function updateIxTray() {
         ]
       : []),
     {
-      label: 'Open IX Agency',
+      label: `Open ${APP_NAME}`,
       click: () => {
         const win = BrowserWindow.getAllWindows().find(w => !w.isDestroyed())
 
@@ -8970,21 +9134,12 @@ function updateIxTray() {
   ixTray.setContextMenu(menu)
 }
 
+// IX lamp pollers — the brand-neutral update poller registers above.
 void app.whenReady().then(() => {
-  try {
-    ixTray = new Tray(ixTrayIcon())
-    updateIxTray()
-  } catch {
-    // Headless/CI environments can lack a tray — the in-window strip still works.
-  }
-
-  // Launch checks + steady-state polling (60s MCP, 45s VPN, 4h update).
   void refreshIxVpnLamp()
   void refreshIxMcpLamp()
-  void refreshIxUpdateStatus()
   setInterval(() => void refreshIxMcpLamp(), 60_000)
   setInterval(() => void refreshIxVpnLamp(), 45_000)
-  setInterval(() => void refreshIxUpdateStatus(), 4 * 60 * 60_000)
 })
 
 // ── IX Agency: Cognito S2S + local Hermes init (first-run setup) ────────────
@@ -8994,7 +9149,7 @@ function ixHermesHome() {
   return process.env.HERMES_HOME || path.join(os.homedir(), '.hermes')
 }
 
-ipcMain.handle('hermes:ix-agency:hermes:status', async () => {
+ixIpcHandle('hermes:ix-agency:hermes:status', async () => {
   const settings = currentIxAgencySettings()
   const configPath = path.join(ixHermesHome(), 'config.yaml')
   const configExists = fileExists(configPath)
@@ -9016,7 +9171,7 @@ ipcMain.handle('hermes:ix-agency:hermes:status', async () => {
 
 // Validate the S2S credentials with a REAL client_credentials grant + JWKS
 // signature verification; persist them (safeStorage) only on success.
-ipcMain.handle('hermes:ix-agency:cognito:validate', async (_event, input) => {
+ixIpcHandle('hermes:ix-agency:cognito:validate', async (_event, input) => {
   const current = currentIxAgencySettings()
   const clientId = (typeof input?.clientId === 'string' && input.clientId.trim()) || current.cognitoClientId
 
@@ -9134,7 +9289,7 @@ async function runIxHermesInit(): Promise<{ ok: boolean; log: string }> {
     envContents = upsertEnvLine(envContents, 'ADMIN_MCP_TOKEN', settings.gatewayToken)
     log += 'ADMIN_MCP_TOKEN written to ~/.hermes/.env\n'
   } else {
-    log += 'No gateway token configured — Hermes admin-mcp calls will 401 until one is added.\n'
+    log += 'No gateway token configured — admin-mcp calls will 401 until one is added.\n'
   }
 
   if (settings.litellmKey) {
@@ -9149,7 +9304,7 @@ async function runIxHermesInit(): Promise<{ ok: boolean; log: string }> {
   return { ok: true, log }
 }
 
-ipcMain.handle('hermes:ix-agency:hermes:init', async () => runIxHermesInit())
+ixIpcHandle('hermes:ix-agency:hermes:init', async () => runIxHermesInit())
 
 // ── IX Agency zero-touch provisioning ───────────────────────────────────────
 // On every successful OTP login (and on boot with a live session) the portal's
@@ -9204,6 +9359,836 @@ async function runIxAutoProvision(): Promise<void> {
   })
 
   return ixAutoProvisionInFlight
+}
+  })()
+}
+
+// ── QuizVerse: DeepTutor platform supervisor + settings ─────────────────────
+// QuizVerse-brand builds only. DeepTutor (FastAPI + Next standalone) runs as
+// a managed child process (or a hosted remote), and the workspace renders its
+// web UI in a webview. Settings live in userData/quizverse.json; the optional
+// API key is safeStorage-encrypted like every other desktop secret.
+//
+// The whole region sits in one compile-time-gated block: IS_QUIZVERSE_BRAND
+// constant-folds (see brand-gates.ts), so non-QuizVerse bundles carry none of
+// this — no `hermes:quizverse:*` channels, no DeepTutor supervisor, no tutor
+// URLs. check-brand-separation.mjs asserts that on dist/electron-main.mjs.
+//
+// Direct env read + IIFE are both load-bearing for DCE — see the note on the
+// IS_IX_AGENCY_BRAND block above.
+if (process.env.HERMES_DESKTOP_BRAND === 'quizverse') {
+  ;(() => {
+const QUIZVERSE_SETTINGS_PATH = path.join(app.getPath('userData'), 'quizverse.json')
+
+function currentQuizverseSettings() {
+  return readQuizverseSettings(QUIZVERSE_SETTINGS_PATH, decryptDesktopSecret)
+}
+
+function broadcastDeepTutorStatus(status: ReturnType<DeepTutorSupervisor['status']>) {
+  for (const win of BrowserWindow.getAllWindows()) {
+    if (!win.isDestroyed()) {
+      win.webContents.send('hermes:quizverse:tutor:event', status)
+    }
+  }
+}
+
+const deepTutorSupervisor: DeepTutorSupervisor | null = IS_QUIZVERSE_BRAND
+  ? new DeepTutorSupervisor({
+      getSettings: currentQuizverseSettings,
+      log: line => rememberLog(line),
+      onStatusChange: status => broadcastDeepTutorStatus(status),
+      // DeepTutor's packaged Next standalone server needs Node 20+ — put the
+      // app's managed Node runtime first so a system without Node still works.
+      extraEnv: () => ({ PATH: pathWithHermesManagedNode() })
+    })
+  : null
+
+const qvTutorSockets = new Map<string, { ownerId: number; socket: WebSocket }>()
+const qvTutorStreams = new Map<string, { controller: AbortController; ownerId: number }>()
+
+function qvTutorApiBase() {
+  const base = deepTutorSupervisor!.status().apiUrl
+
+  if (!base) {
+    throw new Error('TutorX API is not ready')
+  }
+
+  return base.replace(/\/+$/, '')
+}
+
+function qvTutorHeaders(extra: Record<string, string> = {}) {
+  const settings = currentQuizverseSettings()
+
+  return {
+    ...extra,
+    ...(settings.apiKey ? { Authorization: `Bearer ${settings.apiKey}` } : {})
+  }
+}
+
+async function qvTutorRequest(input: {
+  body?: string
+  form?: { data?: ArrayBuffer; filename?: string; name: string; type?: string; value?: string }[]
+  headers?: Record<string, string>
+  method?: string
+  path?: string
+}) {
+  const requestPath = String(input.path ?? '')
+
+  if (!requestPath.startsWith('/api/v1/') || requestPath.includes('://')) {
+    throw new Error('TutorX request path is not allowed')
+  }
+
+  let body: BodyInit | undefined = input.body
+  const headers = qvTutorHeaders(input.headers)
+
+  if (input.form) {
+    const form = new FormData()
+
+    for (const field of input.form) {
+      if (field.data) {
+        form.append(field.name, new Blob([field.data], { type: field.type }), field.filename)
+      } else {
+        form.append(field.name, field.value ?? '')
+      }
+    }
+
+    body = form
+    delete headers['content-type']
+    delete headers['Content-Type']
+  }
+
+  const response = await fetch(`${qvTutorApiBase()}${requestPath}`, {
+    body,
+    headers,
+    method: input.method ?? 'GET',
+    signal: AbortSignal.timeout(120_000)
+  })
+
+  return {
+    body: await response.text(),
+    contentType: response.headers.get('content-type') ?? '',
+    status: response.status
+  }
+}
+
+/** Packaged renderers have a `file://`/`null` Origin, which FastAPI's CORS
+ * policy correctly rejects. Rewrite only requests to the supervised TutorX
+ * API to the backend's allow-listed desktop development origin. This includes
+ * WebSocket handshakes and leaves every other network request untouched. */
+function installTutorXOriginRewrite() {
+  if (!IS_QUIZVERSE_BRAND || !deepTutorSupervisor) {
+    return
+  }
+
+  session.defaultSession.webRequest.onBeforeSendHeaders((details, callback) => {
+    const apiUrl = deepTutorSupervisor.status().apiUrl.replace(/\/+$/, '')
+
+    if (!apiUrl || !details.url.startsWith(`${apiUrl}/`)) {
+      callback({ requestHeaders: details.requestHeaders })
+
+      return
+    }
+
+    callback({
+      requestHeaders: {
+        ...details.requestHeaders,
+        Origin: 'http://localhost:5173'
+      }
+    })
+  })
+}
+
+// Brand separation, mirror of ixIpcHandle: the `hermes:quizverse:*` surface
+// only exists in the QuizVerse build.
+function qvIpcHandle(channel: string, handler: Parameters<typeof ipcMain.handle>[1]) {
+  if (IS_QUIZVERSE_BRAND) {
+    ipcMain.handle(channel, handler)
+  }
+}
+
+const QV_NAKAMA_BASE = 'https://nakama-rest.intelli-verse-x.ai'
+const QV_PLAY_AUTH_PATH = path.join(app.getPath('userData'), 'quizverse-play-auth.json')
+
+const QV_PLAY_RPC_ALLOWLIST = new Set([
+  'async_challenge_create',
+  'async_challenge_get',
+  'async_challenge_join',
+  'async_challenge_submit',
+  'get_leaderboard',
+  'get_player_stats',
+  'learning_track_get',
+  'learning_track_progress_get',
+  'matchmaking_create_party',
+  'matchmaking_join_party',
+  'party_create',
+  'party_join',
+  'party_leave',
+  'player_get_full_profile',
+  'progression_get_state',
+  'quiz_submit_result_v2',
+  'quizverse_ai_generate_questions',
+  'quizverse_create_match',
+  'quizverse_fetch_external_quiz',
+  'quizverse_fetch_news_quiz',
+  'quizverse_get_questions',
+  'quizverse_weekly_fetch',
+  'submit_score_and_sync',
+  'tournament_caller_status',
+  'tournament_enter',
+  'tournament_get',
+  'tournament_list'
+])
+
+interface QvPlayAuth {
+  deviceId: string
+  token: string
+  refreshToken: string
+  userId: string
+  username: string
+}
+
+let qvPlayAuth: QvPlayAuth | null = null
+
+function readQvPlayAuth(): QvPlayAuth | null {
+  try {
+    const raw = JSON.parse(fs.readFileSync(QV_PLAY_AUTH_PATH, 'utf8'))
+    const token = decryptDesktopSecret(raw.token)
+    const refreshToken = decryptDesktopSecret(raw.refreshToken)
+
+    if (!token || !refreshToken || !raw.deviceId) {
+      return null
+    }
+
+    return {
+      deviceId: String(raw.deviceId),
+      refreshToken,
+      token,
+      userId: String(raw.userId ?? ''),
+      username: String(raw.username ?? 'Guest')
+    }
+  } catch {
+    return null
+  }
+}
+
+function writeQvPlayAuth(auth: QvPlayAuth) {
+  fs.mkdirSync(path.dirname(QV_PLAY_AUTH_PATH), { recursive: true })
+  fs.writeFileSync(
+    QV_PLAY_AUTH_PATH,
+    `${JSON.stringify(
+      {
+        deviceId: auth.deviceId,
+        refreshToken: encryptDesktopSecret(auth.refreshToken),
+        token: encryptDesktopSecret(auth.token),
+        userId: auth.userId,
+        username: auth.username
+      },
+      null,
+      2
+    )}\n`
+  )
+}
+
+function qvJwtClaims(token: string): { exp?: number; uid?: string; usn?: string } {
+  try {
+    return JSON.parse(Buffer.from(token.split('.')[1], 'base64url').toString('utf8'))
+  } catch {
+    return {}
+  }
+}
+
+async function authenticateQvPlay(): Promise<QvPlayAuth> {
+  const stored = qvPlayAuth ?? readQvPlayAuth()
+  const claims = stored ? qvJwtClaims(stored.token) : {}
+
+  if (stored && (claims.exp ?? 0) > Date.now() / 1000 + 30) {
+    qvPlayAuth = stored
+
+    return stored
+  }
+
+  if (stored?.refreshToken) {
+    const response = await fetch(`${QV_NAKAMA_BASE}/v2/account/session/refresh`, {
+      body: JSON.stringify({ token: stored.refreshToken }),
+      headers: {
+        Authorization: `Basic ${Buffer.from('defaultkey:').toString('base64')}`,
+        'content-type': 'application/json'
+      },
+      method: 'POST'
+    })
+
+    if (response.ok) {
+      const body = await response.json()
+      const nextClaims = qvJwtClaims(body.token)
+
+      const refreshed = {
+        ...stored,
+        refreshToken: body.refresh_token ?? stored.refreshToken,
+        token: body.token,
+        userId: body.user_id ?? nextClaims.uid ?? stored.userId,
+        username: body.username ?? nextClaims.usn ?? stored.username
+      }
+
+      qvPlayAuth = refreshed
+      writeQvPlayAuth(refreshed)
+
+      return refreshed
+    }
+  }
+
+  const deviceId = stored?.deviceId || `qv_desktop_${crypto.randomUUID().replaceAll('-', '').slice(0, 20)}`
+
+  const response = await fetch(`${QV_NAKAMA_BASE}/v2/account/authenticate/custom?create=true`, {
+    body: JSON.stringify({ id: deviceId }),
+    headers: {
+      Authorization: `Basic ${Buffer.from('defaultkey:').toString('base64')}`,
+      'content-type': 'application/json'
+    },
+    method: 'POST'
+  })
+
+  if (!response.ok) {
+    throw new Error(`QuizVerse guest authentication failed (${response.status})`)
+  }
+
+  const body = await response.json()
+  const nextClaims = qvJwtClaims(body.token)
+
+  const auth = {
+    deviceId,
+    refreshToken: body.refresh_token ?? '',
+    token: body.token,
+    userId: body.user_id ?? nextClaims.uid ?? '',
+    username: body.username ?? nextClaims.usn ?? 'Guest'
+  }
+
+  qvPlayAuth = auth
+  writeQvPlayAuth(auth)
+
+  return auth
+}
+
+async function qvPlayRpc(name: string, payload: Record<string, unknown>) {
+  if (!QV_PLAY_RPC_ALLOWLIST.has(name)) {
+    throw new Error(`QuizVerse RPC is not allowed: ${name}`)
+  }
+
+  let auth = await authenticateQvPlay()
+
+  const call = () =>
+    fetch(`${QV_NAKAMA_BASE}/v2/rpc/${encodeURIComponent(name)}?unwrap=true`, {
+      body: JSON.stringify(payload),
+      headers: { Authorization: `Bearer ${auth.token}`, 'content-type': 'application/json' },
+      method: 'POST'
+    })
+
+  let response = await call()
+
+  if (response.status === 401) {
+    qvPlayAuth = auth.refreshToken ? { ...auth, token: '' } : null
+    auth = await authenticateQvPlay()
+    response = await call()
+  }
+
+  const text = await response.text()
+
+  if (!response.ok) {
+    throw new Error(`${name} failed (${response.status}): ${text.slice(0, 300)}`)
+  }
+
+  return text ? JSON.parse(text) : {}
+}
+
+qvIpcHandle('hermes:quizverse:play:session', async () => {
+  const auth = await authenticateQvPlay()
+
+  return { deviceId: auth.deviceId, userId: auth.userId, username: auth.username }
+})
+qvIpcHandle('hermes:quizverse:play:rpc', async (_event, name, payload) =>
+  qvPlayRpc(String(name), payload && typeof payload === 'object' ? payload : {})
+)
+
+interface QvRealtimeConnection {
+  client: NakamaClient
+  matchId?: string
+  ownerId: number
+  session: NakamaSession
+  socket: NakamaSocket
+}
+
+const qvRealtimeConnections = new Map<string, QvRealtimeConnection>()
+
+function qvRealtimeConnection(id: string, ownerId: number): QvRealtimeConnection {
+  const connection = qvRealtimeConnections.get(id)
+
+  if (!connection || connection.ownerId !== ownerId) {
+    throw new Error('QuizVerse realtime connection is unavailable')
+  }
+
+  return connection
+}
+
+qvIpcHandle('hermes:quizverse:play:realtime:connect', async event => {
+  const auth = await authenticateQvPlay()
+  const client = new NakamaClient('defaultkey', new URL(QV_NAKAMA_BASE).hostname, '443', true)
+  const activeSession = NakamaSession.restore(auth.token, auth.refreshToken)
+  const socket = client.createSocket(true, false)
+
+  await socket.connect(activeSession, true)
+  const id = crypto.randomUUID()
+
+  const emit = (type: string, data?: unknown) => {
+    if (!event.sender.isDestroyed()) {
+      event.sender.send('hermes:quizverse:play:realtime:event', { data, id, type })
+    }
+  }
+
+  socket.onmatchdata = frame => {
+    const data = frame.data instanceof Uint8Array
+      ? new TextDecoder().decode(frame.data)
+      : String(frame.data ?? '')
+
+    emit('match-data', { data, matchId: frame.match_id, opCode: frame.op_code })
+  }
+
+  socket.onmatchpresence = presence => emit('match-presence', presence)
+  socket.onmatchmakermatched = matched => emit('matchmaker-matched', matched)
+
+  socket.ondisconnect = disconnect => {
+    qvRealtimeConnections.delete(id)
+    emit('disconnect', disconnect)
+  }
+
+  socket.onerror = error => emit('error', error instanceof Error ? error.message : String(error))
+  qvRealtimeConnections.set(id, { client, ownerId: event.sender.id, session: activeSession, socket })
+
+  return { id, userId: activeSession.user_id ?? auth.userId }
+})
+
+qvIpcHandle('hermes:quizverse:play:realtime:list-matches', async (event, id, query) => {
+  const connection = qvRealtimeConnection(String(id), event.sender.id)
+
+  const result = await connection.client.listMatches(
+    connection.session,
+    10,
+    true,
+    undefined,
+    1,
+    1,
+    String(query ?? '')
+  )
+
+  return result.matches ?? []
+})
+
+qvIpcHandle('hermes:quizverse:play:realtime:join-match', async (event, id, matchId) => {
+  const connection = qvRealtimeConnection(String(id), event.sender.id)
+  const match = await connection.socket.joinMatch(String(matchId))
+
+  connection.matchId = match.match_id
+
+  return {
+    matchId: match.match_id,
+    presences: (match.presences ?? []).map(presence => ({
+      sessionId: presence.session_id,
+      userId: presence.user_id,
+      username: presence.username
+    }))
+  }
+})
+
+qvIpcHandle('hermes:quizverse:play:realtime:create-match', async (event, id, payload) => {
+  const connection = qvRealtimeConnection(String(id), event.sender.id)
+
+  try {
+    const created = await qvPlayRpc(
+      'quizverse_create_match',
+      payload && typeof payload === 'object' ? payload : {}
+    ) as Record<string, unknown>
+
+    const matchId = String(created.match_id ?? (created.data as Record<string, unknown> | undefined)?.match_id ?? '')
+
+    if (!matchId) {
+      throw new Error('the server returned no match_id')
+    }
+
+    const match = await connection.socket.joinMatch(matchId)
+
+    connection.matchId = match.match_id
+
+    return { matchId: match.match_id }
+  } catch (error) {
+    const detail = error instanceof Error
+      ? error.message
+      : typeof error === 'string'
+        ? error
+        : JSON.stringify(error)
+
+    throw new Error(`sync-turn-v1 match setup failed: ${detail || 'unknown Nakama error'}`)
+  }
+})
+
+qvIpcHandle('hermes:quizverse:play:realtime:send', async (event, id, opCode, payload) => {
+  const connection = qvRealtimeConnection(String(id), event.sender.id)
+
+  if (!connection.matchId) {
+    throw new Error('Join a QuizVerse match before sending realtime state')
+  }
+
+  connection.socket.sendMatchState(
+    connection.matchId,
+    Number(opCode),
+    JSON.stringify(payload && typeof payload === 'object' ? payload : {})
+  )
+})
+
+qvIpcHandle('hermes:quizverse:play:realtime:close', async (event, id) => {
+  const key = String(id)
+  const connection = qvRealtimeConnection(key, event.sender.id)
+
+  if (connection.matchId) {
+    await connection.socket.leaveMatch(connection.matchId).catch(() => undefined)
+  }
+
+  connection.socket.disconnect(true)
+  qvRealtimeConnections.delete(key)
+})
+
+qvIpcHandle('hermes:quizverse:settings:get', async () => quizverseSettingsForRenderer(currentQuizverseSettings()))
+
+qvIpcHandle('hermes:quizverse:litellm:validate', async (_event, input) => {
+  const settings = currentQuizverseSettings()
+  const base = String(input?.url || settings.litellmUrl).replace(/\/+$/, '').replace(/\/v1$/, '')
+  const key = String(input?.key || settings.litellmKey)
+
+  if (!key) {
+    throw new Error('LiteLLM API key is required')
+  }
+
+  const headers = { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' }
+  const modelsResponse = await fetch(`${base}/v1/models`, { headers, signal: AbortSignal.timeout(15_000) })
+
+  if (!modelsResponse.ok) {
+    throw new Error(`LiteLLM model discovery failed (${modelsResponse.status})`)
+  }
+
+  const models = await modelsResponse.json() as { data?: { id?: string; owned_by?: string }[] }
+  const selected = models.data?.find(model => model.id)?.id
+
+  if (!selected) {
+    throw new Error('LiteLLM returned no available models')
+  }
+
+  const completionResponse = await fetch(`${base}/v1/chat/completions`, {
+    body: JSON.stringify({
+      max_tokens: 1,
+      messages: [{ content: 'Reply OK.', role: 'user' }],
+      model: selected,
+      stream: false
+    }),
+    headers,
+    method: 'POST',
+    signal: AbortSignal.timeout(30_000)
+  })
+
+  if (!completionResponse.ok) {
+    throw new Error(`LiteLLM completion validation failed (${completionResponse.status}): ${await completionResponse.text()}`)
+  }
+
+  return {
+    model: selected,
+    modelCount: models.data?.length ?? 0,
+    provider: models.data?.find(model => model.id === selected)?.owned_by ?? 'LiteLLM'
+  }
+})
+
+qvIpcHandle('hermes:quizverse:tutor:request', async (_event, input) =>
+  qvTutorRequest(input && typeof input === 'object' ? input : {})
+)
+
+qvIpcHandle('hermes:quizverse:tutor:stream:start', async (event, pathValue) => {
+  const requestPath = String(pathValue ?? '')
+
+  if (!requestPath.startsWith('/api/v1/') || requestPath.includes('://')) {
+    throw new Error('TutorX stream path is not allowed')
+  }
+
+  const id = crypto.randomUUID()
+  const controller = new AbortController()
+
+  qvTutorStreams.set(id, { controller, ownerId: event.sender.id })
+
+  void (async () => {
+    const emit = (type: string, data?: unknown) => {
+      if (!event.sender.isDestroyed()) {
+        event.sender.send('hermes:quizverse:tutor:stream:event', { data, id, type })
+      }
+    }
+
+    try {
+      const response = await fetch(`${qvTutorApiBase()}${requestPath}`, {
+        headers: qvTutorHeaders(),
+        signal: controller.signal
+      })
+
+      if (!response.ok || !response.body) {
+        throw new Error(`TutorX event stream failed (${response.status})`)
+      }
+
+      const reader = response.body.getReader()
+
+      while (true) {
+        const { done, value } = await reader.read()
+
+        if (done) {
+          emit('done')
+
+          break
+        }
+
+        emit('data', Buffer.from(value).toString('utf8'))
+      }
+    } catch (error) {
+      if (!controller.signal.aborted) {
+        emit('error', error instanceof Error ? error.message : String(error))
+      }
+    } finally {
+      qvTutorStreams.delete(id)
+    }
+  })()
+
+  return id
+})
+
+qvIpcHandle('hermes:quizverse:tutor:stream:stop', async (event, idValue) => {
+  const id = String(idValue)
+  const entry = qvTutorStreams.get(id)
+
+  if (entry && entry.ownerId === event.sender.id) {
+    entry.controller.abort()
+    qvTutorStreams.delete(id)
+  }
+})
+
+qvIpcHandle('hermes:quizverse:tutor:ws:connect', async (event, pathValue, userIdValue) => {
+  const requestPath = String(pathValue ?? '')
+
+  if (!requestPath.startsWith('/api/v1/') || requestPath.includes('://')) {
+    throw new Error('TutorX WebSocket path is not allowed')
+  }
+
+  const id = crypto.randomUUID()
+  const url = new URL(`${qvTutorApiBase().replace(/^http/, 'ws')}${requestPath}`)
+  const settings = currentQuizverseSettings()
+
+  if (settings.apiKey) {
+    url.searchParams.set('token', settings.apiKey)
+  }
+
+  if (userIdValue) {
+    url.searchParams.set('user_id', String(userIdValue))
+  }
+
+  const socket = new WebSocket(url)
+  const ownerId = event.sender.id
+
+  const emit = (type: string, data?: unknown) => {
+    if (!event.sender.isDestroyed()) {
+      event.sender.send('hermes:quizverse:tutor:ws:event', { data, id, type })
+    }
+  }
+
+  qvTutorSockets.set(id, { ownerId, socket })
+  socket.addEventListener('open', () => emit('open'))
+  socket.addEventListener('message', message => emit('message', String(message.data)))
+  socket.addEventListener('error', () => emit('error'))
+  socket.addEventListener('close', close => {
+    qvTutorSockets.delete(id)
+    emit('close', { code: close.code, reason: close.reason })
+  })
+
+  return id
+})
+
+qvIpcHandle('hermes:quizverse:tutor:ws:send', async (event, idValue, dataValue) => {
+  const entry = qvTutorSockets.get(String(idValue))
+
+  if (!entry || entry.ownerId !== event.sender.id || entry.socket.readyState !== WebSocket.OPEN) {
+    throw new Error('TutorX WebSocket is not open')
+  }
+
+  entry.socket.send(String(dataValue))
+})
+
+qvIpcHandle('hermes:quizverse:tutor:ws:close', async (event, idValue) => {
+  const id = String(idValue)
+  const entry = qvTutorSockets.get(id)
+
+  if (entry && entry.ownerId === event.sender.id) {
+    entry.socket.close()
+    qvTutorSockets.delete(id)
+  }
+})
+
+qvIpcHandle('hermes:quizverse:settings:save', async (_event, input) => {
+  const next = sanitizeQuizverseSettingsInput(input, currentQuizverseSettings())
+
+  writeQuizverseSettings(QUIZVERSE_SETTINGS_PATH, next, encryptDesktopSecret)
+  broadcastDeepTutorStatus(deepTutorSupervisor!.status())
+
+  return quizverseSettingsForRenderer(next)
+})
+
+qvIpcHandle('hermes:quizverse:tutor:status', async () => {
+  const status = deepTutorSupervisor!.status()
+
+  // Remote mode (and an externally managed local server) has no child to
+  // watch, so reachability is probed on demand for a truthful lamp.
+  if (status.state === 'remote') {
+    const reachable = await deepTutorSupervisor!.probe()
+
+    return { ...status, detail: reachable ? status.detail : `${status.detail} (unreachable)` , reachable }
+  }
+
+  return { ...status, reachable: status.state === 'running' }
+})
+
+qvIpcHandle('hermes:quizverse:tutor:start', async () => deepTutorSupervisor!.start())
+
+qvIpcHandle('hermes:quizverse:tutor:stop', async () => deepTutorSupervisor!.stop())
+
+qvIpcHandle('hermes:quizverse:tutor:restart', async () => deepTutorSupervisor!.restart())
+
+// Managed install: venv + `pip install -U deeptutor` under userData, then the
+// settings point at the managed entry point. Progress lines stream to the
+// Setup tab over provision:event; concurrent runs collapse into one.
+let qvProvisionInFlight: null | Promise<{ error: string; ok: false } | { ok: true }> = null
+
+function broadcastQvProvisionEvent(payload: { done?: boolean; error?: string; line?: string }) {
+  for (const win of BrowserWindow.getAllWindows()) {
+    if (!win.isDestroyed()) {
+      win.webContents.send('hermes:quizverse:provision:event', payload)
+    }
+  }
+}
+
+qvIpcHandle('hermes:quizverse:tutor:provision', async () => {
+  qvProvisionInFlight ??= (async () => {
+    const deeptutorRoot = path.join(app.getPath('userData'), 'deeptutor')
+
+    try {
+      const binPath = await provisionDeepTutor({
+        venvDir: path.join(deeptutorRoot, 'venv'),
+        workspaceDir: path.join(deeptutorRoot, 'workspace'),
+        log: line => {
+          rememberLog(`[qv-provision] ${line}`)
+          broadcastQvProvisionEvent({ line })
+        }
+      })
+
+      const next = {
+        ...currentQuizverseSettings(),
+        tutorMode: 'local' as const,
+        localCommand: managedLocalCommand(binPath),
+        localDirectory: path.join(deeptutorRoot, 'workspace')
+      }
+
+      writeQuizverseSettings(QUIZVERSE_SETTINGS_PATH, next, encryptDesktopSecret)
+
+      if (next.litellmKey) {
+        try {
+          injectTutorXLitellmConfig(next.localDirectory, next.litellmUrl, next.litellmKey)
+        } catch (injectError) {
+          rememberLog(
+            `[qv-provision] LiteLLM config inject failed: ${
+              injectError instanceof Error ? injectError.message : String(injectError)
+            }`
+          )
+        }
+      }
+
+      broadcastQvProvisionEvent({ done: true })
+      broadcastDeepTutorStatus(deepTutorSupervisor!.status())
+
+      return { ok: true as const }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+
+      rememberLog(`[qv-provision] failed: ${message}`)
+      broadcastQvProvisionEvent({ done: true, error: message })
+
+      return { error: message, ok: false as const }
+    } finally {
+      qvProvisionInFlight = null
+    }
+  })()
+
+  return qvProvisionInFlight
+})
+
+qvIpcHandle('hermes:quizverse:tutor:pick-directory', async () => {
+  const result = await dialog.showOpenDialog({
+    title: 'Choose your TutorX workspace directory',
+    properties: ['openDirectory'],
+    defaultPath: currentQuizverseSettings().localDirectory || app.getPath('home')
+  })
+
+  if (result.canceled || result.filePaths.length === 0) {
+    return { canceled: true, dir: null }
+  }
+
+  return { canceled: false, dir: result.filePaths[0] }
+})
+
+// The QuizVerse status strip's update lamp. Same poller/apply machinery as
+// the tray (feed already brand-resolved via currentUpdateManifestUrl), just
+// exposed on the brand's own IPC surface — the ix-agency channels don't
+// register in this build.
+qvIpcHandle('hermes:quizverse:update:check', async () => {
+  await refreshIxUpdateStatus()
+
+  return ixUpdateStatus
+})
+
+qvIpcHandle('hermes:quizverse:update:apply', async () => applyIxUpdate())
+
+void app.whenReady().then(() => installTutorXOriginRewrite())
+
+{
+  // The DeepTutor child tree must never outlive the app.
+  app.on('will-quit', () => {
+    deepTutorSupervisor?.stop()
+  })
+
+  // Workspace webviews open external links (target=_blank, window.open) in
+  // the system browser instead of spawning unmanaged Electron windows. Scoped
+  // to the QuizVerse guest partitions so other webviews (e.g. the chat
+  // preview pane) keep their existing behavior.
+  const QUIZVERSE_WEBVIEW_PARTITIONS = ['persist:quizverse-tutor', 'persist:quizverse-web']
+
+  app.on('web-contents-created', (_event, contents) => {
+    if (contents.getType() !== 'webview') {
+      return
+    }
+
+    const isQuizverseGuest = QUIZVERSE_WEBVIEW_PARTITIONS.some(
+      partition => contents.session === session.fromPartition(partition)
+    )
+
+    if (!isQuizverseGuest) {
+      return
+    }
+
+    contents.setWindowOpenHandler(({ url }) => {
+      if (/^https?:\/\//i.test(url)) {
+        void shell.openExternal(url)
+      }
+
+      return { action: 'deny' }
+    })
+  })
+}
+  })()
 }
 
 ipcMain.handle('hermes:fetchLinkTitle', (_event, url) => fetchLinkTitle(url))
@@ -9779,7 +10764,7 @@ async function runDesktopUninstall(mode) {
     return {
       ok: false,
       error: 'agent-missing',
-      message: `Can't run the uninstaller: no IX Agency venv at ${VENV_ROOT}.`
+      message: `Can't run the uninstaller: no ${APP_NAME} venv at ${VENV_ROOT}.`
     }
   }
 
@@ -9899,7 +10884,9 @@ ipcMain.handle('hermes:vscode-theme:search', async (_event, query) => searchMark
 // running app's chat composer. Three delivery paths: macOS 'open-url',
 // Win/Linux running-app 'second-instance' (argv), Win/Linux cold-start argv.
 // ---------------------------------------------------------------------------
-const HERMES_PROTOCOL = 'hermes'
+// Deep-link scheme follows the brand (hermes:// for IX Agency, quizverse://
+// for QuizVerse) so side-by-side installs never steal each other's links.
+const HERMES_PROTOCOL = BRAND.protocolScheme
 let _pendingDeepLink = null
 let _rendererReadyForDeepLink = false
 
@@ -10022,6 +11009,7 @@ app.whenReady().then(() => {
     Menu.setApplicationMenu(null)
   }
 
+  ensureDesktopBrandProvision()
   installMediaPermissions()
   registerMediaProtocol()
   installEmbedReferer()

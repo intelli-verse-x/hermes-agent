@@ -128,6 +128,7 @@ export type SidebarNavId =
   | 'ix-agency'
   | 'messaging'
   | 'new-session'
+  | 'quizverse'
   | 'settings'
   | 'skills'
 

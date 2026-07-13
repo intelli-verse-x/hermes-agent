@@ -1,0 +1,21 @@
+{
+  "id": "ix-agency",
+  "productName": "IX Agency",
+  "appId": "ai.intelli-verse-x.ix-agency",
+  "artifactPrefix": "IX-Agency",
+  "executableName": "ix-agency",
+  "description": "IX Agency — AI agency desktop by Intelliverse X.",
+  "author": "Intelliverse X",
+  "copyright": "Copyright © 2026 Nous Research",
+  "homepage": "https://admin.intelli-verse-x.ai",
+  "protocolScheme": "hermes",
+  "icon": "assets/icon",
+  "iconIco": "assets/icon.ico",
+  "markSvg": "ix-agency-mark.svg",
+  "touchIcon": "apple-touch-icon.png",
+  "updateFeedUrl": "https://intelliverse-x-desktop.s3.amazonaws.com/ix-agency",
+  "downloadPageUrl": "https://intelliverse-x-desktop.s3.amazonaws.com/index.html",
+  "s3PublishPath": "ix-agency",
+  "workspace": "ix-agency",
+  "workspaceLabel": "IX Agency"
+}
