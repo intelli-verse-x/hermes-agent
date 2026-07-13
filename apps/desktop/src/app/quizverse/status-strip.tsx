@@ -7,7 +7,16 @@ import { Tip } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 import { $gatewayState } from '@/store/session'
 
-import { $qvUpdate, $tutorStatus, applyQvUpdate, installTutorEvents, refreshQvUpdate, refreshTutorStatus } from './store'
+import {
+  $qvMcpStatus,
+  $qvUpdate,
+  $tutorStatus,
+  applyQvUpdate,
+  installTutorEvents,
+  refreshQvMcpStatus,
+  refreshQvUpdate,
+  refreshTutorStatus
+} from './store'
 import { TUTORX_NAME } from './tutorx'
 
 // Slim strip above the QuizVerse surfaces: TutorX platform lamp, agent
@@ -47,13 +56,18 @@ export function QvStatusStrip() {
   const tutor = useStore($tutorStatus)
   const gatewayState = useStore($gatewayState)
   const update = useStore($qvUpdate)
+  const mcp = useStore($qvMcpStatus)
 
   useEffect(() => {
     installTutorEvents()
     void refreshTutorStatus()
     void refreshQvUpdate()
+    void refreshQvMcpStatus()
 
-    const timer = setInterval(() => void refreshTutorStatus(), POLL_MS)
+    const timer = setInterval(() => {
+      void refreshTutorStatus()
+      void refreshQvMcpStatus()
+    }, POLL_MS)
 
     return () => clearInterval(timer)
   }, [])
@@ -77,6 +91,12 @@ export function QvStatusStrip() {
         color={hermesUp ? 'bg-emerald-500' : 'bg-amber-500'}
         label={`Agent ${hermesUp ? 'connected' : gatewayState}`}
         title={hermesUp ? 'Agent backend is connected' : `Agent gateway state: ${gatewayState}`}
+      />
+      <span className="h-4 w-px bg-(--ui-border-primary)" />
+      <Lamp
+        color={mcp?.state === 'ready' ? 'bg-emerald-500' : 'bg-red-500'}
+        label={`Player tools ${mcp?.state === 'ready' ? mcp.auth : 'offline'}`}
+        title={mcp?.detail ?? 'Checking QuizVerse player tools…'}
       />
       <div className="min-w-0 flex-1" />
       {update?.updateAvailable && (

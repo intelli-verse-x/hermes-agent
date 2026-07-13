@@ -1,5 +1,5 @@
 type Method = string
-import type { ExecFileSyncOptionsWithStringEncoding } from 'node:child_process'
+import type { ChildProcess, ExecFileSyncOptionsWithStringEncoding } from 'node:child_process'
 import { execFile, execFileSync, spawn } from 'node:child_process'
 import crypto from 'node:crypto'
 import fs from 'node:fs'
@@ -181,6 +181,26 @@ import {
   sanitizeQuizverseSettingsInput,
   writeQuizverseSettings
 } from './qv-deeptutor'
+import {
+  quizverseMcpSocketPath,
+  startQuizverseMcpBroker,
+  stopQuizverseMcpBroker
+} from './qv-mcp-broker'
+import {
+  isQuizverseMcpChildRunning,
+  probeQuizverseMcp,
+  startQuizverseMcpChild,
+  stopQuizverseMcpChild
+} from './qv-mcp-child'
+import {
+  assertQuizverseIsolatedHome,
+  resolveQuizverseEffectiveHermesHome
+} from './qv-mcp-profile'
+import { provisionQuizverseMcp } from './qv-mcp-provision'
+import {
+  inspectQuizverseProvision,
+  validateQuizverseProbe
+} from './qv-mcp-readiness'
 import {
   buildSessionWindowUrl,
   chatWindowWebPreferences,
@@ -394,7 +414,24 @@ if (INSTALL_STAMP) {
 // touches the user's real ~/.hermes / %LOCALAPPDATA%\hermes.
 function resolveHermesHome() {
   if (process.env.HERMES_HOME) {
-    return normalizeHermesHomeRoot(process.env.HERMES_HOME)
+    const explicit = normalizeHermesHomeRoot(process.env.HERMES_HOME)
+
+    if (process.env.HERMES_DESKTOP_BRAND === 'quizverse') {
+      const ixDefault = IS_WINDOWS && process.env.LOCALAPPDATA
+        ? path.join(process.env.LOCALAPPDATA, 'hermes')
+        : path.join(app.getPath('home'), '.hermes')
+
+      return assertQuizverseIsolatedHome(explicit, ixDefault)
+    }
+
+    return explicit
+  }
+
+  // QuizVerse owns an isolated agent profile by default. Users who
+  // intentionally shared a profile can preserve that behavior by explicitly
+  // setting HERMES_HOME; we never silently copy IX/admin configuration.
+  if (process.env.HERMES_DESKTOP_BRAND === 'quizverse') {
+    return path.join(app.getPath('userData'), 'hermes-home')
   }
 
   if (USER_DATA_OVERRIDE) {
@@ -433,10 +470,34 @@ function resolveHermesHome() {
 
 const HERMES_HOME = resolveHermesHome()
 
-function ensureDesktopBrandProvision() {
+const QV_MCP_BROKER_SECRET =
+  process.env.HERMES_DESKTOP_BRAND === 'quizverse' ? crypto.randomBytes(48).toString('base64url') : ''
+
+const QV_MCP_SERVER_PIPE_NONCE =
+  process.env.HERMES_DESKTOP_BRAND === 'quizverse' ? crypto.randomBytes(16).toString('hex') : ''
+
+function effectiveDesktopHermesHome(): string {
+  if (process.env.HERMES_DESKTOP_BRAND !== 'quizverse') {
+    return HERMES_HOME
+  }
+
+  const activeProfile = readActiveDesktopProfile()
+
+  return resolveQuizverseEffectiveHermesHome(HERMES_HOME, activeProfile)
+}
+
+function quizverseMcpServerSocketPath(): string {
+  const base = `${quizverseMcpSocketPath(app.getPath('userData'))}-server`
+
+  return IS_WINDOWS ? `${base}-${QV_MCP_SERVER_PIPE_NONCE}` : base
+}
+
+function ensureDesktopBrandProvision(targetHermesHome = effectiveDesktopHermesHome()) {
+  const effectiveHermesHome = targetHermesHome
+
   try {
     const result = provisionDesktopBrand({
-      hermesHome: HERMES_HOME,
+      hermesHome: effectiveHermesHome,
       brandId: BRAND.id,
       productName: BRAND.productName
     })
@@ -446,6 +507,37 @@ function ensureDesktopBrandProvision() {
     )
   } catch (error) {
     rememberLog(`[brand] provision failed: ${error instanceof Error ? error.message : String(error)}`)
+  }
+
+  if (process.env.HERMES_DESKTOP_BRAND === 'quizverse') {
+    try {
+      const mcpServerPath = IS_PACKAGED
+        ? path.join(process.resourcesPath, 'quizverse-mcp', 'server.mjs')
+        : path.join(SOURCE_REPO_ROOT, 'packages', 'quizverse-mcp', 'server.mjs')
+
+      const mcpRelayPath = IS_PACKAGED
+        ? path.join(process.resourcesPath, 'quizverse-mcp', 'relay.mjs')
+        : path.join(SOURCE_REPO_ROOT, 'packages', 'quizverse-mcp', 'relay.mjs')
+
+      const skillsSource = IS_PACKAGED
+        ? path.join(process.resourcesPath, 'quizverse-skills')
+        : path.join(APP_ROOT, 'brands', 'quizverse-skills')
+
+      const result = provisionQuizverseMcp({
+        electronExecutable: process.execPath,
+        hermesHome: effectiveHermesHome,
+        mcpRelayPath,
+        mcpServerPath,
+        skillsSource,
+        socketPath: quizverseMcpServerSocketPath()
+      })
+
+      rememberLog(
+        `[qv-mcp] provisioned ${result.skillCount} skills${result.configChanged ? ' and MCP config' : ''}`
+      )
+    } catch (error) {
+      rememberLog(`[qv-mcp] provision failed: ${error instanceof Error ? error.message : String(error)}`)
+    }
   }
 }
 
@@ -6280,10 +6372,18 @@ async function spawnPoolBackend(profile, entry) {
   }
 
   const token = crypto.randomBytes(32).toString('base64url')
+
   // --profile wins over the inherited HERMES_HOME env (see _apply_profile_override
   // step 3 in hermes_cli/main.py), so the child re-homes to this profile.
   // --port 0: the OS assigns an ephemeral port; the child announces it on stdout.
-  const backendArgs = ['--profile', profile, 'serve', '--host', '127.0.0.1', '--port', '0']
+  const backendArgs = process.env.HERMES_DESKTOP_BRAND === 'quizverse'
+    ? ['serve', '--host', '127.0.0.1', '--port', '0']
+    : ['--profile', profile, 'serve', '--host', '127.0.0.1', '--port', '0']
+
+  if (process.env.HERMES_DESKTOP_BRAND === 'quizverse') {
+    ensureDesktopBrandProvision(resolveQuizverseEffectiveHermesHome(HERMES_HOME, profile))
+  }
+
   const backend = await ensureRuntime(resolveHermesBackend(backendArgs))
   // Route old runtimes (no `serve`) through the legacy `dashboard --no-open`.
   backend.args = getBackendArgsForRuntime(backend)
@@ -6300,7 +6400,9 @@ async function spawnPoolBackend(profile, entry) {
       cwd: hermesCwd,
       env: {
         ...process.env,
-        HERMES_HOME,
+        HERMES_HOME: process.env.HERMES_DESKTOP_BRAND === 'quizverse'
+          ? resolveQuizverseEffectiveHermesHome(HERMES_HOME, profile)
+          : HERMES_HOME,
         ...backend.env,
         // Pin the gateway's tool/terminal cwd to the same directory we chose for
         // the child process. Inherited TERMINAL_CWD (or a stale config bridge)
@@ -6533,7 +6635,7 @@ async function startHermes() {
     // unaffected.
     const activeProfile = readActiveDesktopProfile()
 
-    if (activeProfile) {
+    if (activeProfile && process.env.HERMES_DESKTOP_BRAND !== 'quizverse') {
       backendArgs.unshift('--profile', activeProfile)
     }
 
@@ -6563,7 +6665,7 @@ async function startHermes() {
           // Mismatch would split config / sessions / .env / logs across two
           // directories. install.ps1 sets HERMES_HOME via setx; the desktop
           // can't reliably do that, so we set it inline for every spawn.
-          HERMES_HOME,
+          HERMES_HOME: effectiveDesktopHermesHome(),
           ...backend.env,
           TERMINAL_CWD: hermesCwd,
           HERMES_DASHBOARD_SESSION_TOKEN: token,
@@ -9508,38 +9610,52 @@ function qvIpcHandle(channel: string, handler: Parameters<typeof ipcMain.handle>
 
 const QV_NAKAMA_BASE = 'https://nakama-rest.intelli-verse-x.ai'
 const QV_PLAY_AUTH_PATH = path.join(app.getPath('userData'), 'quizverse-play-auth.json')
+const QV_PLAY_TIMEOUT_MS = 12_000
 
 const QV_PLAY_RPC_ALLOWLIST = new Set([
   'async_challenge_create',
   'async_challenge_get',
   'async_challenge_join',
   'async_challenge_submit',
+  'daily_rewards_claim',
+  'friends_list',
   'get_leaderboard',
   'get_player_stats',
   'learning_track_get',
   'learning_track_progress_get',
   'matchmaking_create_party',
+  'matchmaking_get_status',
   'matchmaking_join_party',
-  'party_create',
-  'party_join',
-  'party_leave',
   'player_get_full_profile',
   'progression_get_state',
+  'quiz_get_history',
+  'quiz_get_stats',
   'quiz_submit_result_v2',
   'quizverse_ai_generate_questions',
+  'quizverse_claim_daily_reward',
   'quizverse_create_match',
   'quizverse_fetch_external_quiz',
+  'quizverse_fetch_movies_quiz',
+  'quizverse_fetch_music_quiz',
   'quizverse_fetch_news_quiz',
+  'quizverse_get_entitlements',
+  'quizverse_get_player_context',
   'quizverse_get_questions',
+  'quizverse_knowledge_map',
+  'quizverse_request_questions',
   'quizverse_weekly_fetch',
+  'send_friend_challenge',
+  'send_friend_invite',
   'submit_score_and_sync',
   'tournament_caller_status',
   'tournament_enter',
   'tournament_get',
-  'tournament_list'
+  'tournament_list',
+  'wallet_get_balances'
 ])
 
 interface QvPlayAuth {
+  authKind: 'authenticated' | 'guest'
   deviceId: string
   token: string
   refreshToken: string
@@ -9560,6 +9676,7 @@ function readQvPlayAuth(): QvPlayAuth | null {
     }
 
     return {
+      authKind: raw.authKind === 'authenticated' ? 'authenticated' : 'guest',
       deviceId: String(raw.deviceId),
       refreshToken,
       token,
@@ -9578,6 +9695,7 @@ function writeQvPlayAuth(auth: QvPlayAuth) {
     `${JSON.stringify(
       {
         deviceId: auth.deviceId,
+        authKind: auth.authKind,
         refreshToken: encryptDesktopSecret(auth.refreshToken),
         token: encryptDesktopSecret(auth.token),
         userId: auth.userId,
@@ -9614,7 +9732,8 @@ async function authenticateQvPlay(): Promise<QvPlayAuth> {
         Authorization: `Basic ${Buffer.from('defaultkey:').toString('base64')}`,
         'content-type': 'application/json'
       },
-      method: 'POST'
+      method: 'POST',
+      signal: AbortSignal.timeout(QV_PLAY_TIMEOUT_MS)
     })
 
     if (response.ok) {
@@ -9644,7 +9763,8 @@ async function authenticateQvPlay(): Promise<QvPlayAuth> {
       Authorization: `Basic ${Buffer.from('defaultkey:').toString('base64')}`,
       'content-type': 'application/json'
     },
-    method: 'POST'
+    method: 'POST',
+    signal: AbortSignal.timeout(QV_PLAY_TIMEOUT_MS)
   })
 
   if (!response.ok) {
@@ -9655,6 +9775,7 @@ async function authenticateQvPlay(): Promise<QvPlayAuth> {
   const nextClaims = qvJwtClaims(body.token)
 
   const auth = {
+    authKind: 'guest' as const,
     deviceId,
     refreshToken: body.refresh_token ?? '',
     token: body.token,
@@ -9679,7 +9800,8 @@ async function qvPlayRpc(name: string, payload: Record<string, unknown>) {
     fetch(`${QV_NAKAMA_BASE}/v2/rpc/${encodeURIComponent(name)}?unwrap=true`, {
       body: JSON.stringify(payload),
       headers: { Authorization: `Bearer ${auth.token}`, 'content-type': 'application/json' },
-      method: 'POST'
+      method: 'POST',
+      signal: AbortSignal.timeout(QV_PLAY_TIMEOUT_MS)
     })
 
   let response = await call()
@@ -10152,12 +10274,181 @@ qvIpcHandle('hermes:quizverse:update:check', async () => {
 
 qvIpcHandle('hermes:quizverse:update:apply', async () => applyIxUpdate())
 
-void app.whenReady().then(() => installTutorXOriginRewrite())
+const qvMcpSocket = quizverseMcpSocketPath(app.getPath('userData'))
+const qvMcpServerSocket = quizverseMcpServerSocketPath()
+let qvMcpBroker: Awaited<ReturnType<typeof startQuizverseMcpBroker>> | null = null
+let qvMcpChild: ChildProcess | null = null
+let qvMcpError = ''
+let qvMcpShutdownComplete = false
+
+async function startQvMcpBroker() {
+  if (qvMcpBroker && isQuizverseMcpChildRunning(qvMcpChild)) {
+    return
+  }
+
+  if (qvMcpBroker) {
+    stopQuizverseMcpBroker(qvMcpBroker, qvMcpSocket)
+    qvMcpBroker = null
+  }
+
+  try {
+    ensureDesktopBrandProvision()
+    qvMcpBroker = await startQuizverseMcpBroker({
+      auditPath: path.join(effectiveDesktopHermesHome(), 'logs', 'quizverse-mcp-audit.jsonl'),
+      handlers: {
+        approve: async request => {
+          const result = await dialog.showMessageBox({
+            buttons: ['Deny', request.hardConfirmation ? 'Approve value-bearing action' : 'Approve once'],
+            cancelId: 0,
+            defaultId: 0,
+            detail: `${request.tool}\n${JSON.stringify(request.payload, null, 2).slice(0, 1200)}`,
+            message: request.hardConfirmation
+              ? 'QuizVerse Chat requests a value-bearing action'
+              : 'QuizVerse Chat requests a game action',
+            noLink: true,
+            type: 'warning'
+          })
+
+          return result.response === 1
+        },
+        capability: async () => {
+          const auth = await authenticateQvPlay()
+
+          return { authKind: auth.authKind, playerId: auth.userId }
+        },
+        rpc: async (name, payload) => qvPlayRpc(name, payload),
+        tutor: async requestPath => {
+          const response = await qvTutorRequest({ method: 'GET', path: requestPath })
+
+          if (response.status < 200 || response.status >= 300) {
+            throw new Error(`TutorX request failed (${response.status})`)
+          }
+
+          return response.body ? JSON.parse(response.body) : {}
+        }
+      },
+      idempotencyPath: path.join(app.getPath('userData'), 'quizverse-mcp-idempotency.json'),
+      secret: QV_MCP_BROKER_SECRET,
+      socketPath: qvMcpSocket
+    })
+
+    const mcpServerPath = IS_PACKAGED
+      ? path.join(process.resourcesPath, 'quizverse-mcp', 'server.mjs')
+      : path.join(SOURCE_REPO_ROOT, 'packages', 'quizverse-mcp', 'server.mjs')
+
+    qvMcpChild = await startQuizverseMcpChild({
+      brokerSecret: QV_MCP_BROKER_SECRET,
+      brokerSocket: qvMcpSocket,
+      executable: process.execPath,
+      serverPath: mcpServerPath,
+      serverSocket: qvMcpServerSocket
+    })
+    qvMcpChild.once('exit', code => {
+      qvMcpChild = null
+      qvMcpError = `QuizVerse MCP child exited (${code})`
+    })
+    qvMcpError = ''
+    rememberLog('[qv-mcp] player auth broker and MCP child ready')
+  } catch (error) {
+    await stopQuizverseMcpChild(qvMcpChild, qvMcpServerSocket)
+    qvMcpChild = null
+    stopQuizverseMcpBroker(qvMcpBroker, qvMcpSocket)
+    qvMcpBroker = null
+    qvMcpError = error instanceof Error ? error.message : String(error)
+    rememberLog(`[qv-mcp] broker failed: ${qvMcpError}`)
+  }
+}
+
+qvIpcHandle('hermes:quizverse:mcp:status', async () => {
+  if (!qvMcpBroker) {
+    await startQvMcpBroker()
+  }
+
+  const auth = qvMcpBroker ? await authenticateQvPlay().catch(() => null) : null
+  const effectiveHome = effectiveDesktopHermesHome()
+  const configPath = path.join(effectiveHome, 'config.yaml')
+
+  const serverPath = IS_PACKAGED
+    ? path.join(process.resourcesPath, 'quizverse-mcp', 'server.mjs')
+    : path.join(SOURCE_REPO_ROOT, 'packages', 'quizverse-mcp', 'server.mjs')
+
+  const relayPath = IS_PACKAGED
+    ? path.join(process.resourcesPath, 'quizverse-mcp', 'relay.mjs')
+    : path.join(SOURCE_REPO_ROOT, 'packages', 'quizverse-mcp', 'relay.mjs')
+
+  const provision = inspectQuizverseProvision({
+    configPath,
+    electronExecutable: process.execPath,
+    relayPath,
+    serverPath,
+    serverSocket: qvMcpServerSocket,
+    skillsRoot: path.join(effectiveHome, 'skills', 'quizverse')
+  })
+
+  let probe: Awaited<ReturnType<typeof probeQuizverseMcp>> | null = null
+
+  if (qvMcpBroker && isQuizverseMcpChildRunning(qvMcpChild) && provision.ready) {
+    probe = await probeQuizverseMcp(qvMcpServerSocket).catch(error => {
+      qvMcpError = error instanceof Error ? error.message : String(error)
+
+      return null
+    })
+
+    if (probe) {qvMcpError = ''}
+  }
+
+  const probeStatus = probe
+    ? validateQuizverseProbe(
+      probe,
+      auth ? { authKind: auth.authKind, playerId: auth.userId } : null
+    )
+    : { ready: false, reason: qvMcpError || 'MCP protocol probe did not complete' }
+
+  const ready = Boolean(
+    qvMcpBroker &&
+    isQuizverseMcpChildRunning(qvMcpChild) &&
+    provision.ready &&
+    probeStatus.ready
+  )
+
+  const degradedReason = !provision.ready ? provision.reason : probeStatus.reason
+
+  return {
+    auth: auth?.authKind ?? 'pending',
+    detail: qvMcpError || (ready
+      ? `Player tools are available in ${effectiveHome} (${probeStatus.reason}).`
+      : degradedReason),
+    state: ready ? 'ready' : 'error',
+    toolCount: probe?.toolIds.length ?? 0
+  }
+})
+
+void app.whenReady().then(async () => {
+  installTutorXOriginRewrite()
+  await startQvMcpBroker()
+})
 
 {
   // The DeepTutor child tree must never outlive the app.
-  app.on('will-quit', () => {
+  app.on('will-quit', event => {
     deepTutorSupervisor?.stop()
+
+    if (!qvMcpShutdownComplete && qvMcpChild) {
+      event.preventDefault()
+      const child = qvMcpChild
+      qvMcpChild = null
+      void stopQuizverseMcpChild(child, qvMcpServerSocket).finally(() => {
+        qvMcpShutdownComplete = true
+        stopQuizverseMcpBroker(qvMcpBroker, qvMcpSocket)
+        qvMcpBroker = null
+        app.quit()
+      })
+
+      return
+    }
+
+    stopQuizverseMcpBroker(qvMcpBroker, qvMcpSocket)
+    qvMcpBroker = null
   })
 
   // Workspace webviews open external links (target=_blank, window.open) in
