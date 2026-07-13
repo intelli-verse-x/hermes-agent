@@ -308,6 +308,7 @@ declare global {
         playRealtimeCreateMatch: (id: string, payload: Record<string, unknown>) => Promise<{ matchId: string }>
         playRealtimeSend: (id: string, opCode: number, payload: Record<string, unknown>) => Promise<void>
         playRealtimeClose: (id: string) => Promise<void>
+        mcpStatus: () => Promise<QuizverseMcpStatus>
         onPlayRealtimeEvent: (callback: (event: QuizversePlayRealtimeEvent) => void) => () => void
         updateCheck: () => Promise<IxUpdateStatus>
         updateApply: () => Promise<{ opened: boolean; detail: string }>
@@ -321,6 +322,13 @@ export interface QuizversePlayRealtimeEvent {
   data?: unknown
   id: string
   type: 'disconnect' | 'error' | 'match-data' | 'match-presence' | 'matchmaker-matched'
+}
+
+export interface QuizverseMcpStatus {
+  auth: 'authenticated' | 'guest' | 'pending'
+  detail: string
+  state: 'error' | 'ready'
+  toolCount: number
 }
 
 export interface QuizverseRendererSettings {

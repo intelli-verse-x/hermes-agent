@@ -3,6 +3,7 @@ import { atom } from 'nanostores'
 import type {
   DeepTutorRendererStatus,
   IxUpdateStatus,
+  QuizverseMcpStatus,
   QuizverseRendererSettings,
   QuizverseSettingsInput
 } from '@/global'
@@ -23,6 +24,7 @@ const bridge = () => window.hermesDesktop?.quizverse
 export const $tutorStatus = atom<DeepTutorRendererStatus | null>(null)
 export const $qvSettings = atom<QuizverseRendererSettings | null>(null)
 export const $qvUpdate = atom<IxUpdateStatus | null>(null)
+export const $qvMcpStatus = atom<QuizverseMcpStatus | null>(null)
 
 export interface QvProvisionState {
   running: boolean
@@ -94,6 +96,25 @@ export async function refreshTutorStatus() {
     $tutorStatus.set(await qv.tutorStatus())
   } catch {
     // Non-QuizVerse build or main not ready — the lamp stays grey.
+  }
+}
+
+export async function refreshQvMcpStatus() {
+  const qv = bridge()
+
+  if (!qv) {
+    return
+  }
+
+  try {
+    $qvMcpStatus.set(await qv.mcpStatus())
+  } catch {
+    $qvMcpStatus.set({
+      auth: 'pending',
+      detail: 'QuizVerse player tools are unavailable.',
+      state: 'error',
+      toolCount: 0
+    })
   }
 }
 

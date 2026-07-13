@@ -8,11 +8,13 @@ import { cn } from '@/lib/utils'
 import { notify } from '@/store/notifications'
 
 import {
+  $qvMcpStatus,
   $qvProvision,
   $qvSettings,
   $tutorStatus,
   loadQuizverseSettings,
   provisionTutor,
+  refreshQvMcpStatus,
   refreshTutorStatus,
   restartTutor,
   saveQuizverseSettings,
@@ -47,6 +49,7 @@ export function SetupTab() {
   const settings = useStore($qvSettings)
   const status = useStore($tutorStatus)
   const provision = useStore($qvProvision)
+  const mcp = useStore($qvMcpStatus)
 
   const [tutorMode, setTutorMode] = useState<'local' | 'remote'>('local')
   const [remoteUrl, setRemoteUrl] = useState('')
@@ -65,6 +68,7 @@ export function SetupTab() {
   useEffect(() => {
     void loadQuizverseSettings()
     void refreshTutorStatus()
+    void refreshQvMcpStatus()
   }, [])
 
   // Hydrate the form once from the persisted settings.
@@ -129,6 +133,26 @@ export function SetupTab() {
   return (
     <div className="h-full overflow-y-auto p-4">
       <div className="mx-auto max-w-2xl space-y-6">
+        <section className="rounded-lg border border-(--ui-border-primary) bg-(--ui-bg-quinary) p-4">
+          <div className="flex items-center gap-2">
+            <span
+              aria-hidden="true"
+              className={cn('size-2 rounded-full', mcp?.state === 'ready' ? 'bg-emerald-500' : 'bg-red-500')}
+            />
+            <span className="text-sm font-medium">Chat player tools</span>
+            <span className="text-xs text-muted-foreground">
+              {mcp?.state === 'ready' ? `${mcp.toolCount} tools · ${mcp.auth}` : 'offline'}
+            </span>
+            <div className="flex-1" />
+            <Button onClick={() => void refreshQvMcpStatus()} size="xs" variant="secondary">
+              Check
+            </Button>
+          </div>
+          <p className="mt-2 text-xs text-muted-foreground">
+            {mcp?.detail ?? 'Checking the local player-scoped MCP and desktop auth broker…'}
+          </p>
+        </section>
+
         {/* Supervisor status + controls */}
         <section className="rounded-lg border border-(--ui-border-primary) bg-(--ui-bg-quinary) p-4">
           <div className="flex items-center gap-2">

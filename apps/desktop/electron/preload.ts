@@ -377,6 +377,7 @@ contextBridge.exposeInMainWorld('hermesDesktop', {
           playRealtimeSend: (id, opCode, payload) =>
             ipcRenderer.invoke('hermes:quizverse:play:realtime:send', id, opCode, payload),
           playRealtimeClose: id => ipcRenderer.invoke('hermes:quizverse:play:realtime:close', id),
+          mcpStatus: () => ipcRenderer.invoke('hermes:quizverse:mcp:status'),
           onPlayRealtimeEvent: callback => {
             const listener = (_event, payload) => callback(payload)
             ipcRenderer.on('hermes:quizverse:play:realtime:event', listener)
