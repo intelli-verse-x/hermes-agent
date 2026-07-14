@@ -20,8 +20,14 @@ function token(name: string) {
 }
 
 function luminance(hex: string) {
-  const channels = hex.slice(1).match(/../g)!.map(value => Number.parseInt(value, 16) / 255)
-  const [red, green, blue] = channels.map(value => value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4)
+  const channels = hex
+    .slice(1)
+    .match(/../g)!
+    .map(value => Number.parseInt(value, 16) / 255)
+
+  const [red, green, blue] = channels.map(value =>
+    value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4
+  )
 
   return red * 0.2126 + green * 0.7152 + blue * 0.0722
 }
@@ -63,9 +69,10 @@ describe('QuizVerse contrast contract', () => {
     expect(selectors.every(line => line.startsWith('.qv-workspace'))).toBe(true)
   })
 
-  it('keeps Arcade native when a hosted satellite is unavailable', () => {
+  it('routes Arcade satellites through the native surface router', () => {
     expect(arcade).not.toMatch(/<webview|QvWebviewPane|document\.createElement\(['"]webview/)
-    expect(arcade).toContain('Embedded hosted navigation is disabled')
+    expect(arcade).toContain('NATIVE_SURFACES')
+    expect(arcade).toContain('NativeSurfaceRouter')
   })
 
   it('has no frame renderer or retired QuizVerse webview IPC', () => {

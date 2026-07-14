@@ -1,0 +1,19 @@
+{
+  "name": "@intelliverse-x/quizverse-mcp",
+  "version": "0.1.0",
+  "private": true,
+  "sideEffects": false,
+  "type": "module",
+  "description": "Player-scoped QuizVerse MCP facade.",
+  "bin": {
+    "quizverse-mcp": "./server.mjs"
+  },
+  "scripts": {
+    "typecheck": "tsc --allowJs --checkJs --noEmit --strict false --types node --typeRoots ../../node_modules/@types --module nodenext --moduleResolution nodenext --target es2022 server.mjs relay.mjs contracts.mjs response-contracts.mjs quiz-fetch-contracts.mjs",
+    "lint": "eslint --config ../../apps/desktop/eslint.config.mjs server.mjs relay.mjs contracts.mjs response-contracts.mjs quiz-fetch-contracts.mjs",
+    "test": "node --test test/*.test.mjs"
+  },
+  "engines": {
+    "node": ">=20 <25"
+  }
+}

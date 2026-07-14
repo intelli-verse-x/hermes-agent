@@ -1,5 +1,5 @@
 type Method = string
-import type { ExecFileSyncOptionsWithStringEncoding } from 'node:child_process'
+import type { ChildProcess, ExecFileSyncOptionsWithStringEncoding } from 'node:child_process'
 import { execFile, execFileSync, spawn } from 'node:child_process'
 import crypto from 'node:crypto'
 import fs from 'node:fs'
@@ -172,6 +172,14 @@ import {
 import { createLinkTitleWindow, guardLinkTitleSession, readLinkTitleWindowTitle } from './link-title-window'
 import { serializeJsonBody, setJsonRequestHeaders } from './oauth-net-request'
 import {
+  beginQuizverseOAuth,
+  completeQuizverseOAuth,
+  exchangeQuizverseOAuthCode,
+  type QuizverseOAuthPending,
+  refreshQuizverseOAuthTokens,
+  verifyQuizverseIdToken
+} from './qv-auth-bridge'
+import {
   DeepTutorSupervisor,
   injectTutorXLitellmConfig,
   managedLocalCommand,
@@ -181,6 +189,32 @@ import {
   sanitizeQuizverseSettingsInput,
   writeQuizverseSettings
 } from './qv-deeptutor'
+import {
+  quizverseMcpSocketPath,
+  startQuizverseMcpBroker,
+  stopQuizverseMcpBroker
+} from './qv-mcp-broker'
+import {
+  isQuizverseMcpChildRunning,
+  probeQuizverseMcp,
+  startQuizverseMcpChild,
+  stopQuizverseMcpChild
+} from './qv-mcp-child'
+import {
+  assertQuizverseIsolatedHome,
+  resolveQuizverseEffectiveHermesHome
+} from './qv-mcp-profile'
+import { provisionQuizverseMcp } from './qv-mcp-provision'
+import {
+  inspectQuizverseProvision,
+  validateQuizverseProbe
+} from './qv-mcp-readiness'
+import {
+  canonicalizeQuizverseProductRequest,
+  isQuizverseWordsCacheFresh,
+  quizverseWordsCacheExpiry,
+  type QuizverseWordsCacheRecord
+} from './qv-product-proxy'
 import {
   buildSessionWindowUrl,
   chatWindowWebPreferences,
@@ -394,7 +428,24 @@ if (INSTALL_STAMP) {
 // touches the user's real ~/.hermes / %LOCALAPPDATA%\hermes.
 function resolveHermesHome() {
   if (process.env.HERMES_HOME) {
-    return normalizeHermesHomeRoot(process.env.HERMES_HOME)
+    const explicit = normalizeHermesHomeRoot(process.env.HERMES_HOME)
+
+    if (process.env.HERMES_DESKTOP_BRAND === 'quizverse') {
+      const ixDefault = IS_WINDOWS && process.env.LOCALAPPDATA
+        ? path.join(process.env.LOCALAPPDATA, 'hermes')
+        : path.join(app.getPath('home'), '.hermes')
+
+      return assertQuizverseIsolatedHome(explicit, ixDefault)
+    }
+
+    return explicit
+  }
+
+  // QuizVerse owns an isolated agent profile by default. Users who
+  // intentionally shared a profile can preserve that behavior by explicitly
+  // setting HERMES_HOME; we never silently copy IX/admin configuration.
+  if (process.env.HERMES_DESKTOP_BRAND === 'quizverse') {
+    return path.join(app.getPath('userData'), 'hermes-home')
   }
 
   if (USER_DATA_OVERRIDE) {
@@ -433,10 +484,34 @@ function resolveHermesHome() {
 
 const HERMES_HOME = resolveHermesHome()
 
-function ensureDesktopBrandProvision() {
+const QV_MCP_BROKER_SECRET =
+  process.env.HERMES_DESKTOP_BRAND === 'quizverse' ? crypto.randomBytes(48).toString('base64url') : ''
+
+const QV_MCP_SERVER_PIPE_NONCE =
+  process.env.HERMES_DESKTOP_BRAND === 'quizverse' ? crypto.randomBytes(16).toString('hex') : ''
+
+function effectiveDesktopHermesHome(): string {
+  if (process.env.HERMES_DESKTOP_BRAND !== 'quizverse') {
+    return HERMES_HOME
+  }
+
+  const activeProfile = readActiveDesktopProfile()
+
+  return resolveQuizverseEffectiveHermesHome(HERMES_HOME, activeProfile)
+}
+
+function quizverseMcpServerSocketPath(): string {
+  const base = `${quizverseMcpSocketPath(app.getPath('userData'))}-server`
+
+  return IS_WINDOWS ? `${base}-${QV_MCP_SERVER_PIPE_NONCE}` : base
+}
+
+function ensureDesktopBrandProvision(targetHermesHome = effectiveDesktopHermesHome()) {
+  const effectiveHermesHome = targetHermesHome
+
   try {
     const result = provisionDesktopBrand({
-      hermesHome: HERMES_HOME,
+      hermesHome: effectiveHermesHome,
       brandId: BRAND.id,
       productName: BRAND.productName
     })
@@ -446,6 +521,37 @@ function ensureDesktopBrandProvision() {
     )
   } catch (error) {
     rememberLog(`[brand] provision failed: ${error instanceof Error ? error.message : String(error)}`)
+  }
+
+  if (process.env.HERMES_DESKTOP_BRAND === 'quizverse') {
+    try {
+      const mcpServerPath = IS_PACKAGED
+        ? path.join(process.resourcesPath, 'quizverse-mcp', 'server.mjs')
+        : path.join(SOURCE_REPO_ROOT, 'packages', 'quizverse-mcp', 'server.mjs')
+
+      const mcpRelayPath = IS_PACKAGED
+        ? path.join(process.resourcesPath, 'quizverse-mcp', 'relay.mjs')
+        : path.join(SOURCE_REPO_ROOT, 'packages', 'quizverse-mcp', 'relay.mjs')
+
+      const skillsSource = IS_PACKAGED
+        ? path.join(process.resourcesPath, 'quizverse-skills')
+        : path.join(APP_ROOT, 'brands', 'quizverse-skills')
+
+      const result = provisionQuizverseMcp({
+        electronExecutable: process.execPath,
+        hermesHome: effectiveHermesHome,
+        mcpRelayPath,
+        mcpServerPath,
+        skillsSource,
+        socketPath: quizverseMcpServerSocketPath()
+      })
+
+      rememberLog(
+        `[qv-mcp] provisioned ${result.skillCount} skills${result.configChanged ? ' and MCP config' : ''}`
+      )
+    } catch (error) {
+      rememberLog(`[qv-mcp] provision failed: ${error instanceof Error ? error.message : String(error)}`)
+    }
   }
 }
 
@@ -6280,10 +6386,18 @@ async function spawnPoolBackend(profile, entry) {
   }
 
   const token = crypto.randomBytes(32).toString('base64url')
+
   // --profile wins over the inherited HERMES_HOME env (see _apply_profile_override
   // step 3 in hermes_cli/main.py), so the child re-homes to this profile.
   // --port 0: the OS assigns an ephemeral port; the child announces it on stdout.
-  const backendArgs = ['--profile', profile, 'serve', '--host', '127.0.0.1', '--port', '0']
+  const backendArgs = process.env.HERMES_DESKTOP_BRAND === 'quizverse'
+    ? ['serve', '--host', '127.0.0.1', '--port', '0']
+    : ['--profile', profile, 'serve', '--host', '127.0.0.1', '--port', '0']
+
+  if (process.env.HERMES_DESKTOP_BRAND === 'quizverse') {
+    ensureDesktopBrandProvision(resolveQuizverseEffectiveHermesHome(HERMES_HOME, profile))
+  }
+
   const backend = await ensureRuntime(resolveHermesBackend(backendArgs))
   // Route old runtimes (no `serve`) through the legacy `dashboard --no-open`.
   backend.args = getBackendArgsForRuntime(backend)
@@ -6300,7 +6414,9 @@ async function spawnPoolBackend(profile, entry) {
       cwd: hermesCwd,
       env: {
         ...process.env,
-        HERMES_HOME,
+        HERMES_HOME: process.env.HERMES_DESKTOP_BRAND === 'quizverse'
+          ? resolveQuizverseEffectiveHermesHome(HERMES_HOME, profile)
+          : HERMES_HOME,
         ...backend.env,
         // Pin the gateway's tool/terminal cwd to the same directory we chose for
         // the child process. Inherited TERMINAL_CWD (or a stale config bridge)
@@ -6533,7 +6649,7 @@ async function startHermes() {
     // unaffected.
     const activeProfile = readActiveDesktopProfile()
 
-    if (activeProfile) {
+    if (activeProfile && process.env.HERMES_DESKTOP_BRAND !== 'quizverse') {
       backendArgs.unshift('--profile', activeProfile)
     }
 
@@ -6563,7 +6679,7 @@ async function startHermes() {
           // Mismatch would split config / sessions / .env / logs across two
           // directories. install.ps1 sets HERMES_HOME via setx; the desktop
           // can't reliably do that, so we set it inline for every spawn.
-          HERMES_HOME,
+          HERMES_HOME: effectiveDesktopHermesHome(),
           ...backend.env,
           TERMINAL_CWD: hermesCwd,
           HERMES_DASHBOARD_SESSION_TOKEN: token,
@@ -9508,38 +9624,114 @@ function qvIpcHandle(channel: string, handler: Parameters<typeof ipcMain.handle>
 
 const QV_NAKAMA_BASE = 'https://nakama-rest.intelli-verse-x.ai'
 const QV_PLAY_AUTH_PATH = path.join(app.getPath('userData'), 'quizverse-play-auth.json')
+const QV_PLAY_TIMEOUT_MS = 12_000
 
 const QV_PLAY_RPC_ALLOWLIST = new Set([
   'async_challenge_create',
   'async_challenge_get',
   'async_challenge_join',
   'async_challenge_submit',
+  'daily_rewards_claim',
+  'friends_list',
   'get_leaderboard',
   'get_player_stats',
   'learning_track_get',
   'learning_track_progress_get',
+  'learning_track_progress_update',
+  'learning_video_record_watch',
+  'learning_check_submit',
+  'brain_coins_get',
   'matchmaking_create_party',
+  'matchmaking_get_status',
   'matchmaking_join_party',
-  'party_create',
-  'party_join',
-  'party_leave',
   'player_get_full_profile',
   'progression_get_state',
+  'quiz_get_history',
+  'quiz_get_stats',
   'quiz_submit_result_v2',
   'quizverse_ai_generate_questions',
+  'quizverse_claim_daily_reward',
   'quizverse_create_match',
   'quizverse_fetch_external_quiz',
+  'quizverse_fetch_movies_quiz',
+  'quizverse_fetch_music_quiz',
   'quizverse_fetch_news_quiz',
+  'quizverse_get_entitlements',
+  'quizverse_get_player_context',
   'quizverse_get_questions',
+  'quizverse_knowledge_map',
+  'quizverse_request_questions',
   'quizverse_weekly_fetch',
+  'send_friend_challenge',
+  'send_friend_invite',
   'submit_score_and_sync',
   'tournament_caller_status',
+  'tournament_bracket_state',
+  'tournament_claim_certificate',
+  'tournament_content_get_pack',
   'tournament_enter',
   'tournament_get',
-  'tournament_list'
+  'tournament_leaderboard_activity_feed',
+  'tournament_leaderboard_around_me',
+  'tournament_leaderboard_country',
+  'tournament_leaderboard_friends',
+  'tournament_leaderboard_tier_league',
+  'tournament_leaderboard_top',
+  'tournament_list',
+  'tournament_pre_enroll',
+  'tournament_submit_pack_result',
+  'tournament_submit_picks',
+  'tournament_streak_get',
+  'tournament_streak_check_in',
+  'tournament_intent_quiz_get',
+  'tournament_intent_quiz_submit',
+  'tournament_intent_quiz_get_recommendation',
+  'referral_my_code',
+  'certificate_get',
+  'quizverse_lap_submit_progress',
+  'quizverse_lap_get_leaderboard',
+  'quizverse_lap_battle_find',
+  'quizverse_words_daily_seed',
+  'quizverse_words_duel_get',
+  'quizverse_words_duel_leaderboard',
+  'quizverse_words_duel_submit',
+  'creator_event_create',
+  'creator_event_get',
+  'creator_event_list',
+  'creator_event_publish',
+  'creator_event_spa_join',
+  'creator_event_submit',
+  'wallet_get_balances'
+])
+
+const QV_PLAY_CONFIRMED_RPCS = new Set([
+  'tournament_claim_certificate',
+  'tournament_enter',
+  'tournament_pre_enroll',
+  'tournament_streak_check_in',
+  'tournament_submit_pack_result',
+  'tournament_submit_picks',
+  'tournament_intent_quiz_submit',
+  'quizverse_words_duel_submit'
+])
+
+const QV_PLAY_IDEMPOTENT_RPCS = new Set(QV_PLAY_CONFIRMED_RPCS)
+
+const QV_PLAY_AUTHENTICATED_RPCS = new Set([
+  'tournament_claim_certificate',
+  'tournament_enter',
+  'tournament_pre_enroll',
+  'tournament_streak_check_in',
+  'tournament_submit_pack_result',
+  'tournament_submit_picks',
+  'tournament_intent_quiz_submit'
 ])
 
 interface QvPlayAuth {
+  authKind: 'authenticated' | 'guest'
+  cognitoAccessToken: string
+  cognitoRefreshToken: string
+  cognitoSubject: string
   deviceId: string
   token: string
   refreshToken: string
@@ -9560,6 +9752,10 @@ function readQvPlayAuth(): QvPlayAuth | null {
     }
 
     return {
+      authKind: raw.authKind === 'authenticated' ? 'authenticated' : 'guest',
+      cognitoAccessToken: decryptDesktopSecret(raw.cognitoAccessToken),
+      cognitoRefreshToken: decryptDesktopSecret(raw.cognitoRefreshToken),
+      cognitoSubject: String(raw.cognitoSubject ?? ''),
       deviceId: String(raw.deviceId),
       refreshToken,
       token,
@@ -9578,6 +9774,10 @@ function writeQvPlayAuth(auth: QvPlayAuth) {
     `${JSON.stringify(
       {
         deviceId: auth.deviceId,
+        authKind: auth.authKind,
+        cognitoAccessToken: encryptDesktopSecret(auth.cognitoAccessToken),
+        cognitoRefreshToken: encryptDesktopSecret(auth.cognitoRefreshToken),
+        cognitoSubject: auth.cognitoSubject,
         refreshToken: encryptDesktopSecret(auth.refreshToken),
         token: encryptDesktopSecret(auth.token),
         userId: auth.userId,
@@ -9589,7 +9789,7 @@ function writeQvPlayAuth(auth: QvPlayAuth) {
   )
 }
 
-function qvJwtClaims(token: string): { exp?: number; uid?: string; usn?: string } {
+function qvJwtClaims(token: string): { exp?: number; sub?: string; uid?: string; usn?: string } {
   try {
     return JSON.parse(Buffer.from(token.split('.')[1], 'base64url').toString('utf8'))
   } catch {
@@ -9614,7 +9814,8 @@ async function authenticateQvPlay(): Promise<QvPlayAuth> {
         Authorization: `Basic ${Buffer.from('defaultkey:').toString('base64')}`,
         'content-type': 'application/json'
       },
-      method: 'POST'
+      method: 'POST',
+      signal: AbortSignal.timeout(QV_PLAY_TIMEOUT_MS)
     })
 
     if (response.ok) {
@@ -9644,7 +9845,8 @@ async function authenticateQvPlay(): Promise<QvPlayAuth> {
       Authorization: `Basic ${Buffer.from('defaultkey:').toString('base64')}`,
       'content-type': 'application/json'
     },
-    method: 'POST'
+    method: 'POST',
+    signal: AbortSignal.timeout(QV_PLAY_TIMEOUT_MS)
   })
 
   if (!response.ok) {
@@ -9655,6 +9857,10 @@ async function authenticateQvPlay(): Promise<QvPlayAuth> {
   const nextClaims = qvJwtClaims(body.token)
 
   const auth = {
+    authKind: 'guest' as const,
+    cognitoAccessToken: '',
+    cognitoRefreshToken: '',
+    cognitoSubject: '',
     deviceId,
     refreshToken: body.refresh_token ?? '',
     token: body.token,
@@ -9668,6 +9874,220 @@ async function authenticateQvPlay(): Promise<QvPlayAuth> {
   return auth
 }
 
+async function authenticateQvCognitoNakama(cognitoSub: string, username: string): Promise<QvPlayAuth> {
+  const deviceId = qvPlayAuth?.deviceId || readQvPlayAuth()?.deviceId || `qv_desktop_${crypto.randomUUID().replaceAll('-', '').slice(0, 20)}`
+  const query = new URLSearchParams({ create: 'true', username })
+
+  const response = await fetch(`${QV_NAKAMA_BASE}/v2/account/authenticate/custom?${query}`, {
+    // Unity and the web auth broker both use the verified Cognito subject as
+    // the custom ID. The subject comes only from the PKCE token exchange;
+    // renderer input can never select this account ID.
+    body: JSON.stringify({ id: cognitoSub }),
+    headers: {
+      Authorization: `Basic ${Buffer.from('defaultkey:').toString('base64')}`,
+      'content-type': 'application/json'
+    },
+    method: 'POST',
+    signal: AbortSignal.timeout(QV_PLAY_TIMEOUT_MS)
+  })
+
+  if (!response.ok) {
+    throw new Error(`QuizVerse account session failed (${response.status})`)
+  }
+
+  const body = await response.json()
+  const claims = qvJwtClaims(body.token)
+
+  return {
+    authKind: 'authenticated',
+    cognitoAccessToken: '',
+    cognitoRefreshToken: '',
+    cognitoSubject: cognitoSub,
+    deviceId,
+    refreshToken: body.refresh_token ?? '',
+    token: body.token,
+    userId: body.user_id ?? claims.uid ?? cognitoSub,
+    username: body.username ?? claims.usn ?? username
+  }
+}
+
+async function ensureQvCognitoAuth(): Promise<QvPlayAuth> {
+  const auth = await authenticateQvPlay()
+
+  if (auth.authKind !== 'authenticated') {
+    throw new Error('Connect a QuizVerse Cognito account before using this product surface')
+  }
+
+  const accessClaims = qvJwtClaims(auth.cognitoAccessToken)
+
+  if ((accessClaims.exp ?? 0) > Date.now() / 1000 + 60) {
+    return auth
+  }
+
+  if (!auth.cognitoRefreshToken) {
+    throw new Error('QuizVerse Cognito session expired; sign in again')
+  }
+
+  try {
+    const config = qvOAuthConfig()
+
+    const tokens = await refreshQuizverseOAuthTokens({
+      clientId: config.clientId,
+      domain: config.domain,
+      refreshToken: auth.cognitoRefreshToken
+    })
+
+    if (!tokens.accessToken || !tokens.idToken) {
+      throw new Error('Cognito refresh response did not include fresh identity tokens')
+    }
+
+    const claims = await verifyQuizverseIdToken(tokens.idToken, {
+      clientId: config.clientId,
+      domain: config.domain,
+      issuer: config.issuer
+    })
+
+    const subject = String(claims.sub ?? '')
+
+    if (!subject || subject !== auth.cognitoSubject) {
+      throw new Error('Cognito refreshed identity does not match the linked account')
+    }
+
+    qvPlayAuth = {
+      ...auth,
+      cognitoAccessToken: tokens.accessToken,
+      cognitoRefreshToken: tokens.refreshToken
+    }
+    writeQvPlayAuth(qvPlayAuth)
+
+    return qvPlayAuth
+  } catch (error) {
+    qvPlayAuth = null
+
+    try {
+      fs.rmSync(QV_PLAY_AUTH_PATH, { force: true })
+    } catch {
+      // A read-only profile still receives the reauthentication state.
+    }
+
+    throw new Error(`QuizVerse Cognito session expired; sign in again (${error instanceof Error ? error.message : String(error)})`)
+  }
+}
+
+let qvOAuthPending: (QuizverseOAuthPending & { guestUserId: string }) | null = null
+
+function qvOAuthConfig() {
+  const settings = currentQuizverseSettings()
+
+  if (!settings.cognitoDomain || !settings.cognitoClientId || !settings.cognitoIssuer) {
+    throw new Error('Configure the QuizVerse Cognito domain, client id, and OIDC issuer in Setup')
+  }
+
+  return {
+    clientId: settings.cognitoClientId,
+    domain: settings.cognitoDomain,
+    issuer: settings.cognitoIssuer,
+    redirectUri: 'quizverse://auth/callback'
+  }
+}
+
+qvIpcHandle('hermes:quizverse:auth:start', async () => {
+  const guest = await authenticateQvPlay()
+  const started = beginQuizverseOAuth(qvOAuthConfig())
+  qvOAuthPending = { ...started.pending, guestUserId: guest.authKind === 'guest' ? guest.userId : '' }
+  await shell.openExternal(started.url)
+
+  return { state: 'pending' }
+})
+
+qvIpcHandle('hermes:quizverse:auth:status', async () => {
+  const auth = qvPlayAuth ?? readQvPlayAuth()
+
+  return {
+    authenticated: auth?.authKind === 'authenticated',
+    configured: Boolean(currentQuizverseSettings().cognitoDomain && currentQuizverseSettings().cognitoClientId),
+    userId: auth?.userId ?? '',
+    username: auth?.username ?? ''
+  }
+})
+
+async function completeQvOAuthDeepLink(callbackUrl: string) {
+  if (!qvOAuthPending) {
+    throw new Error('QuizVerse OAuth callback has no pending login')
+  }
+
+  const pending = qvOAuthPending
+  qvOAuthPending = null
+
+  const completed = await completeQuizverseOAuth({
+    authenticateNakama: async (sub, username) => authenticateQvCognitoNakama(sub, username),
+    callbackUrl,
+    config: qvOAuthConfig(),
+    exchangeCode: exchangeQuizverseOAuthCode,
+    mergeGuest: async (ghostUserId, cognitoSub, accessToken) => {
+      if (!ghostUserId) {
+        return
+      }
+
+      try {
+        const response = await fetch(`${QV_NAKAMA_BASE}/v2/rpc/account_merge_ghost_to_cognito?unwrap=true`, {
+          body: JSON.stringify({
+            cognito_access_token: accessToken,
+            cognito_user_id: cognitoSub,
+            ghost_user_id: ghostUserId
+          }),
+          headers: {
+            Authorization: `Bearer ${(qvPlayAuth ?? readQvPlayAuth())?.token ?? ''}`,
+            'content-type': 'application/json'
+          },
+          method: 'POST',
+          signal: AbortSignal.timeout(QV_PLAY_TIMEOUT_MS)
+        })
+
+        if (!response.ok) {
+          rememberLog(`[qv-auth] guest merge deferred (${response.status})`)
+        }
+      } catch (error) {
+        rememberLog(`[qv-auth] guest merge deferred: ${error instanceof Error ? error.message : String(error)}`)
+      }
+    },
+    pending,
+    previousGuestUserId: pending.guestUserId,
+    verifyIdToken: verifyQuizverseIdToken
+  })
+
+  qvPlayAuth = {
+    ...completed.nakama,
+    authKind: 'authenticated',
+    cognitoAccessToken: completed.tokens.accessToken,
+    cognitoRefreshToken: completed.tokens.refreshToken,
+    cognitoSubject: String(qvJwtClaims(completed.tokens.idToken).sub ?? ''),
+    deviceId: (qvPlayAuth ?? readQvPlayAuth())?.deviceId ?? `qv_desktop_${crypto.randomUUID().replaceAll('-', '').slice(0, 20)}`
+  }
+  writeQvPlayAuth(qvPlayAuth)
+
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('hermes:quizverse:auth:event', {
+      authenticated: true,
+      userId: qvPlayAuth.userId,
+      username: qvPlayAuth.username
+    })
+  }
+}
+
+app.on('brand-auth-callback' as never, (_event, callbackUrl: string) => {
+  void completeQvOAuthDeepLink(callbackUrl).catch(error => {
+    rememberLog(`[qv-auth] callback failed: ${error instanceof Error ? error.message : String(error)}`)
+
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('hermes:quizverse:auth:event', {
+        authenticated: false,
+        error: error instanceof Error ? error.message : String(error)
+      })
+    }
+  })
+})
+
 async function qvPlayRpc(name: string, payload: Record<string, unknown>) {
   if (!QV_PLAY_RPC_ALLOWLIST.has(name)) {
     throw new Error(`QuizVerse RPC is not allowed: ${name}`)
@@ -9679,7 +10099,8 @@ async function qvPlayRpc(name: string, payload: Record<string, unknown>) {
     fetch(`${QV_NAKAMA_BASE}/v2/rpc/${encodeURIComponent(name)}?unwrap=true`, {
       body: JSON.stringify(payload),
       headers: { Authorization: `Bearer ${auth.token}`, 'content-type': 'application/json' },
-      method: 'POST'
+      method: 'POST',
+      signal: AbortSignal.timeout(QV_PLAY_TIMEOUT_MS)
     })
 
   let response = await call()
@@ -9699,14 +10120,274 @@ async function qvPlayRpc(name: string, payload: Record<string, unknown>) {
   return text ? JSON.parse(text) : {}
 }
 
+const qvProductControllers = new Map<string, AbortController>()
+
+qvIpcHandle('hermes:quizverse:product:cancel', async (_event, rawStreamId) => {
+  const streamId = String(rawStreamId)
+  qvProductControllers.get(streamId)?.abort()
+  qvProductControllers.delete(streamId)
+})
+
+qvIpcHandle('hermes:quizverse:product:request', async (event, input) => {
+  const request = canonicalizeQuizverseProductRequest(
+    String(input?.path ?? ''),
+    String(input?.method ?? 'GET')
+  )
+
+  if (request.requiresConfirmation) {
+    const confirmation = await dialog.showMessageBox({
+      buttons: ['Cancel', 'Confirm product action'],
+      cancelId: 0,
+      defaultId: 0,
+      detail: `${request.method} ${request.requestPath}`,
+      message: 'Allow this QuizVerse product write?',
+      noLink: true,
+      type: 'warning'
+    })
+
+    if (confirmation.response !== 1) {
+      throw new Error('QuizVerse product write was cancelled')
+    }
+  }
+
+  const auth = request.requiresAuth ? await ensureQvCognitoAuth() : null
+
+  const streamId = typeof input?.streamId === 'string' && /^[A-Za-z0-9_-]{8,100}$/.test(input.streamId)
+    ? input.streamId
+    : ''
+
+  const streamController = streamId ? new AbortController() : null
+
+  if (streamController) {
+    qvProductControllers.set(streamId, streamController)
+  }
+
+  let body: BodyInit | undefined
+  let contentType = 'application/json'
+
+  if (request.method !== 'GET' && Array.isArray(input?.form)) {
+    if (input.form.length > 24) {
+      throw new Error('QuizVerse product form has too many fields')
+    }
+
+    const form = new FormData()
+    let encodedBytes = 0
+
+    for (const rawField of input.form) {
+      const name = String(rawField?.name ?? '').trim()
+
+      if (!/^[A-Za-z][A-Za-z0-9_-]{0,63}$/.test(name)) {
+        throw new Error('QuizVerse product form field name is invalid')
+      }
+
+      if (rawField?.dataBase64 !== undefined) {
+        const encoded = String(rawField.dataBase64)
+        encodedBytes += encoded.length
+
+        if (encodedBytes > 36_000_000) {
+          throw new Error('QuizVerse product upload exceeds the 27 MB limit')
+        }
+
+        const bytes = Buffer.from(encoded, 'base64')
+        const filename = path.basename(String(rawField.filename ?? 'upload.bin')).slice(0, 180)
+        const mime = String(rawField.mime ?? 'application/octet-stream').slice(0, 120)
+        form.append(name, new Blob([bytes], { type: mime }), filename)
+      } else {
+        form.append(name, String(rawField?.value ?? '').slice(0, 2_000_000))
+      }
+    }
+
+    body = form
+    contentType = ''
+  } else if (request.method !== 'GET' && input?.body !== undefined) {
+    body = JSON.stringify(input.body)
+  }
+
+  const cacheableWordsContent = request.method === 'GET' && (
+    request.requestPath.startsWith('/api/words/content/') ||
+    request.requestPath.startsWith('/quizverse-words-')
+  )
+
+  const cachePath = cacheableWordsContent
+    ? path.join(effectiveDesktopHermesHome(), 'cache', 'quizverse', 'words', `${crypto.createHash('sha256').update(request.url).digest('hex')}.json`)
+    : ''
+
+  let cached: QuizverseWordsCacheRecord | null = null
+
+  if (cachePath && input?.cacheMode === 'reload') {
+    try {
+      fs.rmSync(cachePath, { force: true })
+    } catch {
+      // A read-only profile can still attempt an unconditional network fetch.
+    }
+  }
+
+  if (cachePath && input?.cacheMode !== 'reload') {
+    try {
+      const envelope = JSON.parse(fs.readFileSync(cachePath, 'utf8'))
+      const decrypted = decryptDesktopSecret(envelope.payload)
+      const value = JSON.parse(decrypted)
+
+      const candidate = {
+        ...value,
+        expiresAt: typeof value.expiresAt === 'number'
+          ? value.expiresAt
+          : quizverseWordsCacheExpiry(request.requestPath, value.body, value.savedAt)
+      }
+
+      if (isQuizverseWordsCacheFresh(candidate)) {
+        cached = candidate
+      } else {
+        throw new Error('expired or invalid cache envelope')
+      }
+    } catch {
+      try {
+        fs.rmSync(cachePath, { force: true })
+      } catch {
+        // A read-only profile simply refetches without cache recovery.
+      }
+    }
+  }
+
+  let response: Response
+
+  try {
+    response = await fetch(request.url, {
+      body,
+      headers: auth
+        ? {
+            Authorization: `Bearer ${auth.cognitoAccessToken}`,
+            ...(request.requestPath === '/api/lap/notes/create' ? { 'X-Nakama-Authorization': `Bearer ${auth.token}` } : {}),
+            ...(contentType ? { 'content-type': contentType } : {})
+          }
+        : {
+            ...(contentType ? { 'content-type': contentType } : {}),
+            ...(cached?.etag ? { 'If-None-Match': cached.etag } : {})
+          },
+      method: request.method,
+      signal: streamController
+        ? AbortSignal.any([streamController.signal, AbortSignal.timeout(QV_PLAY_TIMEOUT_MS)])
+        : AbortSignal.timeout(QV_PLAY_TIMEOUT_MS)
+    })
+  } catch (error) {
+    if (streamId) {qvProductControllers.delete(streamId)}
+
+    if (cached) {
+      return { body: cached.body, contentType: cached.contentType, etag: cached.etag, offline: true, ok: true, status: 200 }
+    }
+
+    throw error
+  }
+
+  if (response.status === 304 && cached) {
+    return { body: cached.body, contentType: cached.contentType, etag: cached.etag, offline: false, ok: true, status: 200 }
+  }
+
+  let responseBody = ''
+
+  if (streamId && response.body) {
+    const reader = response.body.getReader()
+    const decoder = new TextDecoder()
+
+    try {
+      while (true) {
+        const { done, value } = await reader.read()
+
+        if (done) {break}
+        const chunk = decoder.decode(value, { stream: true })
+        responseBody += chunk
+        event.sender.send('hermes:quizverse:product:chunk', { chunk, streamId })
+      }
+
+      const finalChunk = decoder.decode()
+
+      if (finalChunk) {
+        responseBody += finalChunk
+        event.sender.send('hermes:quizverse:product:chunk', { chunk: finalChunk, streamId })
+      }
+    } finally {
+      qvProductControllers.delete(streamId)
+    }
+  } else {
+    responseBody = await response.text()
+  }
+
+  const responseContentType = response.headers.get('content-type') ?? ''
+  const etag = response.headers.get('etag') ?? ''
+
+  if (cachePath && response.ok) {
+    try {
+      fs.mkdirSync(path.dirname(cachePath), { recursive: true })
+      const savedAt = Date.now()
+      const expiresAt = quizverseWordsCacheExpiry(request.requestPath, responseBody, savedAt)
+
+      if (!expiresAt) {
+        throw new Error('response has no valid cache expiry')
+      }
+
+      fs.writeFileSync(cachePath, JSON.stringify({
+        payload: encryptDesktopSecret(JSON.stringify({
+          body: responseBody,
+          contentType: responseContentType,
+          etag,
+          expiresAt,
+          savedAt
+        }))
+      }), { mode: 0o600 })
+    } catch (error) {
+      rememberLog(`[qv-content] encrypted cache write skipped: ${error instanceof Error ? error.message : String(error)}`)
+    }
+  }
+
+  return {
+    body: responseBody,
+    contentType: responseContentType,
+    etag,
+    offline: false,
+    ok: response.ok,
+    status: response.status
+  }
+})
+
 qvIpcHandle('hermes:quizverse:play:session', async () => {
   const auth = await authenticateQvPlay()
 
   return { deviceId: auth.deviceId, userId: auth.userId, username: auth.username }
 })
-qvIpcHandle('hermes:quizverse:play:rpc', async (_event, name, payload) =>
-  qvPlayRpc(String(name), payload && typeof payload === 'object' ? payload : {})
-)
+qvIpcHandle('hermes:quizverse:play:rpc', async (_event, name, payload) => {
+  const rpcName = String(name)
+  const rpcPayload = payload && typeof payload === 'object' ? payload as Record<string, unknown> : {}
+
+  if (QV_PLAY_IDEMPOTENT_RPCS.has(rpcName) && !/^[A-Za-z0-9_-]{8,100}$/.test(String(rpcPayload.idempotency_key ?? ''))) {
+    throw new Error(`${rpcName} requires an idempotency_key`)
+  }
+
+  if (QV_PLAY_AUTHENTICATED_RPCS.has(rpcName)) {
+    const auth = await authenticateQvPlay()
+
+    if (auth.authKind !== 'authenticated') {
+      throw new Error(`${rpcName} requires a linked Cognito account`)
+    }
+  }
+
+  if (QV_PLAY_CONFIRMED_RPCS.has(rpcName)) {
+    const confirmation = await dialog.showMessageBox({
+      buttons: ['Cancel', 'Confirm tournament write'],
+      cancelId: 0,
+      defaultId: 0,
+      detail: rpcName,
+      message: 'Allow this QuizVerse tournament write?',
+      noLink: true,
+      type: 'warning'
+    })
+
+    if (confirmation.response !== 1) {
+      throw new Error('QuizVerse tournament write was cancelled')
+    }
+  }
+
+  return qvPlayRpc(rpcName, rpcPayload)
+})
 
 interface QvRealtimeConnection {
   client: NakamaClient
@@ -9753,6 +10434,7 @@ qvIpcHandle('hermes:quizverse:play:realtime:connect', async event => {
 
   socket.onmatchpresence = presence => emit('match-presence', presence)
   socket.onmatchmakermatched = matched => emit('matchmaker-matched', matched)
+  socket.onnotification = notification => emit('notification', notification)
 
   socket.ondisconnect = disconnect => {
     qvRealtimeConnections.delete(id)
@@ -10152,12 +10834,181 @@ qvIpcHandle('hermes:quizverse:update:check', async () => {
 
 qvIpcHandle('hermes:quizverse:update:apply', async () => applyIxUpdate())
 
-void app.whenReady().then(() => installTutorXOriginRewrite())
+const qvMcpSocket = quizverseMcpSocketPath(app.getPath('userData'))
+const qvMcpServerSocket = quizverseMcpServerSocketPath()
+let qvMcpBroker: Awaited<ReturnType<typeof startQuizverseMcpBroker>> | null = null
+let qvMcpChild: ChildProcess | null = null
+let qvMcpError = ''
+let qvMcpShutdownComplete = false
+
+async function startQvMcpBroker() {
+  if (qvMcpBroker && isQuizverseMcpChildRunning(qvMcpChild)) {
+    return
+  }
+
+  if (qvMcpBroker) {
+    stopQuizverseMcpBroker(qvMcpBroker, qvMcpSocket)
+    qvMcpBroker = null
+  }
+
+  try {
+    ensureDesktopBrandProvision()
+    qvMcpBroker = await startQuizverseMcpBroker({
+      auditPath: path.join(effectiveDesktopHermesHome(), 'logs', 'quizverse-mcp-audit.jsonl'),
+      handlers: {
+        approve: async request => {
+          const result = await dialog.showMessageBox({
+            buttons: ['Deny', request.hardConfirmation ? 'Approve value-bearing action' : 'Approve once'],
+            cancelId: 0,
+            defaultId: 0,
+            detail: `${request.tool}\n${JSON.stringify(request.payload, null, 2).slice(0, 1200)}`,
+            message: request.hardConfirmation
+              ? 'QuizVerse Chat requests a value-bearing action'
+              : 'QuizVerse Chat requests a game action',
+            noLink: true,
+            type: 'warning'
+          })
+
+          return result.response === 1
+        },
+        capability: async () => {
+          const auth = await authenticateQvPlay()
+
+          return { authKind: auth.authKind, playerId: auth.userId }
+        },
+        rpc: async (name, payload) => qvPlayRpc(name, payload),
+        tutor: async requestPath => {
+          const response = await qvTutorRequest({ method: 'GET', path: requestPath })
+
+          if (response.status < 200 || response.status >= 300) {
+            throw new Error(`TutorX request failed (${response.status})`)
+          }
+
+          return response.body ? JSON.parse(response.body) : {}
+        }
+      },
+      idempotencyPath: path.join(app.getPath('userData'), 'quizverse-mcp-idempotency.json'),
+      secret: QV_MCP_BROKER_SECRET,
+      socketPath: qvMcpSocket
+    })
+
+    const mcpServerPath = IS_PACKAGED
+      ? path.join(process.resourcesPath, 'quizverse-mcp', 'server.mjs')
+      : path.join(SOURCE_REPO_ROOT, 'packages', 'quizverse-mcp', 'server.mjs')
+
+    qvMcpChild = await startQuizverseMcpChild({
+      brokerSecret: QV_MCP_BROKER_SECRET,
+      brokerSocket: qvMcpSocket,
+      executable: process.execPath,
+      serverPath: mcpServerPath,
+      serverSocket: qvMcpServerSocket
+    })
+    qvMcpChild.once('exit', code => {
+      qvMcpChild = null
+      qvMcpError = `QuizVerse MCP child exited (${code})`
+    })
+    qvMcpError = ''
+    rememberLog('[qv-mcp] player auth broker and MCP child ready')
+  } catch (error) {
+    await stopQuizverseMcpChild(qvMcpChild, qvMcpServerSocket)
+    qvMcpChild = null
+    stopQuizverseMcpBroker(qvMcpBroker, qvMcpSocket)
+    qvMcpBroker = null
+    qvMcpError = error instanceof Error ? error.message : String(error)
+    rememberLog(`[qv-mcp] broker failed: ${qvMcpError}`)
+  }
+}
+
+qvIpcHandle('hermes:quizverse:mcp:status', async () => {
+  if (!qvMcpBroker) {
+    await startQvMcpBroker()
+  }
+
+  const auth = qvMcpBroker ? await authenticateQvPlay().catch(() => null) : null
+  const effectiveHome = effectiveDesktopHermesHome()
+  const configPath = path.join(effectiveHome, 'config.yaml')
+
+  const serverPath = IS_PACKAGED
+    ? path.join(process.resourcesPath, 'quizverse-mcp', 'server.mjs')
+    : path.join(SOURCE_REPO_ROOT, 'packages', 'quizverse-mcp', 'server.mjs')
+
+  const relayPath = IS_PACKAGED
+    ? path.join(process.resourcesPath, 'quizverse-mcp', 'relay.mjs')
+    : path.join(SOURCE_REPO_ROOT, 'packages', 'quizverse-mcp', 'relay.mjs')
+
+  const provision = inspectQuizverseProvision({
+    configPath,
+    electronExecutable: process.execPath,
+    relayPath,
+    serverPath,
+    serverSocket: qvMcpServerSocket,
+    skillsRoot: path.join(effectiveHome, 'skills', 'quizverse')
+  })
+
+  let probe: Awaited<ReturnType<typeof probeQuizverseMcp>> | null = null
+
+  if (qvMcpBroker && isQuizverseMcpChildRunning(qvMcpChild) && provision.ready) {
+    probe = await probeQuizverseMcp(qvMcpServerSocket).catch(error => {
+      qvMcpError = error instanceof Error ? error.message : String(error)
+
+      return null
+    })
+
+    if (probe) {qvMcpError = ''}
+  }
+
+  const probeStatus = probe
+    ? validateQuizverseProbe(
+      probe,
+      auth ? { authKind: auth.authKind, playerId: auth.userId } : null
+    )
+    : { ready: false, reason: qvMcpError || 'MCP protocol probe did not complete' }
+
+  const ready = Boolean(
+    qvMcpBroker &&
+    isQuizverseMcpChildRunning(qvMcpChild) &&
+    provision.ready &&
+    probeStatus.ready
+  )
+
+  const degradedReason = !provision.ready ? provision.reason : probeStatus.reason
+
+  return {
+    auth: auth?.authKind ?? 'pending',
+    detail: qvMcpError || (ready
+      ? `Player tools are available in ${effectiveHome} (${probeStatus.reason}).`
+      : degradedReason),
+    state: ready ? 'ready' : 'error',
+    toolCount: probe?.toolIds.length ?? 0
+  }
+})
+
+void app.whenReady().then(async () => {
+  installTutorXOriginRewrite()
+  await startQvMcpBroker()
+})
 
 {
   // The DeepTutor child tree must never outlive the app.
-  app.on('will-quit', () => {
+  app.on('will-quit', event => {
     deepTutorSupervisor?.stop()
+
+    if (!qvMcpShutdownComplete && qvMcpChild) {
+      event.preventDefault()
+      const child = qvMcpChild
+      qvMcpChild = null
+      void stopQuizverseMcpChild(child, qvMcpServerSocket).finally(() => {
+        qvMcpShutdownComplete = true
+        stopQuizverseMcpBroker(qvMcpBroker, qvMcpSocket)
+        qvMcpBroker = null
+        app.quit()
+      })
+
+      return
+    }
+
+    stopQuizverseMcpBroker(qvMcpBroker, qvMcpSocket)
+    qvMcpBroker = null
   })
 
   // Workspace webviews open external links (target=_blank, window.open) in
@@ -10909,6 +11760,12 @@ function handleDeepLink(url) {
     parsed = new URL(url)
   } catch {
     rememberLog(`[deeplink] ignoring malformed url: ${url}`)
+
+    return
+  }
+
+  if (parsed.hostname === 'auth' && parsed.pathname === '/callback') {
+    app.emit('brand-auth-callback' as never, parsed.toString())
 
     return
   }

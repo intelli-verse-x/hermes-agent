@@ -5,6 +5,8 @@ import { Button } from '@/components/ui/button'
 import { Codicon } from '@/components/ui/codicon'
 import { cn } from '@/lib/utils'
 
+import { openNativeSurface } from './native-surface-store'
+import { NativeSurfaceRouter } from './native-surfaces'
 import {
   createSyncBeatTimeline,
   decodeLiveProtocolFrame,
@@ -765,6 +767,10 @@ function PlayerHeader() {
 export function NativePlay() {
   const [mode, setMode] = useState<null | PlayMode>(null)
 
+  if (mode?.protocol === 'native-surface') {
+    return <NativeSurfaceRouter onBack={() => setMode(null)} />
+  }
+
   return (
     <div className="bg-quizverse-mesh flex h-full min-h-0 flex-col rounded-lg">
       <PlayerHeader />
@@ -783,7 +789,13 @@ export function NativePlay() {
             ? <TournamentLobby onBack={() => setMode(null)} />
             : mode
               ? <QuizGame mode={mode} onBack={() => setMode(null)} />
-              : <ModeGrid onSelect={setMode} />}
+              : <ModeGrid onSelect={selected => {
+                if (selected.protocol === 'native-surface') {
+                  openNativeSurface('link-play', 'library')
+                }
+
+                setMode(selected)
+              }} />}
       </div>
     </div>
   )

@@ -146,6 +146,32 @@ export function brandedBuilderConfig(brand, pkg) {
     entry && entry.to === 'icon.ico' ? { ...entry, from: icoSource } : entry
   )
 
+  if (brand.id === 'quizverse') {
+    build.extraResources = [
+      ...(build.extraResources || []),
+      {
+        from: '../../packages/quizverse-mcp',
+        to: 'quizverse-mcp',
+        filter: [
+          'server.mjs',
+          'relay.mjs',
+          'contracts.mjs',
+          'contracts.d.mts',
+          'response-contracts.mjs',
+          'response-contracts.d.mts',
+          'quiz-fetch-contracts.mjs',
+          'quiz-fetch-contracts.d.mts',
+          'package.json',
+          'README.md'
+        ]
+      },
+      {
+        from: 'brands/quizverse-skills',
+        to: 'quizverse-skills'
+      }
+    ]
+  }
+
   return build
 }
 

@@ -430,7 +430,7 @@ export interface PlayMode {
   source: 'ai' | 'bank' | 'daily' | 'external' | 'premium' | 'viral' | 'weekly'
   available: boolean
   provider?: string
-  protocol?: 'ai-chat' | 'live' | 'party' | 'phantom' | 'sync-beat' | 'tournament'
+  protocol?: 'ai-chat' | 'live' | 'native-surface' | 'party' | 'phantom' | 'sync-beat' | 'tournament'
   reason?: string
   weeklyType?: string
 }
@@ -468,7 +468,7 @@ const protocol = (
 export const PLAY_MODES: readonly PlayMode[] = [
   rpc('solo', 'SoloChallenge', 'Solo Challenge', '🎯', 'speed'),
   rpc('local-battle', 'LocalBattle', 'Local Battle', '🎮', 'social'),
-  ai('link-and-play', 'LinkAndPlay', 'Link & Play', '🔗'),
+  { ...protocol('link-and-play', 'LinkAndPlay', 'Link & Play', '🔗', 'native-surface'), category: 'ai', count: 0 },
   ai('pick-topic', 'PickATopic', 'Pick a Topic', '📚'),
   { ...rpc('daily', 'DailyQuiz', 'Daily Quiz', '📅', 'premium'), source: 'daily' },
   { ...rpc('daily-premium', 'DailyPremiumQuiz', 'Daily Premium', '👑', 'premium'), source: 'premium' },

@@ -284,11 +284,16 @@ declare global {
         tutorStart: () => Promise<DeepTutorRendererStatus>
         tutorStop: () => Promise<DeepTutorRendererStatus>
         tutorRestart: () => Promise<DeepTutorRendererStatus>
-        validateLitellm: (payload?: { key?: string; url?: string }) => Promise<{ model: string; modelCount: number; provider: string }>
+        validateLitellm: (payload?: {
+          key?: string
+          url?: string
+        }) => Promise<{ model: string; modelCount: number; provider: string }>
         tutorRequest: (payload: QuizverseTutorRequest) => Promise<{ body: string; contentType: string; status: number }>
         tutorStreamStart: (path: string) => Promise<string>
         tutorStreamStop: (id: string) => Promise<void>
-        onTutorStreamEvent: (callback: (event: { data?: unknown; id: string; type: 'data' | 'done' | 'error' }) => void) => () => void
+        onTutorStreamEvent: (
+          callback: (event: { data?: unknown; id: string; type: 'data' | 'done' | 'error' }) => void
+        ) => () => void
         tutorWsConnect: (path: string, userId: string) => Promise<string>
         tutorWsSend: (id: string, data: string) => Promise<void>
         tutorWsClose: (id: string) => Promise<void>
@@ -301,13 +306,23 @@ declare global {
         playRpc: <T = unknown>(name: string, payload?: Record<string, unknown>) => Promise<T>
         playRealtimeConnect: () => Promise<{ id: string; userId: string }>
         playRealtimeListMatches: (id: string, query: string) => Promise<{ match_id?: string }[]>
-        playRealtimeJoinMatch: (id: string, matchId: string) => Promise<{
+        playRealtimeJoinMatch: (
+          id: string,
+          matchId: string
+        ) => Promise<{
           matchId: string
           presences: { sessionId?: string; userId?: string; username?: string }[]
         }>
         playRealtimeCreateMatch: (id: string, payload: Record<string, unknown>) => Promise<{ matchId: string }>
         playRealtimeSend: (id: string, opCode: number, payload: Record<string, unknown>) => Promise<void>
         playRealtimeClose: (id: string) => Promise<void>
+        authStart: () => Promise<{ state: 'pending' }>
+        authStatus: () => Promise<QuizverseAuthStatus>
+        onAuthEvent: (callback: (event: QuizverseAuthEvent) => void) => () => void
+        productRequest: (input: QuizverseProductRequest) => Promise<QuizverseProductResponse>
+        productStream: (input: QuizverseProductRequest, onChunk: (chunk: string) => void) => Promise<QuizverseProductResponse>
+        productCancel: (streamId: string) => Promise<void>
+        mcpStatus: () => Promise<QuizverseMcpStatus>
         onPlayRealtimeEvent: (callback: (event: QuizversePlayRealtimeEvent) => void) => () => void
         updateCheck: () => Promise<IxUpdateStatus>
         updateApply: () => Promise<{ opened: boolean; detail: string }>
@@ -320,7 +335,51 @@ declare global {
 export interface QuizversePlayRealtimeEvent {
   data?: unknown
   id: string
-  type: 'disconnect' | 'error' | 'match-data' | 'match-presence' | 'matchmaker-matched'
+  type: 'disconnect' | 'error' | 'match-data' | 'match-presence' | 'matchmaker-matched' | 'notification'
+}
+
+export interface QuizverseAuthStatus {
+  authenticated: boolean
+  configured: boolean
+  userId: string
+  username: string
+}
+
+export interface QuizverseAuthEvent {
+  authenticated: boolean
+  error?: string
+  userId?: string
+  username?: string
+}
+
+export interface QuizverseProductRequest {
+  body?: unknown
+  cacheMode?: 'default' | 'reload'
+  form?: Array<{
+    dataBase64?: string
+    filename?: string
+    mime?: string
+    name: string
+    value?: string
+  }>
+  method?: 'DELETE' | 'GET' | 'PATCH' | 'POST' | 'PUT'
+  path: string
+  streamId?: string
+}
+
+export interface QuizverseProductResponse {
+  body: string
+  contentType: string
+  etag?: string
+  offline?: boolean
+  status: number
+}
+
+export interface QuizverseMcpStatus {
+  auth: 'authenticated' | 'guest' | 'pending'
+  detail: string
+  state: 'error' | 'ready'
+  toolCount: number
 }
 
 export interface QuizverseRendererSettings {
@@ -337,6 +396,9 @@ export interface QuizverseRendererSettings {
   litellmUrl: string
   // The raw LiteLLM key never crosses back into the renderer.
   litellmKeySet: boolean
+  cognitoDomain: string
+  cognitoClientId: string
+  cognitoIssuer: string
 }
 
 export interface QuizverseProvisionEvent {
@@ -369,6 +431,9 @@ export interface QuizverseSettingsInput {
   apiKey?: string
   litellmUrl?: string
   litellmKey?: string
+  cognitoDomain?: string
+  cognitoClientId?: string
+  cognitoIssuer?: string
 }
 
 export interface DeepTutorRendererStatus {

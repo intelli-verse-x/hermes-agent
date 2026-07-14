@@ -826,7 +826,7 @@ export const en: Translations = {
     edit: 'Edit',
     archive: 'Archive',
     skillArchivedTitle: 'Skill archived',
-    skillArchivedMessage: 'Restorable via hermes curator restore.',
+    skillArchivedMessage: 'Available in your archived skills.',
     hub: {
       searchPlaceholder: 'Search the skill hub',
       search: 'Search',
@@ -1226,7 +1226,7 @@ export const en: Translations = {
       },
       MATRIX_HOMESERVER: { label: 'Homeserver URL', placeholder: 'https://matrix.org' },
       MATRIX_ACCESS_TOKEN: { label: 'Access token' },
-      MATRIX_USER_ID: { label: 'Bot user ID', placeholder: '@hermes:example.org' },
+      MATRIX_USER_ID: { label: 'Bot user ID', placeholder: '@agent:example.org' },
       MATRIX_ALLOWED_USERS: {
         label: 'Allowed Matrix user IDs',
         help: 'Recommended. Comma-separated user IDs in @user:server format.'
@@ -1876,7 +1876,7 @@ export const en: Translations = {
     noOutput: 'No output yet.',
     cancelling: 'Cancelling...',
     cancelInstall: 'Cancel install',
-    transcriptSaved: 'Full transcript saved to',
+    transcriptSaved: 'Full transcript saved in the local application logs folder.',
     copiedOutput: 'Copied!',
     copyOutput: 'Copy output',
     reloadRetry: 'Reload and retry'
@@ -2266,7 +2266,7 @@ export const en: Translations = {
       reject: 'Reject',
       alwaysTitle: 'Always allow this command?',
       alwaysDescription: pattern =>
-        `This adds the “${pattern}” pattern to your permanent allowlist (~/.hermes/config.yaml). {brandName} won’t ask again for commands like this — in this session or any future one.`,
+        `This adds the “${pattern}” pattern to your permanent application allowlist. {brandName} won’t ask again for commands like this — in this session or any future one.`,
       alwaysAllow: 'Always allow'
     },
     clarify: {

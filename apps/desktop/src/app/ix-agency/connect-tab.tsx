@@ -27,6 +27,17 @@ const VPN_LABEL: Record<IxAgencyVpnStatus['state'], string> = {
 
 const STATUS_POLL_MS = 10_000
 
+export function intelliversePublicText(value: string): string {
+  return value
+    .replace(/hermes[-\s]?deployment/gi, 'Intelliverse installer')
+    .replace(/\.hermes/gi, 'Intelliverse runtime storage')
+    .replace(/\bHermes(?: Agent)?\b/gi, 'Intelliverse')
+}
+
+function publicRuntimeStatus(status: IxHermesStatus): IxHermesStatus {
+  return { ...status, detail: intelliversePublicText(status.detail) }
+}
+
 export function ConnectTab() {
   const bridge = window.hermesDesktop?.ixAgency
 
@@ -68,7 +79,7 @@ export function ConnectTab() {
 
     void bridge
       .hermesStatus?.()
-      .then(setHermes)
+      .then(status => setHermes(publicRuntimeStatus(status)))
       .catch(() => setHermes(null))
 
     void refreshVpn()
@@ -176,7 +187,7 @@ export function ConnectTab() {
       notify({ message: 'Cognito S2S credentials verified', detail: result.detail })
       setCognitoSecretDraft('')
       setSettings(await bridge.getSettings())
-      setHermes(await bridge.hermesStatus())
+      setHermes(publicRuntimeStatus(await bridge.hermesStatus()))
     } catch (error) {
       notifyError(error, 'Cognito validation failed')
     } finally {
@@ -191,12 +202,15 @@ export function ConnectTab() {
     try {
       const result = await bridge.hermesInit()
 
-      setInitLog(result.log)
+      setInitLog(intelliversePublicText(result.log))
       notify({ message: 'Agent runtime initialized', detail: 'LiteLLM gateway wired as the model provider' })
-      setHermes(await bridge.hermesStatus())
+      setHermes(publicRuntimeStatus(await bridge.hermesStatus()))
       setSettings(await bridge.getSettings())
     } catch (error) {
-      notifyError(error, 'Agent runtime init failed')
+      notifyError(
+        new Error(intelliversePublicText(error instanceof Error ? error.message : String(error))),
+        'Intelliverse runtime init failed'
+      )
     } finally {
       setInitBusy(false)
     }
@@ -378,7 +392,7 @@ export function ConnectTab() {
               size="0.875rem"
             />
             <span className="min-w-0 flex-1 text-xs">
-              {hermes ? `${hermes.detail} (${hermes.configPath})` : 'Checking local agent runtime…'}
+              {hermes ? hermes.detail : 'Checking local Intelliverse runtime…'}
             </span>
           </div>
           <Field label="Cognito OAuth2 token endpoint">
@@ -419,7 +433,7 @@ export function ConnectTab() {
               onClick={() => void runHermesInit()}
               size="sm"
             >
-              {initBusy ? 'Installing…' : hermes?.installerAvailable ? 'Install local agent runtime' : 'Initialize ~/.hermes'}
+              {initBusy ? 'Installing…' : hermes?.installerAvailable ? 'Install local Intelliverse runtime' : 'Initialize local Intelliverse runtime'}
             </Button>
           </div>
           {initLog && (
@@ -431,9 +445,8 @@ export function ConnectTab() {
             Runs automatically after your first sign-in (the secret is provisioned from the portal; the buttons stay
             for re-runs and overrides): validates the S2S credentials with a real client-credentials grant (token
             verified against the pool's JWKS), stores them keychain-backed (safeStorage), then initializes the local
-            agent runtime — via hermes-deployment's install-local.sh when its checkout exists, else a minimal
-            ~/.hermes/config.yaml pointed at the LiteLLM gateway. Your gateway token / LiteLLM key land in
-            ~/.hermes/.env (0600).
+            Intelliverse runtime through the managed installer and points it at the LiteLLM gateway. Your gateway
+            token and LiteLLM key remain in protected local runtime storage.
           </p>
         </section>
       </div>

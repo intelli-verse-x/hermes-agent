@@ -8,11 +8,13 @@ import { cn } from '@/lib/utils'
 import { notify } from '@/store/notifications'
 
 import {
+  $qvMcpStatus,
   $qvProvision,
   $qvSettings,
   $tutorStatus,
   loadQuizverseSettings,
   provisionTutor,
+  refreshQvMcpStatus,
   refreshTutorStatus,
   restartTutor,
   saveQuizverseSettings,
@@ -47,6 +49,7 @@ export function SetupTab() {
   const settings = useStore($qvSettings)
   const status = useStore($tutorStatus)
   const provision = useStore($qvProvision)
+  const mcp = useStore($qvMcpStatus)
 
   const [tutorMode, setTutorMode] = useState<'local' | 'remote'>('local')
   const [remoteUrl, setRemoteUrl] = useState('')
@@ -59,12 +62,17 @@ export function SetupTab() {
   const [litellmUrl, setLitellmUrl] = useState('')
   const [litellmKey, setLitellmKey] = useState('')
   const [litellmStatus, setLitellmStatus] = useState('')
+  const [cognitoDomain, setCognitoDomain] = useState('')
+  const [cognitoClientId, setCognitoClientId] = useState('')
+  const [cognitoIssuer, setCognitoIssuer] = useState('')
+  const [accountStatus, setAccountStatus] = useState('')
   const [hydrated, setHydrated] = useState(false)
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
     void loadQuizverseSettings()
     void refreshTutorStatus()
+    void refreshQvMcpStatus()
   }, [])
 
   // Hydrate the form once from the persisted settings.
@@ -80,6 +88,9 @@ export function SetupTab() {
     setApiPort(settings.apiPort > 0 ? String(settings.apiPort) : '')
     setWebPort(settings.webPort > 0 ? String(settings.webPort) : '')
     setLitellmUrl(settings.litellmUrl)
+    setCognitoDomain(settings.cognitoDomain)
+    setCognitoClientId(settings.cognitoClientId)
+    setCognitoIssuer(settings.cognitoIssuer)
     setHydrated(true)
   }, [hydrated, settings])
 
@@ -110,6 +121,9 @@ export function SetupTab() {
       apiPort: apiPort.trim() === '' ? 0 : Number(apiPort),
       webPort: webPort.trim() === '' ? 0 : Number(webPort),
       litellmUrl,
+      cognitoDomain,
+      cognitoClientId,
+      cognitoIssuer,
       // Empty input = keep the stored key (it never round-trips back here).
       ...(apiKey.trim() ? { apiKey: apiKey.trim() } : {}),
       ...(litellmKey.trim() ? { litellmKey: litellmKey.trim() } : {})
@@ -129,6 +143,71 @@ export function SetupTab() {
   return (
     <div className="h-full overflow-y-auto p-4">
       <div className="mx-auto max-w-2xl space-y-6">
+        <section className="rounded-lg border border-(--ui-border-primary) bg-(--ui-bg-quinary) p-4">
+          <div className="flex items-center gap-2">
+            <span
+              aria-hidden="true"
+              className={cn('size-2 rounded-full', mcp?.state === 'ready' ? 'bg-emerald-500' : 'bg-red-500')}
+            />
+            <span className="text-sm font-medium">Chat player tools</span>
+            <span className="text-xs text-muted-foreground">
+              {mcp?.state === 'ready' ? `${mcp.toolCount} tools · ${mcp.auth}` : 'offline'}
+            </span>
+            <div className="flex-1" />
+            <Button onClick={() => void refreshQvMcpStatus()} size="xs" variant="secondary">
+              Check
+            </Button>
+          </div>
+          <p className="mt-2 text-xs text-muted-foreground">
+            {mcp?.detail ?? 'Checking the local player-scoped MCP and desktop auth broker…'}
+          </p>
+        </section>
+
+        <section className="space-y-3 rounded-lg border border-(--ui-border-primary) bg-(--ui-bg-quinary) p-4">
+          <div>
+            <h3 className="text-sm font-medium">QuizVerse account</h3>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Native Cognito PKCE links the account to the same Nakama identity as web and Unity. Tokens remain in
+              the system keychain.
+            </p>
+          </div>
+          <label className="block space-y-1">
+            <FieldLabel>Cognito domain</FieldLabel>
+            <Input
+              onChange={event => setCognitoDomain(event.target.value)}
+              placeholder="auth.quizverse.world"
+              value={cognitoDomain}
+            />
+          </label>
+          <label className="block space-y-1">
+            <FieldLabel>Cognito app client id</FieldLabel>
+            <Input onChange={event => setCognitoClientId(event.target.value)} value={cognitoClientId} />
+          </label>
+          <label className="block space-y-1">
+            <FieldLabel>Cognito OIDC issuer</FieldLabel>
+            <Input
+              onChange={event => setCognitoIssuer(event.target.value)}
+              placeholder="https://cognito-idp.region.amazonaws.com/user-pool-id"
+              value={cognitoIssuer}
+            />
+          </label>
+          <Button
+            disabled={!settings?.cognitoDomain || !settings.cognitoClientId || !settings.cognitoIssuer}
+            onClick={() => {
+              setAccountStatus('Opening secure sign-in…')
+              void window.hermesDesktop.quizverse?.authStart()
+                .then(() => setAccountStatus('Complete sign-in in your browser.'))
+                .catch(error => setAccountStatus(error instanceof Error ? error.message : String(error)))
+            }}
+            size="sm"
+            type="button"
+            variant="secondary"
+          >
+            Connect account
+          </Button>
+          {accountStatus && <p className="text-xs" role="status">{accountStatus}</p>}
+        </section>
+
         {/* Supervisor status + controls */}
         <section className="rounded-lg border border-(--ui-border-primary) bg-(--ui-bg-quinary) p-4">
           <div className="flex items-center gap-2">
@@ -214,10 +293,6 @@ export function SetupTab() {
                   Browse…
                 </Button>
               </div>
-            </label>
-            <label className="block space-y-1">
-              <FieldLabel>Start command</FieldLabel>
-              <Input onChange={event => setLocalCommand(event.target.value)} placeholder="deeptutor start" value={localCommand} />
             </label>
             <div className="grid gap-3 sm:grid-cols-2">
               <label className="block space-y-1">

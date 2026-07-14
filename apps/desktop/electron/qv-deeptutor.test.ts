@@ -54,6 +54,7 @@ test('managed executable parsing and platform path shapes are stable', () => {
 
 test('Windows process shutdown uses taskkill descendant-tree flags', () => {
   const calls: unknown[][] = []
+
   const fakeSpawn = ((...args: unknown[]) => {
     calls.push(args)
 
@@ -92,7 +93,10 @@ test('write/read round-trip preserves settings and the secret survives the envel
     webPort: 4000,
     apiKey: 'sk-secret',
     litellmUrl: DEFAULT_QUIZVERSE_SETTINGS.litellmUrl,
-    litellmKey: ''
+    litellmKey: '',
+    cognitoDomain: 'auth.quizverse.world',
+    cognitoClientId: 'desktop-client',
+    cognitoIssuer: 'https://cognito-idp.us-east-1.amazonaws.com/pool'
   }
 
   writeQuizverseSettings(filePath, settings, encryptSecret)
