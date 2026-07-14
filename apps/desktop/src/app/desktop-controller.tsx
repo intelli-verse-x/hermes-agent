@@ -10,6 +10,7 @@ import { DesktopOnboardingOverlay } from '@/components/onboarding'
 import { Pane, PaneMain } from '@/components/pane-shell'
 import { RemoteDisplayBanner } from '@/components/remote-display-banner'
 import { useMediaQuery } from '@/hooks/use-media-query'
+import { IS_IX_AGENCY_BRAND, IS_QUIZVERSE_BRAND } from '@/lib/brand'
 import { isFocusWithin } from '@/lib/keybinds/combo'
 import { cn } from '@/lib/utils'
 import { useSkinCommand } from '@/themes/use-skin-command'
@@ -131,7 +132,15 @@ const AgentsView = lazy(async () => ({ default: (await import('./agents')).Agent
 const ArtifactsView = lazy(async () => ({ default: (await import('./artifacts')).ArtifactsView }))
 const CommandCenterView = lazy(async () => ({ default: (await import('./command-center')).CommandCenterView }))
 const CronView = lazy(async () => ({ default: (await import('./cron')).CronView }))
-const IxAgencyView = lazy(async () => ({ default: (await import('./ix-agency')).IxAgencyView }))
+// Brand workspaces: only the active brand's workspace exists in the bundle —
+// IS_*_BRAND are compile-time constants, so the other branch (and its whole
+// import graph) is dead-code-eliminated by the renderer build.
+const IxAgencyView = IS_IX_AGENCY_BRAND ? lazy(async () => ({ default: (await import('./ix-agency')).IxAgencyView })) : null
+
+const QuizverseView = IS_QUIZVERSE_BRAND
+  ? lazy(async () => ({ default: (await import('@/app/quizverse-brand')).QuizverseView }))
+  : null
+
 const StarmapView = lazy(async () => ({ default: (await import('./starmap')).StarmapView }))
 const MessagingView = lazy(async () => ({ default: (await import('./messaging')).MessagingView }))
 const ProfilesView = lazy(async () => ({ default: (await import('./profiles')).ProfilesView }))
@@ -456,7 +465,7 @@ export function DesktopController() {
     requestGateway
   })
 
-  const { refreshHermesConfig, sttEnabled, voiceMaxRecordingSeconds } = useHermesConfig({
+  const { refreshAgentConfig, sttEnabled, voiceMaxRecordingSeconds } = useHermesConfig({
     activeSessionIdRef,
     refreshProjectBranch
   })
@@ -586,7 +595,7 @@ export function DesktopController() {
     activeSessionIdRef,
     hydrateFromStoredSession,
     queryClient,
-    refreshHermesConfig,
+    refreshAgentConfig,
     refreshSessions,
     sessionStateByRuntimeIdRef,
     updateSessionState
@@ -885,7 +894,7 @@ export function DesktopController() {
     onGatewayReady: g => {
       gatewayRef.current = g
     },
-    refreshHermesConfig,
+    refreshAgentConfig,
     refreshSessions
   })
 
@@ -975,9 +984,9 @@ export function DesktopController() {
   useEffect(() => {
     if (gatewayState === 'open' && !activeSessionId && freshDraftReady) {
       void refreshCurrentModel()
-      void refreshHermesConfig()
+      void refreshAgentConfig()
     }
-  }, [activeSessionId, freshDraftReady, gatewayState, refreshCurrentModel, refreshHermesConfig])
+  }, [activeSessionId, freshDraftReady, gatewayState, refreshCurrentModel, refreshAgentConfig])
 
   useRouteResume({
     activeSessionId,
@@ -1052,7 +1061,7 @@ export function DesktopController() {
         <DesktopOnboardingOverlay
           enabled={gatewayState === 'open'}
           onCompleted={() => {
-            void refreshHermesConfig()
+            void refreshAgentConfig()
             void refreshCurrentModel()
             void queryClient.invalidateQueries({ queryKey: ['model-options'] })
           }}
@@ -1077,7 +1086,7 @@ export function DesktopController() {
             gateway={gatewayRef.current}
             onClose={closeOverlayToPreviousRoute}
             onConfigSaved={() => {
-              void refreshHermesConfig()
+              void refreshAgentConfig()
               void refreshCurrentModel()
               void queryClient.invalidateQueries({ queryKey: ['model-options'] })
             }}
@@ -1338,14 +1347,26 @@ export function DesktopController() {
             }
             path="artifacts"
           />
-          <Route
-            element={
-              <Suspense fallback={null}>
-                <IxAgencyView />
-              </Suspense>
-            }
-            path="ix-agency"
-          />
+          {IxAgencyView ? (
+            <Route
+              element={
+                <Suspense fallback={null}>
+                  <IxAgencyView />
+                </Suspense>
+              }
+              path="ix-agency"
+            />
+          ) : null}
+          {QuizverseView ? (
+            <Route
+              element={
+                <Suspense fallback={null}>
+                  <QuizverseView />
+                </Suspense>
+              }
+              path="quizverse"
+            />
+          ) : null}
           <Route element={null} path="cron" />
           <Route element={null} path="profiles" />
           <Route element={null} path="settings" />

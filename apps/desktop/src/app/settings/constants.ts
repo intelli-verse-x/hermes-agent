@@ -1,3 +1,4 @@
+import { BRAND_NAME } from '@/lib/brand'
 import {
   Box,
   Brain,
@@ -41,7 +42,7 @@ export const PROVIDER_GROUPS: ProviderPrefix[] = [
   {
     prefix: 'NOUS_',
     name: 'Nous Portal',
-    description: 'Hosted Hermes & Nous-trained models',
+    description: 'Hosted Nous-trained models',
     docsUrl: 'https://portal.nousresearch.com',
     priority: 0
   },
@@ -435,10 +436,10 @@ export const FIELD_DESCRIPTIONS: Record<string, string> = defineFieldCopy({
     personality: 'Default assistant style for new sessions.',
     showReasoning: 'Show reasoning sections when the backend provides them.'
   },
-  timezone: 'Used when IX Agency needs local time context. Blank uses the system timezone.',
+  timezone: `Used when ${BRAND_NAME} needs local time context. Blank uses the system timezone.`,
   agent: {
     imageInputMode: 'Controls how image attachments are sent to the model.',
-    maxTurns: 'Upper bound for tool-calling turns before IX Agency stops a run.'
+    maxTurns: `Upper bound for tool-calling turns before ${BRAND_NAME} stops a run.`
   },
   terminal: {
     cwd: 'Default project folder for tool and terminal work.',
@@ -452,9 +453,9 @@ export const FIELD_DESCRIPTIONS: Record<string, string> = defineFieldCopy({
   codeExecution: {
     mode: 'How strictly code execution is scoped to the current project.'
   },
-  fileReadMaxChars: 'Maximum characters IX Agency can read from one file request.',
+  fileReadMaxChars: `Maximum characters ${BRAND_NAME} can read from one file request.`,
   approvals: {
-    mode: 'How IX Agency handles commands that need explicit approval.',
+    mode: `How ${BRAND_NAME} handles commands that need explicit approval.`,
     timeout: 'How long approval prompts wait before timing out.'
   },
   security: {
@@ -493,8 +494,7 @@ export const FIELD_DESCRIPTIONS: Record<string, string> = defineFieldCopy({
     }
   },
   updates: {
-    nonInteractiveLocalChanges:
-      'When IX Agency updates itself from the app (no terminal prompt), keep local source edits (stash) or throw them away (discard). Terminal updates always ask.'
+    nonInteractiveLocalChanges: `When ${BRAND_NAME} updates itself from the app (no terminal prompt), keep local source edits (stash) or throw them away (discard). Terminal updates always ask.`
   }
 })
 

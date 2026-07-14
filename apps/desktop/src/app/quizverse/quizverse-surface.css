@@ -1,0 +1,178 @@
+/* QuizVerse owns a dark cosmic canvas in both app appearance modes. Keeping
+   these tokens scoped prevents the host's light palette from putting dark ink
+   on the Play mesh, while leaving IX Agency and the rest of desktop untouched. */
+.qv-workspace {
+  --qv-canvas: #170b31;
+  --qv-surface: #2b1950;
+  --qv-surface-elevated: #352260;
+  --qv-input: #21133f;
+  --qv-foreground: #f7f3ff;
+  --qv-muted-foreground: #cfc4e8;
+  --qv-border: #8a72c0;
+  --qv-focus: #d8b4fe;
+  --qv-primary: #c4b5fd;
+  --qv-primary-foreground: #170b31;
+
+  --ui-bg-chrome: var(--qv-canvas);
+  --ui-bg-editor: var(--qv-surface);
+  --ui-bg-tertiary: #251442;
+  --ui-bg-quaternary: #3c2968;
+  --ui-bg-quinary: #2a184c;
+  --ui-bg-elevated: var(--qv-surface-elevated);
+  --ui-chat-surface-background: var(--qv-canvas);
+  --ui-text-primary: var(--qv-foreground);
+  --ui-text-secondary: #ded5f2;
+  --ui-text-tertiary: var(--qv-muted-foreground);
+  --ui-text-quaternary: #aa9bc9;
+  --ui-stroke-primary: var(--qv-border);
+  --ui-stroke-secondary: #6f58a3;
+  --ui-stroke-tertiary: #564184;
+  --ui-border-primary: var(--qv-border);
+  --ui-control-hover-background: #4a3478;
+  --ui-control-active-background: #59408c;
+  --chrome-action-hover: var(--ui-control-hover-background);
+
+  --dt-background: var(--qv-canvas);
+  --dt-foreground: var(--qv-foreground);
+  --dt-card: var(--qv-surface);
+  --dt-card-foreground: var(--qv-foreground);
+  --dt-muted: #2e1b51;
+  --dt-muted-foreground: var(--qv-muted-foreground);
+  --dt-popover: var(--qv-surface-elevated);
+  --dt-popover-foreground: var(--qv-foreground);
+  --dt-primary: var(--qv-primary);
+  --dt-primary-foreground: var(--qv-primary-foreground);
+  --dt-secondary: #3c2968;
+  --dt-secondary-foreground: var(--qv-foreground);
+  --dt-accent: #4a3478;
+  --dt-accent-foreground: var(--qv-foreground);
+  --dt-border: var(--qv-border);
+  --dt-input: var(--qv-border);
+  --dt-ring: var(--qv-focus);
+
+  --background: var(--qv-canvas);
+  --foreground: var(--qv-foreground);
+  --card: var(--qv-surface);
+  --card-foreground: var(--qv-foreground);
+  --muted: #2e1b51;
+  --muted-foreground: var(--qv-muted-foreground);
+  --popover: var(--qv-surface-elevated);
+  --popover-foreground: var(--qv-foreground);
+  --primary: var(--qv-primary);
+  --primary-foreground: var(--qv-primary-foreground);
+  --secondary: #3c2968;
+  --secondary-foreground: var(--qv-foreground);
+  --accent: #4a3478;
+  --accent-foreground: var(--qv-foreground);
+  --border: var(--qv-border);
+  --input: var(--qv-border);
+  --ring: var(--qv-focus);
+
+  background: var(--qv-canvas);
+  color: var(--qv-foreground);
+  color-scheme: dark;
+}
+
+/* The decoration is its own non-interactive layer. No opacity, filter, or
+   blend mode is ever applied to the wrapper that contains readable content. */
+.qv-workspace .bg-quizverse-mesh {
+  isolation: isolate;
+  position: relative;
+  background: var(--qv-canvas);
+}
+
+.qv-workspace .bg-quizverse-mesh::before {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  border-radius: inherit;
+  background-image:
+    radial-gradient(ellipse 80% 60% at 20% 10%, rgba(107, 63, 206, 0.48), transparent 55%),
+    radial-gradient(ellipse 70% 50% at 85% 20%, rgba(91, 33, 182, 0.38), transparent 50%),
+    radial-gradient(ellipse 60% 45% at 50% 90%, rgba(44, 145, 160, 0.2), transparent 55%),
+    radial-gradient(ellipse 50% 40% at 10% 80%, rgba(124, 58, 237, 0.28), transparent 50%);
+  content: '';
+  pointer-events: none;
+}
+
+.qv-workspace .bg-quizverse-mesh > * {
+  position: relative;
+  z-index: 1;
+}
+
+.qv-workspace .qv-glass-tile {
+  border: 1px solid var(--qv-border);
+  background: rgba(43, 25, 80, 0.92);
+  color: var(--qv-foreground);
+  box-shadow: 0 8px 28px rgba(8, 2, 22, 0.24);
+}
+
+.qv-workspace .qv-disabled-tile {
+  border-color: #6f58a3;
+  background: #251742;
+  color: #cfc4e8;
+}
+
+.qv-workspace :is(input, textarea, select) {
+  border-color: var(--qv-border);
+  background-color: var(--qv-input);
+  color: var(--qv-foreground);
+  caret-color: var(--qv-foreground);
+}
+
+.qv-workspace :is(input, textarea)::placeholder {
+  color: #aa9bc9;
+  opacity: 1;
+}
+
+.qv-workspace select option {
+  background: var(--qv-input);
+  color: var(--qv-foreground);
+}
+
+.qv-workspace :is(button, input, textarea, select, summary):focus-visible {
+  outline: 2px solid var(--qv-focus);
+  outline-offset: 2px;
+}
+
+.qv-workspace :is(button, input, textarea, select):disabled {
+  cursor: not-allowed;
+}
+
+.qv-workspace button:disabled {
+  opacity: 0.72;
+}
+
+.qv-workspace .qv-cta-gradient {
+  background: linear-gradient(100deg, #fbbf24, #f97316);
+  color: #2a1568;
+}
+
+.qv-workspace .qv-cta-gradient:hover {
+  filter: brightness(1.06);
+}
+
+.qv-workspace .qv-toon-knowledge {
+  --qv-tile-accent: #4a90d9;
+}
+.qv-workspace .qv-toon-ai {
+  --qv-tile-accent: #8b5cf6;
+}
+.qv-workspace .qv-toon-social {
+  --qv-tile-accent: #22c55e;
+}
+.qv-workspace .qv-toon-media {
+  --qv-tile-accent: #f97316;
+}
+.qv-workspace .qv-toon-creative {
+  --qv-tile-accent: #ec4899;
+}
+.qv-workspace .qv-toon-speed {
+  --qv-tile-accent: #ef4444;
+}
+.qv-workspace .qv-toon-special {
+  --qv-tile-accent: #14b8a6;
+}
+.qv-workspace .qv-toon-premium {
+  --qv-tile-accent: #f59e0b;
+}

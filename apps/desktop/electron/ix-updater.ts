@@ -53,12 +53,14 @@ export function isLegacyJsonManifest(configured: string): boolean {
 }
 
 /** Base URL for the generic provider: legacy/blank → official feed;
- *  `…/latest.json` and trailing slashes are stripped. */
-export function normalizeUpdateFeedUrl(configured: string): string {
+ *  `…/latest.json` and trailing slashes are stripped. Multi-brand builds pass
+ *  their own brand feed as `defaultFeedUrl` (QuizVerse publishes to its own
+ *  S3 prefix); the IX Agency feed stays the fallback default. */
+export function normalizeUpdateFeedUrl(configured: string, defaultFeedUrl: string = DEFAULT_UPDATE_FEED_URL): string {
   const raw = String(configured || '').trim()
 
   if (!raw || LEGACY_FEED_URLS.has(raw)) {
-    return DEFAULT_UPDATE_FEED_URL
+    return defaultFeedUrl
   }
 
   return raw.replace(/\/latest\.json$/, '').replace(/\/+$/, '')
@@ -139,11 +141,18 @@ export function pickDownloadUrl(
 }
 
 /** Where the Update button sends the user when in-place install is impossible
- *  or fails (unsigned mac, MSI, deb/rpm): the CI-managed download landing page
- *  for the official feed — it always offers the newest release per install
- *  kind — otherwise the platform artifact from the custom feed. */
-export function pickFallbackUrl(feedBase: string, artifactUrl: string): string {
-  return feedBase === DEFAULT_UPDATE_FEED_URL ? DOWNLOAD_PAGE_URL : artifactUrl
+ *  or fails (unsigned mac, MSI, deb/rpm): the brand's CI-managed download
+ *  landing page for an official brand feed — it always offers the newest
+ *  release per install kind — otherwise the platform artifact. Brands without
+ *  a landing page (brand.downloadPageUrl empty) always get the direct
+ *  artifact, so a QuizVerse user is never sent to the IX Agency page. */
+export function pickFallbackUrl(
+  feedBase: string,
+  artifactUrl: string,
+  defaultFeedUrl: string = DEFAULT_UPDATE_FEED_URL,
+  downloadPageUrl: string = DOWNLOAD_PAGE_URL
+): string {
+  return feedBase === defaultFeedUrl && downloadPageUrl ? downloadPageUrl : artifactUrl
 }
 
 /** electron-updater releaseNotes can be a string or a per-version array. */

@@ -3,6 +3,8 @@ import os from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
+import { BRAND } from './brand'
+
 const DEFAULT_FETCH_TIMEOUT_MS = 15_000
 const DATA_URL_READ_MAX_BYTES = 16 * 1024 * 1024
 const TEXT_PREVIEW_SOURCE_MAX_BYTES = 64 * 1024 * 1024
@@ -23,7 +25,7 @@ function resolveTimeoutMs(timeoutMs, fallbackMs = DEFAULT_FETCH_TIMEOUT_MS) {
   return fallback
 }
 
-function encryptDesktopSecret(value, safeStorageApi) {
+function encryptDesktopSecret(value, safeStorageApi, platform = process.platform) {
   const raw = String(value || '')
 
   if (!raw) {
@@ -40,8 +42,19 @@ function encryptDesktopSecret(value, safeStorageApi) {
 
   if (!encryptionAvailable) {
     throw new Error(
-      'Secure token storage is unavailable, so IX Agency cannot save remote gateway tokens. ' +
+      `Secure token storage is unavailable, so ${BRAND.productName} cannot save remote gateway tokens. ` +
         'Set HERMES_DESKTOP_REMOTE_URL and HERMES_DESKTOP_REMOTE_TOKEN in your environment, or enable OS keychain access and try again.'
+    )
+  }
+
+  if (
+    platform === 'linux' &&
+    typeof safeStorageApi?.getSelectedStorageBackend === 'function' &&
+    safeStorageApi.getSelectedStorageBackend() === 'basic_text'
+  ) {
+    throw new Error(
+      `Secure token storage is using Electron's insecure basic_text backend, so ${BRAND.productName} will not save secrets. ` +
+        'Unlock a supported Linux keyring (Secret Service/KWallet) and retry.'
     )
   }
 
@@ -112,6 +125,7 @@ function sensitiveFileBlockReason(filePath) {
 
 function ipcPathError(code: any, message: string): Error & { code: any } {
   const error = new Error(message) as Error & { code: any }
+
   ;(error as any).code = code
 
   return error

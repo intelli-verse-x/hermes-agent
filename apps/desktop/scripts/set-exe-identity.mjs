@@ -40,36 +40,43 @@ import { existsSync } from 'node:fs'
 
 import { rcedit } from 'rcedit'
 
+import { loadBrand } from './apply-brand.mjs'
 import { isMain } from './utils.mjs'
 
-// Stamp the Hermes icon + identity onto `exe`. Resolves on success, throws on
-// failure. `desktopRoot` defaults to this script's package root so the icon and
-// the rcedit dependency resolve regardless of cwd.
+// Stamp the active brand's icon + identity onto `exe`. Resolves on success,
+// throws on failure. `desktopRoot` defaults to this script's package root so
+// the icon and the rcedit dependency resolve regardless of cwd.
 async function stampExeIdentity(exe, desktopRoot = resolve(import.meta.dirname, '..')) {
   if (!exe || !existsSync(exe)) {
     throw new Error(`target exe not found: ${exe}`)
   }
 
-  // Icon lives at apps/desktop/assets/icon.ico
-  const icon = join(desktopRoot, 'assets', 'icon.ico')
+  const brand = loadBrand()
+
+  // Brand .ico with a fallback to the default icon so a brand shipping only a
+  // .png still gets a stamped (if generic) identity instead of a hard failure.
+  let icon = join(desktopRoot, brand.iconIco)
+  if (!existsSync(icon)) {
+    icon = join(desktopRoot, 'assets', 'icon.ico')
+  }
   if (!existsSync(icon)) {
     throw new Error(`icon not found: ${icon}`)
   }
 
-  console.log(`[set-exe-identity] stamping ${exe}`)
+  console.log(`[set-exe-identity] stamping ${exe} (brand: ${brand.id})`)
   console.log(`[set-exe-identity] icon: ${icon}`)
 
   await rcedit(exe, {
     icon,
     'version-string': {
-      ProductName: 'IX Agency',
-      FileDescription: 'IX Agency',
-      CompanyName: 'Intelliverse X',
-      LegalCopyright: 'Copyright (c) 2026 Intelliverse X'
+      ProductName: brand.productName,
+      FileDescription: brand.productName,
+      CompanyName: brand.author,
+      LegalCopyright: `Copyright (c) 2026 ${brand.author}`
     }
   })
 
-  console.log('[set-exe-identity] done — IX Agency icon + identity stamped')
+  console.log(`[set-exe-identity] done — ${brand.productName} icon + identity stamped`)
 }
 
 export { stampExeIdentity }

@@ -14,21 +14,25 @@ if (typeof globalThis.CSS === 'undefined' || typeof globalThis.CSS.escape !== 'f
       // NULL → REPLACEMENT CHARACTER
       if (codeUnit === 0x0000) {
         result += '\uFFFD'
+
         continue
       }
 
       const isControl = (codeUnit >= 0x0001 && codeUnit <= 0x001f) || codeUnit === 0x007f
+
       const isLeadingDigit =
         codeUnit >= 0x0030 && codeUnit <= 0x0039 && (index === 0 || (index === 1 && str.charCodeAt(0) === 0x002d))
 
       if (isControl || isLeadingDigit) {
         result += `\\${codeUnit.toString(16)} `
+
         continue
       }
 
       // A lone leading "-"
       if (index === 0 && length === 1 && codeUnit === 0x002d) {
         result += `\\${str.charAt(index)}`
+
         continue
       }
 
@@ -47,6 +51,7 @@ if (typeof globalThis.CSS === 'undefined' || typeof globalThis.CSS.escape !== 'f
   }
 
   const existing = (globalThis as { CSS?: object }).CSS ?? {}
+
   ;(globalThis as { CSS: object }).CSS = Object.assign(existing, { escape: cssEscape })
 
   if (typeof window !== 'undefined') {

@@ -1,0 +1,327 @@
+/* ============================================================
+   autocurio.css — CSS animation layer for the Autocurio mascot
+   Works in tandem with autocurio-animator.js which applies
+   classes like state-idle, state-wave, expr-happy, acc-crown
+   directly to the root <svg> element.
+   ============================================================ */
+
+/* ── Global keyframes ─────────────────────────────────────── */
+
+@keyframes ac-float {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-6px); }
+}
+
+@keyframes ac-bounce {
+  0%, 100% { transform: translateY(0) scaleY(1); }
+  40%       { transform: translateY(-10px) scaleY(1.05); }
+  60%       { transform: translateY(-8px) scaleY(1.02); }
+}
+
+@keyframes ac-wave-arm {
+  0%, 100% { transform: rotate(0deg); }
+  25%       { transform: rotate(25deg); }
+  75%       { transform: rotate(-10deg); }
+}
+
+@keyframes ac-think-bob {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50%       { transform: translateY(-3px) rotate(3deg); }
+}
+
+@keyframes ac-fistpump {
+  0%, 100% { transform: translateY(0); }
+  30%       { transform: translateY(-12px); }
+  60%       { transform: translateY(-8px); }
+}
+
+@keyframes ac-bow {
+  0%, 100% { transform: rotate(0deg); transform-origin: bottom center; }
+  40%       { transform: rotate(20deg); transform-origin: bottom center; }
+}
+
+@keyframes ac-lean {
+  0%, 100% { transform: rotate(0deg); }
+  50%       { transform: rotate(-8deg); }
+}
+
+@keyframes ac-armswide-pulse {
+  0%, 100% { transform: scaleX(1); }
+  50%       { transform: scaleX(1.04); }
+}
+
+@keyframes ac-celebrate {
+  0%        { transform: translateY(0) rotate(0deg); }
+  20%        { transform: translateY(-12px) rotate(-5deg); }
+  40%        { transform: translateY(-14px) rotate(5deg); }
+  60%        { transform: translateY(-10px) rotate(-3deg); }
+  80%        { transform: translateY(-6px) rotate(2deg); }
+  100%       { transform: translateY(0) rotate(0deg); }
+}
+
+@keyframes ac-load-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+@keyframes ac-skydrop {
+  0%   { transform: translateY(-40px); opacity: 0; }
+  60%  { transform: translateY(4px); opacity: 1; }
+  80%  { transform: translateY(-2px); }
+  100% { transform: translateY(0); }
+}
+
+@keyframes ac-doublebounce {
+  0%, 100% { transform: translateY(0); }
+  20%       { transform: translateY(-8px); }
+  40%       { transform: translateY(0); }
+  60%       { transform: translateY(-14px); }
+  80%       { transform: translateY(0); }
+}
+
+@keyframes ac-meditation-breathe {
+  0%, 100% { transform: scaleY(1); }
+  50%       { transform: scaleY(1.06); }
+}
+
+@keyframes ac-surprised-jump {
+  0%   { transform: translateY(0) scale(1); }
+  30%  { transform: translateY(-14px) scale(1.08); }
+  60%  { transform: translateY(-10px) scale(1.04); }
+  100% { transform: translateY(0) scale(1); }
+}
+
+@keyframes ac-sad-droop {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(3px); }
+}
+
+@keyframes ac-sleep-rock {
+  0%, 100% { transform: rotate(0deg); }
+  50%       { transform: rotate(4deg); }
+}
+
+@keyframes ac-walk {
+  0%, 100% { transform: translateX(0); }
+  25%       { transform: translateX(3px); }
+  75%       { transform: translateX(-3px); }
+}
+
+@keyframes ac-dance {
+  0%, 100% { transform: rotate(0deg) scale(1); }
+  25%       { transform: rotate(-6deg) scale(1.04); }
+  75%       { transform: rotate(6deg) scale(1.04); }
+}
+
+@keyframes ac-antenna-ping {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50%       { transform: scale(1.5); opacity: 0.5; }
+}
+
+@keyframes ac-pointdown-bob {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(5px); }
+}
+
+/* ── State: idle ──────────────────────────────────────────── */
+
+.state-idle #autocurio-body {
+  animation: ac-float 4s ease-in-out infinite;
+}
+
+.state-idle #autocurio-antenna-tip {
+  animation: ac-antenna-ping 3s ease-in-out infinite;
+}
+
+/* ── State: wave ──────────────────────────────────────────── */
+
+.state-wave #autocurio-body {
+  animation: ac-float 3s ease-in-out infinite;
+}
+
+.state-wave #autocurio-arm-right,
+.state-wave #autocurio-right-arm {
+  animation: ac-wave-arm 0.6s ease-in-out infinite;
+  transform-origin: top center;
+}
+
+/* ── State: thinking ──────────────────────────────────────── */
+
+.state-thinking #autocurio-body {
+  animation: ac-think-bob 2.5s ease-in-out infinite;
+}
+
+.state-thinking #autocurio-antenna {
+  animation: ac-antenna-ping 1.5s ease-in-out infinite;
+}
+
+/* ── State: pointing ──────────────────────────────────────── */
+
+.state-pointing #autocurio-body {
+  animation: ac-float 3s ease-in-out infinite;
+}
+
+/* ── State: fistpump ──────────────────────────────────────── */
+
+.state-fistpump #autocurio-body {
+  animation: ac-fistpump 0.6s ease-in-out infinite;
+}
+
+/* ── State: bowing ────────────────────────────────────────── */
+
+.state-bowing #autocurio-body {
+  animation: ac-bow 1.2s ease-in-out infinite;
+  transform-origin: bottom center;
+}
+
+/* ── State: leaning ───────────────────────────────────────── */
+
+.state-leaning #autocurio-body {
+  animation: ac-lean 2s ease-in-out infinite;
+  transform-origin: bottom center;
+}
+
+/* ── State: armswide ──────────────────────────────────────── */
+
+.state-armswide #autocurio-body {
+  animation: ac-armswide-pulse 2s ease-in-out infinite;
+}
+
+/* ── State: celebrating ───────────────────────────────────── */
+
+.state-celebrating #autocurio-body {
+  animation: ac-celebrate 0.8s ease-in-out infinite;
+}
+
+/* ── State: loading ───────────────────────────────────────── */
+
+.state-loading #autocurio-body {
+  animation: ac-float 2s ease-in-out infinite;
+}
+
+.state-loading #autocurio-antenna {
+  animation: ac-load-spin 1.2s linear infinite;
+  transform-origin: center;
+}
+
+/* ── State: skydrop ───────────────────────────────────────── */
+
+.state-skydrop #autocurio-body {
+  animation: ac-skydrop 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* ── State: doublebounce ──────────────────────────────────── */
+
+.state-doublebounce #autocurio-body {
+  animation: ac-doublebounce 0.7s ease-in-out infinite;
+}
+
+/* ── State: pointdown ─────────────────────────────────────── */
+
+.state-pointdown #autocurio-body {
+  animation: ac-pointdown-bob 1.5s ease-in-out infinite;
+}
+
+/* ── State: meditation ────────────────────────────────────── */
+
+.state-meditation #autocurio-body {
+  animation: ac-meditation-breathe 4s ease-in-out infinite;
+  transform-origin: center;
+}
+
+/* ── State: surprised ─────────────────────────────────────── */
+
+.state-surprised #autocurio-body {
+  animation: ac-surprised-jump 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* ── State: sad ───────────────────────────────────────────── */
+
+.state-sad #autocurio-body {
+  animation: ac-sad-droop 3s ease-in-out infinite;
+}
+
+/* ── State: sleeping ──────────────────────────────────────── */
+
+.state-sleeping #autocurio-body {
+  animation: ac-sleep-rock 3s ease-in-out infinite;
+  transform-origin: bottom center;
+}
+
+/* ── State: walking ───────────────────────────────────────── */
+
+.state-walking #autocurio-body {
+  animation: ac-walk 0.5s ease-in-out infinite;
+}
+
+/* ── State: dancing ───────────────────────────────────────── */
+
+.state-dancing #autocurio-body {
+  animation: ac-dance 0.4s ease-in-out infinite;
+  transform-origin: center bottom;
+}
+
+/* ── Expressions: visibility overrides ───────────────────── */
+
+/* By default all expression layers hidden; each expr class shows its layer */
+#autocurio-face-happy,
+#autocurio-face-wince,
+#autocurio-face-curious,
+#autocurio-face-respectful,
+#autocurio-face-celebrating {
+  display: none;
+}
+
+.expr-happy       #autocurio-face-happy       { display: block; }
+.expr-wince       #autocurio-face-wince       { display: block; }
+.expr-curious     #autocurio-face-curious     { display: block; }
+.expr-respectful  #autocurio-face-respectful  { display: block; }
+.expr-celebrating #autocurio-face-celebrating { display: block; }
+
+/* idle expression uses the base face (no overrides) */
+
+/* ── Accessories ──────────────────────────────────────────── */
+
+#autocurio-acc-explorer-hat,
+#autocurio-acc-glasses,
+#autocurio-acc-graduation-cap,
+#autocurio-acc-shield,
+#autocurio-acc-crown,
+#autocurio-acc-rocket,
+#autocurio-acc-clouds,
+#autocurio-acc-books,
+#autocurio-acc-thumbs-up,
+#autocurio-acc-chest-pulse {
+  display: none;
+}
+
+.acc-explorer-hat    #autocurio-acc-explorer-hat    { display: block; }
+.acc-glasses         #autocurio-acc-glasses         { display: block; }
+.acc-graduation-cap  #autocurio-acc-graduation-cap  { display: block; }
+.acc-shield          #autocurio-acc-shield          { display: block; }
+.acc-crown           #autocurio-acc-crown           { display: block; }
+.acc-rocket          #autocurio-acc-rocket          { display: block; }
+.acc-clouds          #autocurio-acc-clouds          { display: block; }
+.acc-books           #autocurio-acc-books           { display: block; }
+.acc-thumbs-up       #autocurio-acc-thumbs-up       { display: block; }
+.acc-chest-pulse     #autocurio-acc-chest-pulse     { display: block; }
+
+/* ── Off-screen pause ─────────────────────────────────────── */
+
+.autocurio-paused,
+.autocurio-paused * {
+  animation-play-state: paused !important;
+}
+
+/* ── Reduced-motion overrides ─────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  [id^="autocurio"] *,
+  [class*="state-"] #autocurio-body,
+  [class*="state-"] #autocurio-antenna,
+  [class*="state-"] #autocurio-arm-right,
+  [class*="state-"] #autocurio-right-arm {
+    animation: none !important;
+    transition: none !important;
+  }
+}

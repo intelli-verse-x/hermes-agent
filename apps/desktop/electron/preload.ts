@@ -1,5 +1,12 @@
 import { contextBridge, ipcRenderer, webUtils } from 'electron'
 
+// Compile-time brand gates (see the DCE contract in brand-gates.ts): in the
+// packaged preload these inline to literals, so the inactive brand's IPC
+// namespace — including its channel strings — is dead-code-eliminated from
+// dist/electron-preload.js, not just left unregistered.
+// check-brand-separation.mjs asserts that on the bundle.
+import { IS_IX_AGENCY_BRAND, IS_QUIZVERSE_BRAND } from './brand-gates'
+
 contextBridge.exposeInMainWorld('hermesDesktop', {
   getConnection: profile => ipcRenderer.invoke('hermes:connection', profile),
   revalidateConnection: () => ipcRenderer.invoke('hermes:connection:revalidate'),
@@ -245,72 +252,147 @@ contextBridge.exposeInMainWorld('hermesDesktop', {
     searchMarketplace: query => ipcRenderer.invoke('hermes:vscode-theme:search', query)
   },
   // IX Agency: locally-persisted settings (portal/gateway/VPN profile), the
-  // WireGuard VPN control, and the admin-mcp gateway MCP directory.
-  ixAgency: {
-    getSettings: () => ipcRenderer.invoke('hermes:ix-agency:settings:get'),
-    saveSettings: payload => ipcRenderer.invoke('hermes:ix-agency:settings:save', payload),
-    pickVpnConf: () => ipcRenderer.invoke('hermes:ix-agency:vpn:pick-conf'),
-    importVpnConf: () => ipcRenderer.invoke('hermes:ix-agency:vpn:import-conf'),
-    vpnStatus: () => ipcRenderer.invoke('hermes:ix-agency:vpn:status'),
-    vpnConnect: () => ipcRenderer.invoke('hermes:ix-agency:vpn:connect'),
-    vpnDisconnect: () => ipcRenderer.invoke('hermes:ix-agency:vpn:disconnect'),
-    // Status lamps (VPN deep check + admin-mcp) and the update poller.
-    statusSummary: refresh => ipcRenderer.invoke('hermes:ix-agency:status:summary', { refresh }),
-    updateCheck: () => ipcRenderer.invoke('hermes:ix-agency:update:check'),
-    updateApply: () => ipcRenderer.invoke('hermes:ix-agency:update:apply'),
-    // Cognito S2S + local Hermes first-run init.
-    hermesStatus: () => ipcRenderer.invoke('hermes:ix-agency:hermes:status'),
-    cognitoValidate: payload => ipcRenderer.invoke('hermes:ix-agency:cognito:validate', payload),
-    hermesInit: () => ipcRenderer.invoke('hermes:ix-agency:hermes:init'),
-    listMcpTiles: () => ipcRenderer.invoke('hermes:ix-agency:mcp:list'),
-    // User-level SKILL.md drafts (~/.hermes/skills/ix-user/) + publish to the
-    // portal's global Skills.md API.
-    skillsList: () => ipcRenderer.invoke('hermes:ix-agency:skills:list'),
-    skillsSave: payload => ipcRenderer.invoke('hermes:ix-agency:skills:save', payload),
-    skillsDelete: id => ipcRenderer.invoke('hermes:ix-agency:skills:delete', { id }),
-    skillsPublish: id => ipcRenderer.invoke('hermes:ix-agency:skills:publish', { id }),
-    // Login enforcement: probes the portal OTP session (main process, using
-    // the persist:ix-agency-portal session cookies).
-    authStatus: force => ipcRenderer.invoke('hermes:ix-agency:auth:status', { force }),
-    // Native OTP login — email a code, verify it; cookies land in the same
-    // portal session partition the probe checks. No webview involved.
-    authSendOtp: email => ipcRenderer.invoke('hermes:ix-agency:auth:send-otp', { email }),
-    authVerifyOtp: payload => ipcRenderer.invoke('hermes:ix-agency:auth:verify-otp', payload),
-    // Native chat: LiteLLM + admin-mcp tool loop in the main process. The
-    // write gate's Confirm/Cancel travels ONLY over chatConfirm — no other
-    // surface (and never the model) can approve a write.
-    chatModels: () => ipcRenderer.invoke('hermes:ix-agency:chat:models'),
-    chatList: () => ipcRenderer.invoke('hermes:ix-agency:chat:list'),
-    chatGet: conversationId => ipcRenderer.invoke('hermes:ix-agency:chat:get', conversationId),
-    chatSend: payload => ipcRenderer.invoke('hermes:ix-agency:chat:send', payload),
-    chatConfirm: payload => ipcRenderer.invoke('hermes:ix-agency:chat:confirm', payload),
-    onChatEvent: callback => {
-      const listener = (_event, payload) => callback(payload)
-      ipcRenderer.on('hermes:ix-agency:chat:event', listener)
+  // WireGuard VPN control, and the admin-mcp gateway MCP directory. Only the
+  // IX Agency brand exposes this namespace (constant-folded out elsewhere).
+  ...(IS_IX_AGENCY_BRAND
+    ? {
+        ixAgency: {
+          getSettings: () => ipcRenderer.invoke('hermes:ix-agency:settings:get'),
+          saveSettings: payload => ipcRenderer.invoke('hermes:ix-agency:settings:save', payload),
+          pickVpnConf: () => ipcRenderer.invoke('hermes:ix-agency:vpn:pick-conf'),
+          importVpnConf: () => ipcRenderer.invoke('hermes:ix-agency:vpn:import-conf'),
+          vpnStatus: () => ipcRenderer.invoke('hermes:ix-agency:vpn:status'),
+          vpnConnect: () => ipcRenderer.invoke('hermes:ix-agency:vpn:connect'),
+          vpnDisconnect: () => ipcRenderer.invoke('hermes:ix-agency:vpn:disconnect'),
+          // Status lamps (VPN deep check + admin-mcp) and the update poller.
+          statusSummary: refresh => ipcRenderer.invoke('hermes:ix-agency:status:summary', { refresh }),
+          updateCheck: () => ipcRenderer.invoke('hermes:ix-agency:update:check'),
+          updateApply: () => ipcRenderer.invoke('hermes:ix-agency:update:apply'),
+          // Cognito S2S + local Hermes first-run init.
+          hermesStatus: () => ipcRenderer.invoke('hermes:ix-agency:hermes:status'),
+          cognitoValidate: payload => ipcRenderer.invoke('hermes:ix-agency:cognito:validate', payload),
+          hermesInit: () => ipcRenderer.invoke('hermes:ix-agency:hermes:init'),
+          listMcpTiles: () => ipcRenderer.invoke('hermes:ix-agency:mcp:list'),
+          // User-level SKILL.md drafts (~/.hermes/skills/ix-user/) + publish to the
+          // portal's global Skills.md API.
+          skillsList: () => ipcRenderer.invoke('hermes:ix-agency:skills:list'),
+          skillsSave: payload => ipcRenderer.invoke('hermes:ix-agency:skills:save', payload),
+          skillsDelete: id => ipcRenderer.invoke('hermes:ix-agency:skills:delete', { id }),
+          skillsPublish: id => ipcRenderer.invoke('hermes:ix-agency:skills:publish', { id }),
+          // Login enforcement: probes the portal OTP session (main process, using
+          // the persist:ix-agency-portal session cookies).
+          authStatus: force => ipcRenderer.invoke('hermes:ix-agency:auth:status', { force }),
+          // Native OTP login — email a code, verify it; cookies land in the same
+          // portal session partition the probe checks. No webview involved.
+          authSendOtp: email => ipcRenderer.invoke('hermes:ix-agency:auth:send-otp', { email }),
+          authVerifyOtp: payload => ipcRenderer.invoke('hermes:ix-agency:auth:verify-otp', payload),
+          // Native chat: LiteLLM + admin-mcp tool loop in the main process. The
+          // write gate's Confirm/Cancel travels ONLY over chatConfirm — no other
+          // surface (and never the model) can approve a write.
+          chatModels: () => ipcRenderer.invoke('hermes:ix-agency:chat:models'),
+          chatList: () => ipcRenderer.invoke('hermes:ix-agency:chat:list'),
+          chatGet: conversationId => ipcRenderer.invoke('hermes:ix-agency:chat:get', conversationId),
+          chatSend: payload => ipcRenderer.invoke('hermes:ix-agency:chat:send', payload),
+          chatConfirm: payload => ipcRenderer.invoke('hermes:ix-agency:chat:confirm', payload),
+          onChatEvent: callback => {
+            const listener = (_event, payload) => callback(payload)
+            ipcRenderer.on('hermes:ix-agency:chat:event', listener)
 
-      return () => ipcRenderer.removeListener('hermes:ix-agency:chat:event', listener)
-    },
-    // Auto-attach sync: gateway MCP directory + dynamic connectors + org
-    // skills, run automatically after login/boot and pushed via syncEvent.
-    syncGet: () => ipcRenderer.invoke('hermes:ix-agency:sync:get'),
-    syncRun: () => ipcRenderer.invoke('hermes:ix-agency:sync:run'),
-    onSyncEvent: callback => {
-      const listener = (_event, payload) => callback(payload)
-      ipcRenderer.on('hermes:ix-agency:sync:event', listener)
+            return () => ipcRenderer.removeListener('hermes:ix-agency:chat:event', listener)
+          },
+          // Auto-attach sync: gateway MCP directory + dynamic connectors + org
+          // skills, run automatically after login/boot and pushed via syncEvent.
+          syncGet: () => ipcRenderer.invoke('hermes:ix-agency:sync:get'),
+          syncRun: () => ipcRenderer.invoke('hermes:ix-agency:sync:run'),
+          onSyncEvent: callback => {
+            const listener = (_event, payload) => callback(payload)
+            ipcRenderer.on('hermes:ix-agency:sync:event', listener)
 
-      return () => ipcRenderer.removeListener('hermes:ix-agency:sync:event', listener)
-    },
-    // Per-MCP-tile health lamps (green/grey/red), cached in the main process.
-    mcpHealth: refresh => ipcRenderer.invoke('hermes:ix-agency:mcp:health', { refresh }),
-    // Dynamic connectors (super admin): CRUD + probe through the portal's
-    // /api/portal/connectors/dynamic routes. Tokens pass through the main
-    // process only — never stored or echoed back.
-    connectorsList: () => ipcRenderer.invoke('hermes:ix-agency:connectors:list'),
-    connectorsSave: payload => ipcRenderer.invoke('hermes:ix-agency:connectors:save', payload),
-    connectorsPatch: payload => ipcRenderer.invoke('hermes:ix-agency:connectors:patch', payload),
-    connectorsDelete: id => ipcRenderer.invoke('hermes:ix-agency:connectors:delete', { id }),
-    connectorsTest: payload => ipcRenderer.invoke('hermes:ix-agency:connectors:test', payload),
-    connectorsParseImport: json => ipcRenderer.invoke('hermes:ix-agency:connectors:parse-import', { json }),
-    connectorsExport: () => ipcRenderer.invoke('hermes:ix-agency:connectors:export')
-  }
+            return () => ipcRenderer.removeListener('hermes:ix-agency:sync:event', listener)
+          },
+          // Per-MCP-tile health lamps (green/grey/red), cached in the main process.
+          mcpHealth: refresh => ipcRenderer.invoke('hermes:ix-agency:mcp:health', { refresh }),
+          // Dynamic connectors (super admin): CRUD + probe through the portal's
+          // /api/portal/connectors/dynamic routes. Tokens pass through the main
+          // process only — never stored or echoed back.
+          connectorsList: () => ipcRenderer.invoke('hermes:ix-agency:connectors:list'),
+          connectorsSave: payload => ipcRenderer.invoke('hermes:ix-agency:connectors:save', payload),
+          connectorsPatch: payload => ipcRenderer.invoke('hermes:ix-agency:connectors:patch', payload),
+          connectorsDelete: id => ipcRenderer.invoke('hermes:ix-agency:connectors:delete', { id }),
+          connectorsTest: payload => ipcRenderer.invoke('hermes:ix-agency:connectors:test', payload),
+          connectorsParseImport: json => ipcRenderer.invoke('hermes:ix-agency:connectors:parse-import', { json }),
+          connectorsExport: () => ipcRenderer.invoke('hermes:ix-agency:connectors:export')
+        }
+      }
+    : {}),
+  // QuizVerse: DeepTutor platform supervisor (local spawn / hosted remote),
+  // locally-persisted settings, and the Play/Arcade surface catalog. Only the
+  // QuizVerse brand exposes this namespace (constant-folded out elsewhere).
+  ...(IS_QUIZVERSE_BRAND
+    ? {
+        quizverse: {
+          getSettings: () => ipcRenderer.invoke('hermes:quizverse:settings:get'),
+          saveSettings: payload => ipcRenderer.invoke('hermes:quizverse:settings:save', payload),
+          tutorStatus: () => ipcRenderer.invoke('hermes:quizverse:tutor:status'),
+          tutorStart: () => ipcRenderer.invoke('hermes:quizverse:tutor:start'),
+          tutorStop: () => ipcRenderer.invoke('hermes:quizverse:tutor:stop'),
+          tutorRestart: () => ipcRenderer.invoke('hermes:quizverse:tutor:restart'),
+          validateLitellm: payload => ipcRenderer.invoke('hermes:quizverse:litellm:validate', payload),
+          tutorRequest: payload => ipcRenderer.invoke('hermes:quizverse:tutor:request', payload),
+          tutorStreamStart: path => ipcRenderer.invoke('hermes:quizverse:tutor:stream:start', path),
+          tutorStreamStop: id => ipcRenderer.invoke('hermes:quizverse:tutor:stream:stop', id),
+          onTutorStreamEvent: callback => {
+            const listener = (_event, payload) => callback(payload)
+            ipcRenderer.on('hermes:quizverse:tutor:stream:event', listener)
+
+            return () => ipcRenderer.removeListener('hermes:quizverse:tutor:stream:event', listener)
+          },
+          tutorWsConnect: (path, userId) => ipcRenderer.invoke('hermes:quizverse:tutor:ws:connect', path, userId),
+          tutorWsSend: (id, data) => ipcRenderer.invoke('hermes:quizverse:tutor:ws:send', id, data),
+          tutorWsClose: id => ipcRenderer.invoke('hermes:quizverse:tutor:ws:close', id),
+          onTutorWsEvent: callback => {
+            const listener = (_event, payload) => callback(payload)
+            ipcRenderer.on('hermes:quizverse:tutor:ws:event', listener)
+
+            return () => ipcRenderer.removeListener('hermes:quizverse:tutor:ws:event', listener)
+          },
+          // Managed install: venv + pip install deeptutor under userData.
+          provisionTutor: () => ipcRenderer.invoke('hermes:quizverse:tutor:provision'),
+          onProvisionEvent: callback => {
+            const listener = (_event, payload) => callback(payload)
+            ipcRenderer.on('hermes:quizverse:provision:event', listener)
+
+            return () => ipcRenderer.removeListener('hermes:quizverse:provision:event', listener)
+          },
+          pickTutorDirectory: () => ipcRenderer.invoke('hermes:quizverse:tutor:pick-directory'),
+          playSession: () => ipcRenderer.invoke('hermes:quizverse:play:session'),
+          playRpc: (name, payload) => ipcRenderer.invoke('hermes:quizverse:play:rpc', name, payload),
+          playRealtimeConnect: () => ipcRenderer.invoke('hermes:quizverse:play:realtime:connect'),
+          playRealtimeListMatches: (id, query) =>
+            ipcRenderer.invoke('hermes:quizverse:play:realtime:list-matches', id, query),
+          playRealtimeJoinMatch: (id, matchId) =>
+            ipcRenderer.invoke('hermes:quizverse:play:realtime:join-match', id, matchId),
+          playRealtimeCreateMatch: (id, payload) =>
+            ipcRenderer.invoke('hermes:quizverse:play:realtime:create-match', id, payload),
+          playRealtimeSend: (id, opCode, payload) =>
+            ipcRenderer.invoke('hermes:quizverse:play:realtime:send', id, opCode, payload),
+          playRealtimeClose: id => ipcRenderer.invoke('hermes:quizverse:play:realtime:close', id),
+          onPlayRealtimeEvent: callback => {
+            const listener = (_event, payload) => callback(payload)
+            ipcRenderer.on('hermes:quizverse:play:realtime:event', listener)
+
+            return () => ipcRenderer.removeListener('hermes:quizverse:play:realtime:event', listener)
+          },
+          // Update lamp for the status strip (same poller as the tray).
+          updateCheck: () => ipcRenderer.invoke('hermes:quizverse:update:check'),
+          updateApply: () => ipcRenderer.invoke('hermes:quizverse:update:apply'),
+          onTutorEvent: callback => {
+            const listener = (_event, payload) => callback(payload)
+            ipcRenderer.on('hermes:quizverse:tutor:event', listener)
+
+            return () => ipcRenderer.removeListener('hermes:quizverse:tutor:event', listener)
+          }
+        }
+      }
+    : {})
 })

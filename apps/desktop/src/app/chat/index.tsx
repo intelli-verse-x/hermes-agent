@@ -18,6 +18,7 @@ import { Codicon } from '@/components/ui/codicon'
 import { ErrorState } from '@/components/ui/error-state'
 import { getGlobalModelOptions, type HermesGateway } from '@/hermes'
 import { useI18n } from '@/i18n'
+import { BRAND_NAME } from '@/lib/brand'
 import type { ChatMessage } from '@/lib/chat-messages'
 import {
   coalesceToolOnlyAssistants,
@@ -362,7 +363,7 @@ export function ChatView({
       }
 
       if (!gateway) {
-        throw new Error('IX Agency gateway unavailable')
+        throw new Error(`${BRAND_NAME} gateway unavailable`)
       }
 
       return gateway.request<ModelOptionsResponse>('model.options', {

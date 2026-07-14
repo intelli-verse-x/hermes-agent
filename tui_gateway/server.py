@@ -7779,8 +7779,18 @@ def _(rid, params: dict) -> dict:
     usage = _get_usage(agent) if agent is not None else {}
     provider = getattr(agent, "provider", None) or "unknown"
     model = getattr(agent, "model", None) or "(unknown)"
+    # Branded frontends (the desktop apps) provision a custom skin whose
+    # branding.agent_name should headline /status output. The default skin
+    # keeps the historical "Hermes" header byte-for-byte for CLI/TUI users.
+    header_brand = "Hermes"
+    try:
+        _skin = resolve_skin()
+        if (_skin.get("name") or "default") != "default":
+            header_brand = (_skin.get("branding") or {}).get("agent_name") or header_brand
+    except Exception:
+        pass
     lines = [
-        "Hermes TUI Status",
+        f"{header_brand} TUI Status",
         "",
         f"Session ID: {key}",
         f"Path: {display_hermes_home()}",

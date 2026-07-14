@@ -73,6 +73,7 @@ function resolveLocalInstallScript(sourceRepoRoot) {
   if (!sourceRepoRoot) {
     return null
   }
+
   const candidate = path.join(sourceRepoRoot, 'scripts', installScriptName())
 
   try {
@@ -96,6 +97,7 @@ function installedAgentInstallScript(hermesHome) {
   if (!hermesHome) {
     return null
   }
+
   const candidate = path.join(hermesHome, 'hermes-agent', 'scripts', installScriptName())
 
   try {
@@ -413,6 +415,7 @@ function spawnPowerShell(scriptPath, args, { emit, stageName, abortSignal, herme
       if (abortSignal) {
         abortSignal.removeEventListener('abort', onAbort)
       }
+
       reject(err)
     })
 
@@ -429,6 +432,7 @@ function spawnPowerShell(scriptPath, args, { emit, stageName, abortSignal, herme
       if (stderrBuf) {
         emit && emit({ type: 'log', stage: stageName, line: stderrBuf, stream: 'stderr' } as any)
       }
+
       resolve({ stdout, stderr, code, signal, killed } as any)
     })
   })
@@ -505,6 +509,7 @@ function spawnBash(scriptPath, args, { emit, stageName, abortSignal, hermesHome 
       if (abortSignal) {
         abortSignal.removeEventListener('abort', onAbort)
       }
+
       reject(err)
     })
 
@@ -520,6 +525,7 @@ function spawnBash(scriptPath, args, { emit, stageName, abortSignal, hermesHome 
       if (stderrBuf) {
         emit && emit({ type: 'log', stage: stageName, line: stderrBuf, stream: 'stderr' })
       }
+
       resolve({ stdout, stderr, code, signal, killed })
     })
   })

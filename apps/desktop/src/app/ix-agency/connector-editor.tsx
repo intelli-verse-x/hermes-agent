@@ -21,7 +21,8 @@ import { Field, FieldRow } from './bits'
 // Mirror of the webfrontend's app registry / capability bundles (the portal
 // validates against its own list; these just drive the pickers).
 export const CONNECTOR_APPS: readonly { id: string; label: string }[] = [
-  { id: 'quizverse', label: 'QuizVerse' },
+  // Label avoids the other brand's productName literal — the portal id stays `quizverse`.
+  { id: 'quizverse', label: 'Quizverse' },
   { id: 'questx', label: 'QuestX' },
   { id: 'intelliverse', label: 'IntelliVerse X' },
   { id: 'toba', label: 'ToBa Tech' },

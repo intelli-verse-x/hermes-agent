@@ -3,6 +3,7 @@ import { atom } from 'nanostores'
 import { liveSessionProjectId, type SidebarProjectTree } from '@/app/chat/sidebar/projects/workspace-groups'
 import type { HermesGitBranch } from '@/global'
 import { translateNow } from '@/i18n'
+import { BRAND_NAME } from '@/lib/brand'
 import { desktopDefaultCwd, selectDesktopPaths, writeDesktopFileText } from '@/lib/desktop-fs'
 import { desktopGit } from '@/lib/desktop-git'
 import { isMissingRpcMethod } from '@/lib/gateway-rpc'
@@ -221,7 +222,7 @@ async function gatewayRequest<T>(method: string, params: Record<string, unknown>
   }
 
   if (!gateway) {
-    throw new Error('IX Agency gateway is not connected')
+    throw new Error(`${BRAND_NAME} gateway is not connected`)
   }
 
   return gateway.request<T>(method, params)

@@ -1,19 +1,25 @@
-# desktop-release.yml — IX Agency desktop release chain (fork-only; upstream
+# desktop-release.yml — branded desktop release chain (fork-only; upstream
 # hermes-agent has no packaged-release CI). Full docs: apps/desktop/RELEASING.md
+#
+# One repo ships TWO branded desktop apps (IX Agency + QuizVerse) from the
+# same Hermes core — the build matrix is 2 brands x 3 OS. DESKTOP_BRAND
+# selects the flavor (apps/desktop/brands/<brand>.json owns the identity).
 #
 # Triggers:
 #   - automatically from desktop-auto-release.yml on every merge to main that
 #     bumps apps/desktop/package.json version (workflow_call),
 #   - push an `ix-desktop-v*` tag whose version matches
-#     apps/desktop/package.json (e.g. ix-desktop-v0.17.0),
+#     apps/desktop/package.json (e.g. ix-desktop-v0.17.0) — releases BOTH
+#     brands at that version,
 #   - or run manually (workflow_dispatch).
 #
-# Each platform job builds with electron-builder and publishes DIRECTLY to
-# s3://intelliverse-x-desktop/ix-agency/ (package.json > build.publish):
-# installers + per-platform channel files (latest.yml / latest-mac.yml /
-# latest-linux.yml). Installed apps poll that feed with electron-updater's
-# generic provider (electron/ix-updater.ts) — the "Update available" button
-# pops up within 4 h and installs in place.
+# Each job builds with electron-builder and publishes DIRECTLY to the brand's
+# S3 prefix (s3://intelliverse-x-desktop/ix-agency/ or .../quizverse/, from
+# the brand overlay in build/electron-builder-brand.json): installers +
+# per-platform channel files (latest.yml / latest-mac.yml / latest-linux.yml).
+# Installed apps poll their own brand's feed with electron-updater's generic
+# provider (electron/ix-updater.ts) — the "Update available" button pops up
+# within 4 h and installs in place.
 #
 # Required repo secrets:
 #   AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY — IAM user
@@ -40,14 +46,14 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - platform: macos-latest
-          - platform: ubuntu-22.04
-          - platform: windows-latest
+        platform: [macos-latest, ubuntu-22.04, windows-latest]
+        brand: [ix-agency, quizverse]
     runs-on: ${{ matrix.platform }}
     defaults:
       run:
         shell: bash
+    env:
+      DESKTOP_BRAND: ${{ matrix.brand }}
     steps:
       - uses: actions/checkout@v4
 
@@ -71,15 +77,19 @@ jobs:
 
       - run: npm ci
 
-      - name: Typecheck + IX unit tests
+      - name: Typecheck + brand unit tests
         working-directory: apps/desktop
         run: |
           npx tsc -p . --noEmit
-          npx tsx --test electron/ix-updater.test.ts electron/ix-status.test.ts
+          npx tsx --test electron/ix-updater.test.ts electron/ix-status.test.ts electron/qv-deeptutor.test.ts
 
       - name: Build renderer + electron bundles
         working-directory: apps/desktop
         run: npm run build
+
+      - name: Assert brand separation in the built bundles
+        working-directory: apps/desktop
+        run: node scripts/check-brand-separation.mjs
 
       - name: Package + publish to S3 feed
         working-directory: apps/desktop
@@ -106,7 +116,7 @@ jobs:
       - name: Upload installers as workflow artifacts (debug/QA convenience)
         uses: actions/upload-artifact@v4
         with:
-          name: ix-agency-${{ matrix.platform }}
+          name: ${{ matrix.brand }}-${{ matrix.platform }}
           path: |
             apps/desktop/release/*.dmg
             apps/desktop/release/*.zip
@@ -138,18 +148,24 @@ jobs:
             --cache-control "no-cache"
           curl -sf https://intelliverse-x-desktop.s3.amazonaws.com/index.html >/dev/null
 
-  # End-to-end feed check: after all 3 platforms publish, confirm the public
-  # S3 feed serves the new version on every channel and every artifact it
-  # references is downloadable with the exact size the channel file records.
+  # End-to-end feed check: after all platforms publish, confirm each brand's
+  # public S3 feed serves the new version on every channel and every artifact
+  # it references is downloadable with the exact size the channel file records.
   verify-feed:
     needs: build-publish
+    strategy:
+      fail-fast: false
+      matrix:
+        brand: [ix-agency, quizverse]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: Verify public update feed serves this version
+      - name: Verify the ${{ matrix.brand }} update feed serves this version
+        env:
+          DESKTOP_BRAND: ${{ matrix.brand }}
         run: |
           EXPECT_VERSION="$(node -p "require('./apps/desktop/package.json').version")" \
             node apps/desktop/scripts/verify-update-feed.mjs

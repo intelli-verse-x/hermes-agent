@@ -21,6 +21,7 @@ import {
 } from '@/components/ui/sidebar'
 import { searchSessions, type SessionInfo, type SessionSearchResult } from '@/hermes'
 import { useI18n } from '@/i18n'
+import { BRAND, IS_QUIZVERSE_BRAND } from '@/lib/brand'
 import { comboTokens } from '@/lib/keybinds/combo'
 import { profileColor } from '@/lib/profile-color'
 import { sessionMatchesSearch } from '@/lib/session-search'
@@ -95,7 +96,7 @@ import {
   setCurrentCwd
 } from '@/store/session'
 
-import { type AppView, ARTIFACTS_ROUTE, IX_AGENCY_ROUTE, MESSAGING_ROUTE, SKILLS_ROUTE } from '../../routes'
+import { type AppView, ARTIFACTS_ROUTE, IX_AGENCY_ROUTE, MESSAGING_ROUTE, QUIZVERSE_ROUTE, SKILLS_ROUTE } from '../../routes'
 import type { SidebarNavItem } from '../../types'
 
 import { countLabel } from './chrome'
@@ -130,6 +131,22 @@ const NON_SESSION_LOAD_STEP = 10
 
 const NEW_SESSION_KBD = comboTokens('mod+n')
 
+// The last rail item is the brand workspace: IX Agency's org estate or the
+// QuizVerse learning workspace — only the active brand's item exists.
+const BRAND_WORKSPACE_NAV: SidebarNavItem = IS_QUIZVERSE_BRAND
+  ? {
+      id: 'quizverse',
+      label: BRAND.workspaceLabel,
+      icon: props => <Codicon name="mortar-board" {...props} />,
+      route: QUIZVERSE_ROUTE
+    }
+  : {
+      id: 'ix-agency',
+      label: BRAND.workspaceLabel,
+      icon: props => <Codicon name="organization" {...props} />,
+      route: IX_AGENCY_ROUTE
+    }
+
 const SIDEBAR_NAV: SidebarNavItem[] = [
   {
     id: 'new-session',
@@ -145,12 +162,7 @@ const SIDEBAR_NAV: SidebarNavItem[] = [
   },
   { id: 'messaging', label: '', icon: props => <Codicon name="comment" {...props} />, route: MESSAGING_ROUTE },
   { id: 'artifacts', label: '', icon: props => <Codicon name="files" {...props} />, route: ARTIFACTS_ROUTE },
-  {
-    id: 'ix-agency',
-    label: 'IX Agency',
-    icon: props => <Codicon name="organization" {...props} />,
-    route: IX_AGENCY_ROUTE
-  }
+  BRAND_WORKSPACE_NAV
 ]
 
 // Two modes via the `compact` height variant (styles.css):
@@ -1060,7 +1072,8 @@ export function ChatSidebar({
                   (item.id === 'skills' && currentView === 'skills') ||
                   (item.id === 'messaging' && currentView === 'messaging') ||
                   (item.id === 'artifacts' && currentView === 'artifacts') ||
-                  (item.id === 'ix-agency' && currentView === 'ix-agency')
+                  (item.id === 'ix-agency' && currentView === 'ix-agency') ||
+                  (item.id === 'quizverse' && currentView === 'quizverse')
 
                 const isNewSession = item.id === 'new-session'
 

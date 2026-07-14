@@ -1,3 +1,5 @@
+import { IS_IX_AGENCY_BRAND, IS_QUIZVERSE_BRAND } from '@/lib/brand'
+
 export const SESSION_ROUTE_PREFIX = '/'
 export const NEW_CHAT_ROUTE = '/'
 export const SETTINGS_ROUTE = '/settings'
@@ -10,6 +12,7 @@ export const PROFILES_ROUTE = '/profiles'
 export const AGENTS_ROUTE = '/agents'
 export const STARMAP_ROUTE = '/starmap'
 export const IX_AGENCY_ROUTE = '/ix-agency'
+export const QUIZVERSE_ROUTE = '/quizverse'
 
 export type AppView =
   | 'agents'
@@ -20,6 +23,7 @@ export type AppView =
   | 'ix-agency'
   | 'messaging'
   | 'profiles'
+  | 'quizverse'
   | 'settings'
   | 'skills'
   | 'starmap'
@@ -33,6 +37,7 @@ export type AppRouteId =
   | 'messaging'
   | 'new'
   | 'profiles'
+  | 'quizverse'
   | 'settings'
   | 'skills'
   | 'starmap'
@@ -43,7 +48,10 @@ export interface AppRoute {
   view: AppView
 }
 
-export const APP_ROUTES = [
+// Brand workspaces are strictly separated: only the active brand's workspace
+// route registers, so an IX Agency build has no /quizverse (and vice versa) —
+// a manual navigation to the other brand's path falls through to chat.
+export const APP_ROUTES: readonly AppRoute[] = [
   { id: 'new', path: NEW_CHAT_ROUTE, view: 'chat' },
   { id: 'settings', path: SETTINGS_ROUTE, view: 'settings' },
   { id: 'command-center', path: COMMAND_CENTER_ROUTE, view: 'command-center' },
@@ -54,8 +62,9 @@ export const APP_ROUTES = [
   { id: 'profiles', path: PROFILES_ROUTE, view: 'profiles' },
   { id: 'agents', path: AGENTS_ROUTE, view: 'agents' },
   { id: 'starmap', path: STARMAP_ROUTE, view: 'starmap' },
-  { id: 'ix-agency', path: IX_AGENCY_ROUTE, view: 'ix-agency' }
-] as const satisfies readonly AppRoute[]
+  ...(IS_IX_AGENCY_BRAND ? [{ id: 'ix-agency', path: IX_AGENCY_ROUTE, view: 'ix-agency' } as const] : []),
+  ...(IS_QUIZVERSE_BRAND ? [{ id: 'quizverse', path: QUIZVERSE_ROUTE, view: 'quizverse' } as const] : [])
+]
 
 const APP_VIEW_BY_PATH = new Map<string, AppView>(APP_ROUTES.map(route => [route.path, route.view]))
 const RESERVED_PATHS: ReadonlySet<string> = new Set(APP_ROUTES.map(route => route.path))

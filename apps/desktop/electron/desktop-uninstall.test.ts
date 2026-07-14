@@ -87,6 +87,11 @@ test('resolveRemovableAppPath finds the install dir on Windows', () => {
     resolveRemovableAppPath('C:\\Users\\x\\AppData\\Local\\hermes-desktop\\Hermes.exe', 'win32'),
     'C:\\Users\\x\\AppData\\Local\\hermes-desktop'
   )
+  // The active brand's own install dir (default brand under `node --test`).
+  assert.equal(
+    resolveRemovableAppPath('C:\\Users\\x\\AppData\\Local\\Programs\\IX Agency\\IX Agency.exe', 'win32'),
+    'C:\\Users\\x\\AppData\\Local\\Programs\\IX Agency'
+  )
 })
 
 test('resolveRemovableAppPath returns null for an unrecognized Windows dir', () => {

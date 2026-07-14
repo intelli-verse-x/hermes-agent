@@ -53,7 +53,7 @@ interface GatewayBootOptions {
     connection: Awaited<ReturnType<NonNullable<typeof window.hermesDesktop>['getConnection']>> | null
   ) => void
   onGatewayReady: (gateway: HermesGateway | null) => void
-  refreshHermesConfig: () => Promise<void>
+  refreshAgentConfig: () => Promise<void>
   refreshSessions: () => Promise<void>
 }
 
@@ -61,14 +61,14 @@ export function useGatewayBoot({
   handleGatewayEvent,
   onConnectionReady,
   onGatewayReady,
-  refreshHermesConfig,
+  refreshAgentConfig,
   refreshSessions
 }: GatewayBootOptions) {
   const callbacksRef = useRef({
     handleGatewayEvent,
     onConnectionReady,
     onGatewayReady,
-    refreshHermesConfig,
+    refreshAgentConfig,
     refreshSessions
   })
 
@@ -76,7 +76,7 @@ export function useGatewayBoot({
     handleGatewayEvent,
     onConnectionReady,
     onGatewayReady,
-    refreshHermesConfig,
+    refreshAgentConfig,
     refreshSessions
   }
 
@@ -167,7 +167,7 @@ export function useGatewayBoot({
 
         reconnectAttempt = 0
         // Resync state that may have moved on the backend while we were asleep.
-        await callbacksRef.current.refreshHermesConfig().catch(() => undefined)
+        await callbacksRef.current.refreshAgentConfig().catch(() => undefined)
         await callbacksRef.current.refreshSessions().catch(() => undefined)
       } catch (err) {
         // OAuth session expired mid-reconnect: surface the actionable "sign in
@@ -383,7 +383,7 @@ export function useGatewayBoot({
           setCurrentBranch(remoteDefault.branch || '')
         }
 
-        await callbacksRef.current.refreshHermesConfig()
+        await callbacksRef.current.refreshAgentConfig()
 
         if (cancelled) {
           return

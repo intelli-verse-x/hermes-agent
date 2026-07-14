@@ -21,6 +21,7 @@
 
 import path from 'node:path'
 
+import { loadBrand } from './apply-brand.mjs'
 import { stampExeIdentity } from './set-exe-identity.mjs'
 
 export default async function afterPack(context) {
@@ -28,7 +29,7 @@ export default async function afterPack(context) {
     return
   }
 
-  const productName = context.packager?.appInfo?.productFilename || 'IX Agency'
+  const productName = context.packager?.appInfo?.productFilename || loadBrand().productName
   const exe = path.join(context.appOutDir, `${productName}.exe`)
   const desktopRoot = path.resolve(import.meta.dirname, '..')
 

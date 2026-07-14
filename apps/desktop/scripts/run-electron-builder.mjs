@@ -9,6 +9,8 @@ import path from "node:path"
 import { spawnSync } from "node:child_process"
 import { createRequire } from "node:module"
 
+import { applyBrand } from "./apply-brand.mjs"
+
 const require = createRequire(import.meta.url)
 
 function electronDistDir() {
@@ -36,8 +38,13 @@ function electronBuilderCli() {
   return path.join(path.dirname(pkgJson), rel)
 }
 
+// Regenerate the branded electron-builder config for the active DESKTOP_BRAND
+// so a stale build/ from another flavor can never leak into this package.
+const brand = applyBrand()
+console.log(`[run-electron-builder] brand: ${brand.id} (${brand.productName})`)
+
 const dist = electronDistDir()
-const args = []
+const args = ["--config", "build/electron-builder-brand.json"]
 if (dist && fs.existsSync(distBinary(dist))) {
   args.push(`-c.electronDist=${dist}`)
 } else {

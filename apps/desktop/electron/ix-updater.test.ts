@@ -75,6 +75,18 @@ test('pickFallbackUrl: official feed goes to the download page, custom feeds kee
   assert.equal(pickFallbackUrl('https://example.com/feed', ''), '')
 })
 
+test('pickFallbackUrl: per-brand download page — brands without one keep the artifact', () => {
+  const qvFeed = 'https://intelliverse-x-desktop.s3.amazonaws.com/quizverse'
+
+  // A brand with its own landing page gets that page on its official feed.
+  assert.equal(pickFallbackUrl(qvFeed, 'https://x/QuizVerse.dmg', qvFeed, 'https://qv/download.html'), 'https://qv/download.html')
+  // A brand with NO landing page (QuizVerse today) must get the direct
+  // artifact — never another brand's download page.
+  assert.equal(pickFallbackUrl(qvFeed, 'https://x/QuizVerse.dmg', qvFeed, ''), 'https://x/QuizVerse.dmg')
+  // Custom feed still bypasses the landing page entirely.
+  assert.equal(pickFallbackUrl('https://example.com/feed', 'https://x/QuizVerse.dmg', qvFeed, 'https://qv/download.html'), 'https://x/QuizVerse.dmg')
+})
+
 test('pickDownloadUrl: platform-preferred artifact, resolved against the feed base', () => {
   const files = [{ url: 'IX-Agency-0.18.0.AppImage' }, { url: 'IX-Agency-0.18.0.dmg' }, { url: 'IX-Agency-0.18.0.exe' }]
 

@@ -12,6 +12,7 @@ import {
   submitOAuthCode,
   validateProviderCredential
 } from '@/hermes'
+import { BRAND_NAME } from '@/lib/brand'
 import { evaluateRuntimeReadiness, type RuntimeReadinessResult } from '@/lib/runtime-readiness'
 import { notify, notifyError } from '@/store/notifications'
 import type { ModelOptionProvider, OAuthProvider, OAuthStartResponse } from '@/types/hermes'
@@ -191,7 +192,7 @@ function shouldPreserveConfiguredOnFallback(runtime: RuntimeReadinessResult, sta
 }
 
 function notifyReady(provider: string) {
-  notify({ kind: 'success', title: 'IX Agency is ready', message: `${provider} connected.` })
+  notify({ kind: 'success', title: `${BRAND_NAME} is ready`, message: `${provider} connected.` })
 }
 
 // Human-friendly labels for tools auto-routed through the Nous Tool Gateway,
@@ -360,8 +361,8 @@ function providerResolutionFailure(reason: null | string) {
   const detail = reason?.trim()
 
   return detail
-    ? `Connected, but IX Agency still cannot resolve a usable provider. ${detail}`
-    : 'Connected, but IX Agency still cannot resolve a usable provider.'
+    ? `Connected, but ${BRAND_NAME} still cannot resolve a usable provider. ${detail}`
+    : `Connected, but ${BRAND_NAME} still cannot resolve a usable provider.`
 }
 
 async function refreshProviders() {
@@ -526,7 +527,7 @@ export async function refreshOnboarding(ctx: OnboardingContext) {
       kind: 'error',
       title: 'Runtime not ready',
       message:
-        'IX Agency could not verify the running backend on startup. Some features may be unavailable until the gateway is reachable.'
+        `${BRAND_NAME} could not verify the running backend on startup. Some features may be unavailable until the gateway is reachable.`
     })
 
     return false
@@ -728,7 +729,7 @@ export async function recheckExternalSignin(ctx: OnboardingContext) {
       provider,
       message:
         reason?.trim() ||
-        `IX Agency still cannot reach ${provider.name}. Run \`${provider.cli_command}\` in a terminal first.`
+        `${BRAND_NAME} still cannot reach ${provider.name}. Run \`${provider.cli_command}\` in a terminal first.`
     })
   )
 }
@@ -843,7 +844,7 @@ export async function saveOnboardingLocalEndpoint(baseUrl: string, apiKey: strin
     if (!runtime.ready) {
       const detail = (runtime.reason ?? '').trim()
 
-      return { ok: false, message: detail || `Saved, but IX Agency still cannot reach ${url}.` }
+      return { ok: false, message: detail || `Saved, but ${BRAND_NAME} still cannot reach ${url}.` }
     }
 
     notifyReady('Local / custom endpoint')

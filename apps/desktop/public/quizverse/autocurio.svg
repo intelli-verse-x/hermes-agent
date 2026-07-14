@@ -1,0 +1,298 @@
+<svg id="autocurio-root" viewBox="0 0 200 320" xmlns="http://www.w3.org/2000/svg"
+     role="img" aria-label="Autocurio, your QuizVerse guide">
+  <title>Autocurio</title>
+  <desc>Autocurio: a friendly matte-black robot mascot with cyan eyes, dome head, round ear pods, antenna, and X chest emblem.</desc>
+
+  <defs>
+    <linearGradient id="grad-eye-ring" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#5ACEAE"/>
+      <stop offset="100%" stop-color="#00AADD"/>
+    </linearGradient>
+    <radialGradient id="grad-antenna-tip" cx="0.38" cy="0.32" r="0.6">
+      <stop offset="0%" stop-color="#7EE8FF"/>
+      <stop offset="100%" stop-color="#00BBEE"/>
+    </radialGradient>
+    <linearGradient id="grad-chest-x" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#2255CC"/>
+      <stop offset="100%" stop-color="#00AADD"/>
+    </linearGradient>
+    <filter id="glow-cyan" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="3" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <!-- Shadow -->
+  <g id="autocurio-shadow">
+    <ellipse cx="100" cy="306" rx="46" ry="7" fill="#000" opacity="0.25"/>
+    <ellipse cx="100" cy="306" rx="28" ry="4" fill="#000" opacity="0.10"/>
+  </g>
+
+  <!-- Behind Accessories -->
+  <g id="autocurio-accessories-behind">
+    <g id="acc-rocket" display="none">
+      <path d="M 82 158 C 78 160, 76 168, 78 180 L 78 198 C 78 206, 82 210, 88 210 L 112 210 C 118 210, 122 206, 122 198 L 122 180 C 124 168, 122 160, 118 158 Z" fill="#2A2A2A"/>
+      <path d="M 86 162 C 83 164, 82 170, 83 180 L 83 194 C 83 200, 86 204, 90 204 L 110 204 C 114 204, 117 200, 117 194 L 117 180 C 118 170, 117 164, 114 162 Z" fill="#333"/>
+      <circle cx="100" cy="178" r="6" fill="#444"/>
+      <circle cx="100" cy="178" r="3.5" fill="#666"/>
+      <ellipse id="rocket-flame-left" cx="90" cy="216" rx="5" ry="12" fill="#FF6600" opacity="0.9"/>
+      <ellipse id="rocket-flame-right" cx="110" cy="216" rx="5" ry="12" fill="#FF6600" opacity="0.9"/>
+      <ellipse cx="90" cy="215" rx="3" ry="8" fill="#FFCC00" opacity="0.8"/>
+      <ellipse cx="110" cy="215" rx="3" ry="8" fill="#FFCC00" opacity="0.8"/>
+    </g>
+  </g>
+
+  <!-- ===== MAIN BODY ===== -->
+  <g id="autocurio-body">
+
+    <!-- LEGS (with knee joints) -->
+    <g id="autocurio-legs">
+      <g id="autocurio-leg-left">
+        <!-- Thigh (hip to knee) -->
+        <ellipse cx="82" cy="250" rx="14" ry="18" fill="#1C1C1C"/>
+        <ellipse cx="80" cy="248" rx="5" ry="12" fill="#222222"/>
+        <!-- Shin group (pivots at knee) -->
+        <g id="autocurio-left-shin">
+          <circle cx="82" cy="268" r="7" fill="#202020"/>
+          <ellipse cx="82" cy="282" rx="13" ry="16" fill="#1C1C1C"/>
+          <ellipse cx="80" cy="280" rx="5" ry="10" fill="#222222"/>
+          <!-- Foot -->
+          <ellipse cx="82" cy="300" rx="14" ry="5" fill="#161616"/>
+        </g>
+      </g>
+      <g id="autocurio-leg-right">
+        <ellipse cx="118" cy="250" rx="14" ry="18" fill="#1C1C1C"/>
+        <ellipse cx="120" cy="248" rx="5" ry="12" fill="#222222"/>
+        <g id="autocurio-right-shin">
+          <circle cx="118" cy="268" r="7" fill="#202020"/>
+          <ellipse cx="118" cy="282" rx="13" ry="16" fill="#1C1C1C"/>
+          <ellipse cx="120" cy="280" rx="5" ry="10" fill="#222222"/>
+          <ellipse cx="118" cy="300" rx="14" ry="5" fill="#161616"/>
+        </g>
+      </g>
+    </g>
+
+    <!-- LEFT ARM (with elbow joint — forearm+hand nested for transform chaining) -->
+    <g id="autocurio-left-arm">
+      <g id="autocurio-left-shoulder">
+        <ellipse cx="48" cy="170" rx="10" ry="8" fill="#1E1E1E"/>
+      </g>
+      <g id="autocurio-left-upper-arm">
+        <!-- Upper arm (shoulder to elbow) -->
+        <ellipse cx="46" cy="182" rx="12" ry="15" fill="#1C1C1C"/>
+        <ellipse cx="43" cy="180" rx="5" ry="10" fill="#222222"/>
+        <!-- Forearm group (pivots at elbow) -->
+        <g id="autocurio-left-forearm">
+          <circle cx="46" cy="196" r="7" fill="#202020"/>
+          <ellipse cx="46" cy="210" rx="11" ry="14" fill="#1C1C1C"/>
+          <ellipse cx="43" cy="208" rx="4" ry="9" fill="#222222"/>
+          <!-- Hand (pivots at wrist) -->
+          <g id="autocurio-left-hand">
+            <g id="autocurio-left-palm">
+              <ellipse cx="42" cy="226" rx="13" ry="10" fill="#1A1A1A"/>
+              <ellipse cx="40" cy="224" rx="6" ry="5" fill="#222222"/>
+            </g>
+            <g id="autocurio-left-thumb">
+              <ellipse cx="54" cy="220" rx="5" ry="4.5" fill="#1A1A1A"/>
+            </g>
+            <g id="autocurio-left-fingers">
+              <ellipse cx="42" cy="234" rx="10" ry="5" fill="#1A1A1A"/>
+            </g>
+          </g>
+        </g>
+      </g>
+    </g>
+
+    <!-- TORSO (balanced width) -->
+    <g id="autocurio-torso">
+      <path id="torso-base" d="M 100 150 C 126 150, 142 160, 144 178 C 146 198, 142 218, 136 230 C 130 238, 116 242, 100 242 C 84 242, 70 238, 64 230 C 58 218, 54 198, 56 178 C 58 160, 74 150, 100 150 Z" fill="#1C1C1C"/>
+      <!-- Subtle belly highlight -->
+      <ellipse cx="98" cy="196" rx="28" ry="26" fill="#222222"/>
+      <!-- Neck shadow -->
+      <ellipse cx="100" cy="155" rx="28" ry="6" fill="#111" opacity="0.4"/>
+
+      <!-- Chest X -->
+      <g id="autocurio-chest-mark">
+        <line x1="84" y1="182" x2="116" y2="208" stroke="url(#grad-chest-x)" stroke-width="3.5" stroke-linecap="round" opacity="0.6"/>
+        <line x1="116" y1="182" x2="84" y2="208" stroke="url(#grad-chest-x)" stroke-width="3.5" stroke-linecap="round" opacity="0.6"/>
+      </g>
+    </g>
+
+    <!-- RIGHT ARM (with elbow joint — mirrored) -->
+    <g id="autocurio-right-arm">
+      <g id="autocurio-right-shoulder">
+        <ellipse cx="152" cy="170" rx="10" ry="8" fill="#1E1E1E"/>
+      </g>
+      <g id="autocurio-right-upper-arm">
+        <ellipse cx="154" cy="182" rx="12" ry="15" fill="#1C1C1C"/>
+        <ellipse cx="157" cy="180" rx="5" ry="10" fill="#222222"/>
+        <g id="autocurio-right-forearm">
+          <circle cx="154" cy="196" r="7" fill="#202020"/>
+          <ellipse cx="154" cy="210" rx="11" ry="14" fill="#1C1C1C"/>
+          <ellipse cx="157" cy="208" rx="4" ry="9" fill="#222222"/>
+          <g id="autocurio-right-hand">
+            <g id="autocurio-right-palm">
+              <ellipse cx="158" cy="226" rx="13" ry="10" fill="#1A1A1A"/>
+              <ellipse cx="160" cy="224" rx="6" ry="5" fill="#222222"/>
+            </g>
+            <g id="autocurio-right-thumb">
+              <ellipse cx="146" cy="220" rx="5" ry="4.5" fill="#1A1A1A"/>
+            </g>
+            <g id="autocurio-right-fingers">
+              <ellipse cx="158" cy="234" rx="10" ry="5" fill="#1A1A1A"/>
+            </g>
+          </g>
+        </g>
+      </g>
+    </g>
+
+    <!-- HEAD (smooth dark sphere, very subtle shading) -->
+    <g id="autocurio-head">
+
+      <!-- Head base (dark, near-black like reference) -->
+      <path id="head-base" d="M 100 36 C 144 36, 158 50, 158 95 C 158 140, 144 154, 100 154 C 56 154, 42 140, 42 95 C 42 50, 56 36, 100 36 Z" fill="#242424"/>
+      <!-- Very subtle dome highlight (barely visible, like reference) -->
+      <ellipse cx="88" cy="68" rx="38" ry="26" fill="#2A2A2A"/>
+
+      <!-- Antenna -->
+      <g id="autocurio-antenna">
+        <line x1="100" y1="38" x2="100" y2="14" stroke="#1E1E1E" stroke-width="4" stroke-linecap="round"/>
+        <circle cx="100" cy="10" r="7" fill="url(#grad-antenna-tip)" filter="url(#glow-cyan)"/>
+        <circle cx="98" cy="8" r="2" fill="#fff" opacity="0.6"/>
+      </g>
+
+      <!-- Ear pods (ROUND DISCS like reference headphone cups) -->
+      <g id="autocurio-ears">
+        <g id="autocurio-ear-left">
+          <!-- Main disc -->
+          <ellipse cx="40" cy="95" rx="11" ry="14" fill="#1A1A1A"/>
+          <!-- Inner ring -->
+          <ellipse cx="40" cy="95" rx="7" ry="9" fill="#141414"/>
+          <!-- Center dot (speaker detail) -->
+          <ellipse cx="40" cy="95" rx="3" ry="4" fill="#1E1E1E"/>
+          <!-- Subtle cyan accent ring -->
+          <ellipse cx="40" cy="95" rx="8" ry="10.5" fill="none" stroke="#00D4FF" stroke-width="1" opacity="0.4"/>
+        </g>
+        <g id="autocurio-ear-right">
+          <ellipse cx="160" cy="95" rx="11" ry="14" fill="#1A1A1A"/>
+          <ellipse cx="160" cy="95" rx="7" ry="9" fill="#141414"/>
+          <ellipse cx="160" cy="95" rx="3" ry="4" fill="#1E1E1E"/>
+          <ellipse cx="160" cy="95" rx="8" ry="10.5" fill="none" stroke="#00D4FF" stroke-width="1" opacity="0.4"/>
+        </g>
+      </g>
+
+      <!-- Face -->
+      <g id="autocurio-face">
+
+        <!-- Eyes (SIMPLE: socket → cyan ring → pupil → one specular) -->
+        <g id="autocurio-eyes">
+          <g id="autocurio-eye-left">
+            <!-- Dark socket (flush with head) -->
+            <circle cx="78" cy="97" r="18" fill="#111111"/>
+            <!-- Bright cyan ring -->
+            <circle cx="78" cy="97" r="15" fill="url(#grad-eye-ring)"/>
+            <!-- Dark pupil -->
+            <circle cx="78" cy="97" r="8.5" fill="#0C0C0C"/>
+            <!-- Pupil group (for eye tracking) -->
+            <g id="autocurio-pupil-left" class="pupil-group">
+              <circle cx="78" cy="97" r="7" fill="#080808"/>
+              <!-- Single bright specular (like reference) -->
+              <circle cx="82" cy="93" r="2.8" fill="#fff" opacity="0.92"/>
+            </g>
+          </g>
+          <g id="autocurio-eye-right">
+            <circle cx="122" cy="97" r="18" fill="#111111"/>
+            <circle cx="122" cy="97" r="15" fill="url(#grad-eye-ring)"/>
+            <circle cx="122" cy="97" r="8.5" fill="#0C0C0C"/>
+            <g id="autocurio-pupil-right" class="pupil-group">
+              <circle cx="122" cy="97" r="7" fill="#080808"/>
+              <circle cx="126" cy="93" r="2.8" fill="#fff" opacity="0.92"/>
+            </g>
+          </g>
+        </g>
+
+        <!-- Eyebrows (thin, subtle) -->
+        <g id="autocurio-eyebrows">
+          <path id="brow-left" d="M 62 79 Q 76 72 92 79" stroke="#3A3A3A" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+          <path id="brow-right" d="M 108 79 Q 124 72 138 79" stroke="#3A3A3A" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+        </g>
+
+        <!-- Mouth -->
+        <g id="autocurio-mouth">
+          <path id="mouth-smile" d="M 86 122 Q 100 133 114 122" stroke="#3A3A3A" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+          <ellipse id="mouth-open" cx="100" cy="125" rx="9" ry="7" fill="#111" stroke="#2A2A2A" stroke-width="1.5" display="none"/>
+          <line id="mouth-flat" x1="87" y1="124" x2="113" y2="124" stroke="#3A3A3A" stroke-width="2.5" stroke-linecap="round" display="none"/>
+          <path id="mouth-sad" d="M 86 129 Q 100 120 114 129" stroke="#3A3A3A" stroke-width="2.5" stroke-linecap="round" fill="none" display="none"/>
+        </g>
+
+      </g>
+    </g>
+
+  </g>
+
+  <!-- ===== FRONT ACCESSORIES ===== -->
+  <g id="autocurio-accessories">
+
+    <g id="acc-explorer-hat" display="none">
+      <ellipse cx="100" cy="44" rx="50" ry="9" fill="#7A5C12"/>
+      <path d="M 60 44 Q 60 16 100 8 Q 140 16 140 44" fill="#A0782C"/>
+      <rect x="60" y="41" width="80" height="7" rx="3.5" fill="#8B6914"/>
+    </g>
+
+    <g id="acc-glasses" display="none">
+      <circle cx="78" cy="97" r="22" fill="none" stroke="#999" stroke-width="3"/>
+      <circle cx="122" cy="97" r="22" fill="none" stroke="#999" stroke-width="3"/>
+      <line x1="100" y1="97" x2="100" y2="97" stroke="#999" stroke-width="3" stroke-linecap="round"/>
+      <path d="M 56 93 L 38 87" stroke="#999" stroke-width="2" stroke-linecap="round" fill="none"/>
+      <path d="M 144 93 L 162 87" stroke="#999" stroke-width="2" stroke-linecap="round" fill="none"/>
+    </g>
+
+    <g id="acc-graduation-cap" display="none">
+      <polygon points="100,18 48,44 100,60 152,44" fill="#1a1a2e"/>
+      <rect x="92" y="42" width="16" height="16" fill="#1a1a2e"/>
+      <line x1="140" y1="44" x2="144" y2="70" stroke="#FFD700" stroke-width="2.5"/>
+      <circle cx="144" cy="72" r="4" fill="#FFD700"/>
+    </g>
+
+    <g id="acc-shield" display="none">
+      <path d="M 8 166 L 40 154 L 72 166 L 72 210 Q 72 240 40 254 Q 8 240 8 210 Z" fill="#4169E1" stroke="#FFD700" stroke-width="3"/>
+      <path d="M 40 180 L 56 206 L 24 206 Z" fill="#FFD700"/>
+    </g>
+
+    <g id="acc-crown" display="none">
+      <path d="M 64 44 L 72 16 L 84 34 L 100 8 L 116 34 L 128 16 L 136 44 Z" fill="#FFD700"/>
+      <rect x="64" y="42" width="72" height="10" rx="3" fill="#E6C200"/>
+      <circle cx="84" cy="48" r="3.5" fill="#FF4444"/>
+      <circle cx="100" cy="48" r="3.5" fill="#4169E1"/>
+      <circle cx="116" cy="48" r="3.5" fill="#2ECC71"/>
+    </g>
+
+    <g id="acc-thumbs-up" display="none">
+      <ellipse cx="158" cy="200" rx="10" ry="8" fill="#1A1A1A"/>
+      <rect x="153" y="178" width="10" height="24" rx="5" fill="#1A1A1A"/>
+    </g>
+
+    <g id="acc-clouds" display="none">
+      <g class="cloud cloud-1">
+        <ellipse cx="24" cy="50" rx="22" ry="11" fill="#fff" opacity="0.14"/>
+        <ellipse cx="14" cy="43" rx="14" ry="9" fill="#fff" opacity="0.10"/>
+        <ellipse cx="36" cy="45" rx="10" ry="7" fill="#fff" opacity="0.08"/>
+      </g>
+      <g class="cloud cloud-2">
+        <ellipse cx="178" cy="38" rx="20" ry="10" fill="#fff" opacity="0.12"/>
+        <ellipse cx="168" cy="31" rx="12" ry="8" fill="#fff" opacity="0.09"/>
+      </g>
+      <g class="cloud cloud-3">
+        <ellipse cx="172" cy="138" rx="18" ry="8" fill="#fff" opacity="0.10"/>
+      </g>
+    </g>
+
+    <g id="acc-books" display="none">
+      <rect x="18" y="196" width="30" height="6" rx="2" fill="#E74C3C" transform="rotate(-8 33 199)"/>
+      <rect x="18" y="203" width="30" height="6" rx="2" fill="#3498DB" transform="rotate(-6 33 206)"/>
+      <rect x="18" y="210" width="30" height="6" rx="2" fill="#2ECC71" transform="rotate(-4 33 213)"/>
+    </g>
+
+  </g>
+
+</svg>

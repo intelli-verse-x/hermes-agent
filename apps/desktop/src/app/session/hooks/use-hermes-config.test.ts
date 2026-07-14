@@ -18,7 +18,7 @@ const WORKSPACE_CWD_KEY = 'hermes.desktop.workspace-cwd'
 const mockConfig = (config: Record<string, unknown>) =>
   vi.mocked(getHermesConfig).mockResolvedValue(config as Awaited<ReturnType<typeof getHermesConfig>>)
 
-describe('useHermesConfig refreshHermesConfig', () => {
+describe('useHermesConfig refreshAgentConfig', () => {
   beforeEach(() => {
     // Reset atoms and localStorage between tests
     setCurrentCwd('')
@@ -40,7 +40,7 @@ describe('useHermesConfig refreshHermesConfig', () => {
     )
 
     await act(async () => {
-      await result.current.refreshHermesConfig()
+      await result.current.refreshAgentConfig()
     })
 
     // The configured terminal.cwd must override the stale localStorage value
@@ -60,7 +60,7 @@ describe('useHermesConfig refreshHermesConfig', () => {
     )
 
     await act(async () => {
-      await result.current.refreshHermesConfig()
+      await result.current.refreshAgentConfig()
     })
 
     // Config refreshes mid-session must not yank the workspace out from
@@ -79,7 +79,7 @@ describe('useHermesConfig refreshHermesConfig', () => {
     )
 
     await act(async () => {
-      await result.current.refreshHermesConfig()
+      await result.current.refreshAgentConfig()
     })
 
     expect($currentCwd.get()).toBe('')
@@ -96,7 +96,7 @@ describe('useHermesConfig refreshHermesConfig', () => {
     )
 
     await act(async () => {
-      await result.current.refreshHermesConfig()
+      await result.current.refreshAgentConfig()
     })
 
     expect($currentCwd.get()).toBe('')
@@ -116,7 +116,7 @@ describe('useHermesConfig refreshHermesConfig', () => {
     )
 
     await act(async () => {
-      await result.current.refreshHermesConfig()
+      await result.current.refreshAgentConfig()
     })
 
     expect(refreshProjectBranch).toHaveBeenCalledWith('/workspace/project-a')
@@ -136,7 +136,7 @@ describe('useHermesConfig refreshHermesConfig', () => {
     )
 
     await act(async () => {
-      await result.current.refreshHermesConfig()
+      await result.current.refreshAgentConfig()
     })
 
     expect(refreshProjectBranch).toHaveBeenCalledWith('/workspace/attached-project')

@@ -500,7 +500,7 @@ export function CommandPalette() {
             icon: Download,
             id: 'cc-update-hermes',
             keywords: ['update', 'upgrade', 'hermes', 'version', 'system', 'restart'],
-            label: cc.updateHermes,
+            label: cc.updateBrand,
             run: () => void applyBackendUpdate()
           }
         ]
