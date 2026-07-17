@@ -122,8 +122,12 @@ describe('IVX Agency ecosystem story', () => {
     expect(downloadText).toContain('new URLSearchParams(location.search)')
     expect(downloadText).toContain('localStorage.setItem(ATTRIBUTION_STORAGE_KEY')
     expect(downloadText).toContain('90 * 24 * 60 * 60 * 1000')
+    for (const clickId of ['gclid', 'wbraid', 'gbraid', 'fbclid', 'msclkid', 'ttclid', 'li_fat_id', 'twclid']) {
+      expect(downloadText).toContain(`'${clickId}'`)
+    }
     expect(downloadText).toContain('target.searchParams.set(`first_${field}`, value)')
     expect(downloadText).toContain('target.searchParams.set(`hop_${field}`, value)')
+    expect(downloadText).toContain("target.searchParams.set('attribution_id', firstTouch.attributionId)")
     expect(downloadText).toContain("target.pathname.includes('/team') ? 'request-agency-access' : 'agency-portal'")
     expect(downloadText).toContain('stores no credentials or entitlement')
   })
@@ -136,7 +140,7 @@ describe('IVX Agency ecosystem story', () => {
         })
       },
       runScripts: 'dangerously',
-      url: 'https://intelliverse-x-desktop.s3.amazonaws.com/index.html?utm_source=partner&utm_medium=email&utm_campaign=launch&utm_content=cta&intent=agency-evaluation&role=agency-operator&engine=all'
+      url: 'https://intelliverse-x-desktop.s3.amazonaws.com/index.html?utm_source=partner&utm_medium=email&utm_campaign=launch&utm_content=cta&intent=agency-evaluation&role=agency-operator&engine=all&gclid=google-click&wbraid=web-braid&gbraid=app-braid&fbclid=meta-click&msclkid=microsoft-click&ttclid=tiktok-click&li_fat_id=linkedin-click&twclid=x-click'
     })
 
     const portal = dom.window.document.querySelector<HTMLAnchorElement>(
@@ -151,15 +155,58 @@ describe('IVX Agency ecosystem story', () => {
         engine: 'all',
         intent: 'agency-evaluation',
         role: 'agency-operator',
+        fbclid: 'meta-click',
+        gbraid: 'app-braid',
+        gclid: 'google-click',
+        li_fat_id: 'linkedin-click',
+        msclkid: 'microsoft-click',
+        ttclid: 'tiktok-click',
+        twclid: 'x-click',
         utm_campaign: 'launch',
         utm_content: 'cta',
         utm_medium: 'email',
-        utm_source: 'partner'
+        utm_source: 'partner',
+        wbraid: 'web-braid'
       })
     )
+    expect(stored.attributionId).toMatch(/^(desktop-|[0-9a-f]{8}-)/)
     expect(portalUrl.searchParams.get('first_utm_source')).toBe('partner')
     expect(portalUrl.searchParams.get('first_intent')).toBe('agency-evaluation')
+    expect(portalUrl.searchParams.get('first_gclid')).toBe('google-click')
+    expect(portalUrl.searchParams.get('first_wbraid')).toBe('web-braid')
+    expect(portalUrl.searchParams.get('first_gbraid')).toBe('app-braid')
+    expect(portalUrl.searchParams.get('first_fbclid')).toBe('meta-click')
+    expect(portalUrl.searchParams.get('first_msclkid')).toBe('microsoft-click')
+    expect(portalUrl.searchParams.get('first_ttclid')).toBe('tiktok-click')
+    expect(portalUrl.searchParams.get('first_li_fat_id')).toBe('linkedin-click')
+    expect(portalUrl.searchParams.get('first_twclid')).toBe('x-click')
+    expect(portalUrl.searchParams.get('attribution_id')).toBe(stored.attributionId)
     expect(portalUrl.searchParams.get('hop_utm_source')).toBe('ivx-agency-download')
+    expect(portalUrl.searchParams.get('hop_intent')).toBe('agency-portal')
+    expect(portalUrl.searchParams.get('hop_role')).toBe('agency-operator')
+    expect(portalUrl.searchParams.get('hop_engine')).toBe('all')
     expect(portalUrl.searchParams.get('intent')).toBe('agency-portal')
+
+    const handoffs = [
+      'a[href*="admin.intelli-verse-x.ai/admin/team"]',
+      'a[href*="router.intelli-verse-x.ai/apps"]',
+      'a[href*="router.intelli-verse-x.ai/demo"]',
+      'a[href*="quizverse.world"]'
+    ]
+
+    for (const selector of handoffs) {
+      const link = dom.window.document.querySelector<HTMLAnchorElement>(selector)
+      const target = new URL(link?.href || '')
+
+      expect(target.searchParams.get('attribution_id')).toBe(stored.attributionId)
+      expect(target.searchParams.get('first_gclid')).toBe('google-click')
+      expect(target.searchParams.get('first_fbclid')).toBe('meta-click')
+      expect(target.searchParams.get('first_msclkid')).toBe('microsoft-click')
+      expect(target.searchParams.get('first_li_fat_id')).toBe('linkedin-click')
+      expect(target.searchParams.get('hop_utm_source')).toBe('ivx-agency-download')
+      expect(target.searchParams.get('hop_intent')).toBeTruthy()
+      expect(target.searchParams.get('hop_role')).toBeTruthy()
+      expect(target.searchParams.get('hop_engine')).toBeTruthy()
+    }
   })
 })

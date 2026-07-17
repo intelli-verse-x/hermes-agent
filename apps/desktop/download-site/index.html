@@ -482,8 +482,8 @@
             >request a connected-engine pilot</a
           >. Desktop is the operator surface; it does not create platform entitlements, App IDs, or pilot approval.
           <small style="display: block; margin-top: 8px">
-            This page keeps a bounded first-touch campaign and journey tuple in this browser for up to 90 days and
-            forwards it to portal, setup, and pilot handoffs. It stores no credentials or entitlement.
+            This page keeps a bounded first-touch campaign, click-ID, and journey tuple in this browser for up to 90 days
+            and forwards it to portal, setup, and pilot handoffs. It stores no credentials or entitlement.
           </small>
         </div>
 
@@ -934,7 +934,26 @@
 
       const ATTRIBUTION_STORAGE_KEY = 'ivx-desktop-download-first-touch-v1'
       const ATTRIBUTION_MAX_AGE_MS = 90 * 24 * 60 * 60 * 1000
-      const ATTRIBUTION_FIELDS = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'intent', 'role', 'engine']
+      const ATTRIBUTION_JOURNEY_FIELDS = [
+        'utm_source',
+        'utm_medium',
+        'utm_campaign',
+        'utm_content',
+        'intent',
+        'role',
+        'engine'
+      ]
+      const ATTRIBUTION_CLICK_ID_FIELDS = [
+        'gclid',
+        'wbraid',
+        'gbraid',
+        'fbclid',
+        'msclkid',
+        'ttclid',
+        'li_fat_id',
+        'twclid'
+      ]
+      const ATTRIBUTION_FIELDS = [...ATTRIBUTION_JOURNEY_FIELDS, ...ATTRIBUTION_CLICK_ID_FIELDS]
 
       function cleanAttributionValue(value) {
         return String(value || '')
@@ -971,7 +990,16 @@
         if (Object.keys(values).length === 0) return null
 
         const capturedAt = Date.now()
-        const firstTouch = { capturedAt, expiresAt: capturedAt + ATTRIBUTION_MAX_AGE_MS, values }
+        const attributionId =
+          typeof crypto.randomUUID === 'function'
+            ? crypto.randomUUID()
+            : `desktop-${capturedAt}-${Math.random().toString(36).slice(2, 14)}`
+        const firstTouch = {
+          attributionId,
+          capturedAt,
+          expiresAt: capturedAt + ATTRIBUTION_MAX_AGE_MS,
+          values
+        }
 
         try {
           localStorage.setItem(ATTRIBUTION_STORAGE_KEY, JSON.stringify(firstTouch))
@@ -995,35 +1023,48 @@
         )
       }
 
+      function applyHopContext(target) {
+        if (target.hostname === 'admin.intelli-verse-x.ai') {
+          target.searchParams.set('intent', target.pathname.includes('/team') ? 'request-agency-access' : 'agency-portal')
+          target.searchParams.set('role', 'agency-operator')
+          target.searchParams.set('engine', 'all')
+        } else if (target.hostname === 'quizverse.world') {
+          target.searchParams.set('intent', 'quizverse-desktop-discovery')
+          target.searchParams.set('role', 'learner-player')
+          target.searchParams.set('engine', 'questx')
+        }
+      }
+
       function decorateOutboundAttribution(firstTouch) {
         for (const link of document.querySelectorAll('a[href^="https://"]')) {
           const target = new URL(link.href)
           const content = outboundContent(link, target)
-          const explicitCampaign = ATTRIBUTION_FIELDS.some(field => target.searchParams.has(field))
-          const hop = {
+          const hopDefaults = {
             utm_campaign: 'native_engines',
             utm_content: content,
             utm_medium: 'referral',
             utm_source: 'ivx-agency-download'
           }
 
+          if (firstTouch?.attributionId) target.searchParams.set('attribution_id', firstTouch.attributionId)
+
           for (const [field, value] of Object.entries(firstTouch?.values || {})) {
             target.searchParams.set(`first_${field}`, value)
-            if (!explicitCampaign && !target.searchParams.has(field)) target.searchParams.set(field, value)
+            if (ATTRIBUTION_CLICK_ID_FIELDS.includes(field) && !target.searchParams.has(field)) {
+              target.searchParams.set(field, value)
+            }
           }
 
-          for (const [field, value] of Object.entries(hop)) {
-            if (!target.searchParams.has(field)) target.searchParams.set(field, value)
-            target.searchParams.set(`hop_${field}`, value)
+          for (const [field, fallback] of Object.entries(hopDefaults)) {
+            const value = target.searchParams.get(field) || fallback
+            target.searchParams.set(field, value)
           }
 
-          if (target.hostname === 'admin.intelli-verse-x.ai') {
-            target.searchParams.set(
-              'intent',
-              target.pathname.includes('/team') ? 'request-agency-access' : 'agency-portal'
-            )
-            target.searchParams.set('role', 'agency-operator')
-            target.searchParams.set('engine', 'all')
+          applyHopContext(target)
+
+          for (const field of ATTRIBUTION_JOURNEY_FIELDS) {
+            const value = target.searchParams.get(field)
+            if (value) target.searchParams.set(`hop_${field}`, value)
           }
 
           link.href = target.toString()
