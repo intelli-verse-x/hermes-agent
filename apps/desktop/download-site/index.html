@@ -481,6 +481,10 @@
             rel="noreferrer"
             >request a connected-engine pilot</a
           >. Desktop is the operator surface; it does not create platform entitlements, App IDs, or pilot approval.
+          <small style="display: block; margin-top: 8px">
+            This page keeps a bounded first-touch campaign and journey tuple in this browser for up to 90 days and
+            forwards it to portal, setup, and pilot handoffs. It stores no credentials or entitlement.
+          </small>
         </div>
 
         <div class="primary">
@@ -905,7 +909,7 @@
         }
         if (focus) tab.focus()
         if (updateHash) {
-          history.replaceState(null, '', tab.id === 'tab-quizverse' ? '#quizverse' : '#ivx-admin')
+          history.replaceState(null, '', tab.id === 'tab-quizverse' ? '#quizverse' : '#ivx-agency')
         }
       }
 
@@ -927,6 +931,107 @@
       if (location.hash.toLowerCase() === '#quizverse') {
         activateTab(document.getElementById('tab-quizverse'), { updateHash: false })
       }
+
+      const ATTRIBUTION_STORAGE_KEY = 'ivx-desktop-download-first-touch-v1'
+      const ATTRIBUTION_MAX_AGE_MS = 90 * 24 * 60 * 60 * 1000
+      const ATTRIBUTION_FIELDS = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'intent', 'role', 'engine']
+
+      function cleanAttributionValue(value) {
+        return String(value || '')
+          .trim()
+          .slice(0, 160)
+      }
+
+      function readFirstTouchAttribution() {
+        try {
+          const stored = JSON.parse(localStorage.getItem(ATTRIBUTION_STORAGE_KEY) || 'null')
+
+          if (!stored || stored.expiresAt <= Date.now() || typeof stored.values !== 'object') {
+            localStorage.removeItem(ATTRIBUTION_STORAGE_KEY)
+            return null
+          }
+
+          return stored
+        } catch {
+          return null
+        }
+      }
+
+      function captureFirstTouchAttribution() {
+        const existing = readFirstTouchAttribution()
+        if (existing) return existing
+
+        const inbound = new URLSearchParams(location.search)
+        const values = Object.fromEntries(
+          ATTRIBUTION_FIELDS.map(field => [field, cleanAttributionValue(inbound.get(field))]).filter(([, value]) =>
+            Boolean(value)
+          )
+        )
+
+        if (Object.keys(values).length === 0) return null
+
+        const capturedAt = Date.now()
+        const firstTouch = { capturedAt, expiresAt: capturedAt + ATTRIBUTION_MAX_AGE_MS, values }
+
+        try {
+          localStorage.setItem(ATTRIBUTION_STORAGE_KEY, JSON.stringify(firstTouch))
+        } catch {
+          // Storage can be unavailable in private/restricted browser contexts.
+        }
+
+        return firstTouch
+      }
+
+      function outboundContent(link, target) {
+        if (link.dataset.attributionContent) return link.dataset.attributionContent
+        if (target.hostname === 'admin.intelli-verse-x.ai' && target.pathname.includes('/team')) return 'team_access'
+        if (target.hostname === 'admin.intelli-verse-x.ai') return 'admin_portal'
+        if (target.hostname === 'quizverse.world') return 'quizverse_footer'
+        return (
+          target.pathname
+            .replace(/^\/|\/$/g, '')
+            .replace(/[^a-z0-9]+/gi, '_')
+            .toLowerCase() || 'outbound'
+        )
+      }
+
+      function decorateOutboundAttribution(firstTouch) {
+        for (const link of document.querySelectorAll('a[href^="https://"]')) {
+          const target = new URL(link.href)
+          const content = outboundContent(link, target)
+          const explicitCampaign = ATTRIBUTION_FIELDS.some(field => target.searchParams.has(field))
+          const hop = {
+            utm_campaign: 'native_engines',
+            utm_content: content,
+            utm_medium: 'referral',
+            utm_source: 'ivx-agency-download'
+          }
+
+          for (const [field, value] of Object.entries(firstTouch?.values || {})) {
+            target.searchParams.set(`first_${field}`, value)
+            if (!explicitCampaign && !target.searchParams.has(field)) target.searchParams.set(field, value)
+          }
+
+          for (const [field, value] of Object.entries(hop)) {
+            if (!target.searchParams.has(field)) target.searchParams.set(field, value)
+            target.searchParams.set(`hop_${field}`, value)
+          }
+
+          if (target.hostname === 'admin.intelli-verse-x.ai') {
+            target.searchParams.set(
+              'intent',
+              target.pathname.includes('/team') ? 'request-agency-access' : 'agency-portal'
+            )
+            target.searchParams.set('role', 'agency-operator')
+            target.searchParams.set('engine', 'all')
+          }
+
+          link.href = target.toString()
+        }
+      }
+
+      const firstTouchAttribution = captureFirstTouchAttribution()
+      decorateOutboundAttribution(firstTouchAttribution)
 
       // The artifacts + electron-updater channel manifests live under ix-agency/
       // in this same bucket. We read the manifests at runtime so this page never

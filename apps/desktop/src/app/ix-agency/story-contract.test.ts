@@ -1,6 +1,9 @@
 import { readdirSync, readFileSync } from 'node:fs'
 import path from 'node:path'
 
+// jsdom ships without declarations in this workspace; the exercised surface is standard DOM.
+// @ts-expect-error -- runtime dependency is present and covered by this browser-contract test.
+import { JSDOM } from 'jsdom'
 import { describe, expect, it } from 'vitest'
 
 const desktopRoot = process.cwd()
@@ -108,9 +111,55 @@ describe('IVX Agency ecosystem story', () => {
 
   it('uses one public name and artifact-exact trust gating', () => {
     expect(downloadSource).not.toContain('IVX Admin Desktop')
+    expect(downloadSource).not.toContain('#ivx-admin')
     expect(downloadText).toContain('Desktop is the operator surface')
     expect(downloadText).toContain('trust.schemaVersion === 1')
     expect(downloadText).toContain('trust.channel?.sha512 === (await sha512Base64(manifestText))')
     expect(downloadText).toContain('artifact?.sha512 === file.sha512')
+  })
+
+  it('captures and forwards bounded first-touch attribution', () => {
+    expect(downloadText).toContain('new URLSearchParams(location.search)')
+    expect(downloadText).toContain('localStorage.setItem(ATTRIBUTION_STORAGE_KEY')
+    expect(downloadText).toContain('90 * 24 * 60 * 60 * 1000')
+    expect(downloadText).toContain('target.searchParams.set(`first_${field}`, value)')
+    expect(downloadText).toContain('target.searchParams.set(`hop_${field}`, value)')
+    expect(downloadText).toContain("target.pathname.includes('/team') ? 'request-agency-access' : 'agency-portal'")
+    expect(downloadText).toContain('stores no credentials or entitlement')
+  })
+
+  it('persists inbound attribution and decorates access handoffs at runtime', () => {
+    const dom = new JSDOM(downloadSource, {
+      beforeParse(window: Window) {
+        Object.defineProperty(window, 'fetch', {
+          value: async () => ({ ok: false, status: 403 })
+        })
+      },
+      runScripts: 'dangerously',
+      url: 'https://intelliverse-x-desktop.s3.amazonaws.com/index.html?utm_source=partner&utm_medium=email&utm_campaign=launch&utm_content=cta&intent=agency-evaluation&role=agency-operator&engine=all'
+    })
+
+    const portal = dom.window.document.querySelector<HTMLAnchorElement>(
+      'a[href^="https://admin.intelli-verse-x.ai/admin/portal"]'
+    )
+
+    const portalUrl = new URL(portal?.href || '')
+    const stored = JSON.parse(dom.window.localStorage.getItem('ivx-desktop-download-first-touch-v1') || '{}')
+
+    expect(stored.values).toEqual(
+      expect.objectContaining({
+        engine: 'all',
+        intent: 'agency-evaluation',
+        role: 'agency-operator',
+        utm_campaign: 'launch',
+        utm_content: 'cta',
+        utm_medium: 'email',
+        utm_source: 'partner'
+      })
+    )
+    expect(portalUrl.searchParams.get('first_utm_source')).toBe('partner')
+    expect(portalUrl.searchParams.get('first_intent')).toBe('agency-evaluation')
+    expect(portalUrl.searchParams.get('hop_utm_source')).toBe('ivx-agency-download')
+    expect(portalUrl.searchParams.get('intent')).toBe('agency-portal')
   })
 })
