@@ -93,7 +93,17 @@ export function IxAgencyView(props: React.ComponentProps<'section'>) {
         </ul>
         <p className="mt-2">
           Discount-code and payout review workflows are roadmap, not live Desktop actions.
+          Workspace access is provisioned through the Intelliverse portal or an administrator;
+          named role administration remains roadmap.
         </p>
+        <a
+          className="mt-2 inline-flex font-medium text-foreground underline underline-offset-4"
+          href="https://router.intelli-verse-x.ai/apps?utm_source=ivx-agency-desktop&utm_medium=referral&utm_campaign=native_engines&utm_content=connected_setup"
+          rel="noreferrer"
+          target="_blank"
+        >
+          Review the connected-engine setup and pilot path
+        </a>
       </aside>
       {mode === 'copilot' && <CopilotTab />}
       {mode === 'clients' && <ClientsTab query={query} />}

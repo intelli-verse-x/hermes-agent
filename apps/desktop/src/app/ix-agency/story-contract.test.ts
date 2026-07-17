@@ -21,7 +21,14 @@ describe('IVX Agency ecosystem story', () => {
 
   it('keeps unimplemented agency workflows roadmap-honest', () => {
     expect(source).toContain('Discount-code and payout review workflows are roadmap')
+    expect(source).toContain('named role administration remains roadmap')
     expect(source).not.toMatch(/discount codes are issued/i)
     expect(source).not.toMatch(/payouts are tracked per campaign/i)
+  })
+
+  it('links to the attributed connected-engine setup path', () => {
+    expect(source).toContain('router.intelli-verse-x.ai/apps')
+    expect(source).toContain('utm_source=ivx-agency-desktop')
+    expect(source).toContain('utm_campaign=native_engines')
   })
 })

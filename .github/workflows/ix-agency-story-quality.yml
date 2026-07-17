@@ -1,0 +1,27 @@
+name: IX Agency story quality
+
+on:
+  pull_request:
+    paths:
+      - "apps/desktop/brands/ix-agency.json"
+      - "apps/desktop/download-site/**"
+      - "apps/desktop/src/app/ix-agency/**"
+      - "apps/desktop/package.json"
+      - "package-lock.json"
+      - ".github/workflows/ix-agency-story-quality.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  story-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm --workspace apps/desktop run test:ui -- src/app/ix-agency/story-contract.test.ts
