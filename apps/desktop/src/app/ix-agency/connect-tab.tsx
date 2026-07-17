@@ -222,6 +222,36 @@ export function ConnectTab() {
     <div className="h-full overflow-y-auto overscroll-contain">
       <div className="mx-auto max-w-2xl space-y-6 px-5 py-4">
         <section className="space-y-3">
+          <h3 className="text-sm font-semibold text-foreground">Guided first-run checklist</h3>
+          <ul className="grid gap-2 text-xs sm:grid-cols-2">
+            <li className="rounded-md bg-(--ui-bg-quinary) px-3 py-2">
+              1. Email OTP and portal entitlement — completed before this workspace opens
+            </li>
+            <li className="rounded-md bg-(--ui-bg-quinary) px-3 py-2">
+              2. Assigned gateway and model credentials —{' '}
+              {settings.gatewayTokenSet && settings.litellmKeySet
+                ? 'present'
+                : 'needs administrator provisioning or override'}
+            </li>
+            <li className="rounded-md bg-(--ui-bg-quinary) px-3 py-2">
+              3. VPN backend/profile —{' '}
+              {settings.vpnConfImported || settings.vpnConfPath ? VPN_LABEL[vpnState] : 'profile not configured'}
+            </li>
+            <li className="rounded-md bg-(--ui-bg-quinary) px-3 py-2">
+              4. Confidential runtime client —{' '}
+              {settings.cognitoClientSecretSet ? 'stored; validate or rotate below' : 'not provisioned'}
+            </li>
+            <li className="rounded-md bg-(--ui-bg-quinary) px-3 py-2 sm:col-span-2">
+              5. Local agent runtime — {hermes?.initialized ? 'initialized' : hermes?.detail || 'not initialized'}
+            </li>
+          </ul>
+          <p className="text-[0.68rem] leading-relaxed text-muted-foreground/70">
+            Provisioning steps can fail independently. Retry the affected control below or ask the credential owner to
+            issue, rotate, or revoke access. IVX Agency does not grant portal roles or bypass server-side authorization.
+          </p>
+        </section>
+
+        <section className="space-y-3">
           <h3 className="text-sm font-semibold text-foreground">Company VPN (usa-vpn · WireGuard)</h3>
           <div className="flex items-center gap-3 rounded-md bg-(--ui-bg-quinary) px-3 py-2.5">
             <span aria-hidden="true" className={cn('size-2 shrink-0 rounded-full', VPN_DOT[vpnState])} />
@@ -247,8 +277,8 @@ export function ConnectTab() {
             />
             <span className="min-w-0 flex-1 text-xs">
               {settings.vpnConfImported
-                ? 'usa-vpn.conf is imported into the keychain (safeStorage) — nothing stays on disk.'
-                : 'No profile in the keychain yet — it auto-imports on sign-in, or import a usa-vpn.conf manually.'}
+                ? 'usa-vpn.conf is stored as operating-system-protected ciphertext through Electron safeStorage.'
+                : 'No protected profile is stored. Sign-in may import an assigned profile; otherwise ask your administrator or import one manually.'}
             </span>
             <Button onClick={() => void importConf()} size="sm" variant="secondary">
               {settings.vpnConfImported ? 'Re-import…' : 'Import .conf…'}
@@ -275,10 +305,10 @@ export function ConnectTab() {
             />
           </Field>
           <p className="text-[0.68rem] leading-relaxed text-muted-foreground/70">
-            Your per-employee profile is fetched from the portal automatically on sign-in (manual import stays as an
-            override). Connecting prompts for your admin password; needs wireguard-tools on macOS/Linux or WireGuard
-            for Windows. The status lamp turns green only when a fresh handshake is seen AND traffic actually egresses
-            via the exit IP above.
+            For eligible accounts, sign-in attempts to fetch the profile assigned by the portal; retrieval can be
+            unavailable, denied, expired, or revoked. Manual import remains an override. Connecting prompts for an
+            OS-admin password and requires wireguard-tools on macOS/Linux or WireGuard for Windows. The status lamp
+            turns green only after a fresh handshake and verified egress through the configured exit IP.
           </p>
         </section>
 
@@ -322,9 +352,10 @@ export function ConnectTab() {
             )}
           </div>
           <p className="text-[0.68rem] leading-relaxed text-muted-foreground/70">
-            Auto-filled on sign-in (leave empty to use the portal-provisioned token; enter a value only to override).
-            The token is encrypted at rest (safeStorage) and powers the live MCP directory on the Tools tab, the MCP
-            status lamp and the native Copilot's tool loop.
+            Eligible accounts may receive a tenant-scoped token after sign-in. Leave this empty to keep the stored value
+            or enter an administrator-issued replacement. Electron safeStorage protects the local ciphertext; the
+            issuing portal owns scope, rotation, expiry, and revocation. The token powers only tools authorized for the
+            signed-in account.
           </p>
         </section>
 
@@ -356,9 +387,10 @@ export function ConnectTab() {
             />
           </Field>
           <p className="text-[0.68rem] leading-relaxed text-muted-foreground/70">
-            Powers the Copilot tab: streaming chat with the full admin-mcp tool estate. A personal key is provisioned
-            automatically on sign-in (enter one here only to override it). The key is encrypted at rest (safeStorage).
-            The copilot additionally requires the IVX Agency portal login (OTP) — credentials alone do not unlock it.
+            Powers the Copilot tab for models and tools authorized to this account. Eligible accounts may receive a
+            personal key after sign-in; provisioning is not guaranteed and an administrator can rotate or revoke it.
+            Enter a replacement only when instructed. Electron safeStorage protects the local ciphertext. Portal OTP and
+            server-side authorization are still required—possessing a key alone does not unlock the copilot.
           </p>
         </section>
 
@@ -373,10 +405,10 @@ export function ConnectTab() {
             />
           </Field>
           <p className="text-[0.68rem] leading-relaxed text-muted-foreground/70">
-            Checked on launch and every 4 hours. The default is the official S3 feed that CI publishes on every
-            release; when a newer version is there, a non-blocking "Update available" button appears in the strip
-            above and the tray, and clicking it downloads, installs and restarts in place. A URL ending in .json is
-            treated as a legacy hand-published manifest (the button opens the download instead).
+            Checked on launch and every 4 hours. The default is the official S3 feed that CI publishes on every release;
+            when a newer version is there, a non-blocking "Update available" button appears in the strip above and the
+            tray, and clicking it downloads, installs and restarts in place. A URL ending in .json is treated as a
+            legacy hand-published manifest (the button opens the download instead).
           </p>
         </section>
 
@@ -433,7 +465,11 @@ export function ConnectTab() {
               onClick={() => void runHermesInit()}
               size="sm"
             >
-              {initBusy ? 'Installing…' : hermes?.installerAvailable ? 'Install local Intelliverse runtime' : 'Initialize local Intelliverse runtime'}
+              {initBusy
+                ? 'Installing…'
+                : hermes?.installerAvailable
+                  ? 'Install local Intelliverse runtime'
+                  : 'Initialize local Intelliverse runtime'}
             </Button>
           </div>
           {initLog && (
@@ -442,11 +478,11 @@ export function ConnectTab() {
             </pre>
           )}
           <p className="text-[0.68rem] leading-relaxed text-muted-foreground/70">
-            Runs automatically after your first sign-in (the secret is provisioned from the portal; the buttons stay
-            for re-runs and overrides): validates the S2S credentials with a real client-credentials grant (token
-            verified against the pool's JWKS), stores them keychain-backed (safeStorage), then initializes the local
-            Intelliverse runtime through the managed installer and points it at the LiteLLM gateway. Your gateway
-            token and LiteLLM key remain in protected local runtime storage.
+            For eligible tenants, first sign-in attempts this sequence; use these controls to inspect or retry failures.
+            The confidential S2S client secret is administrator-issued and is distinct from a public OAuth app client,
+            which must not have a secret. Validation performs a client-credentials grant and verifies the token against
+            the pool JWKS. Electron safeStorage protects local ciphertext before the installer initializes the local
+            runtime and configures LiteLLM. The issuing services retain responsibility for rotation and revocation.
           </p>
         </section>
       </div>

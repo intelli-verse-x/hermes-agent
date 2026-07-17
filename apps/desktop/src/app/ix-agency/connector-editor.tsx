@@ -270,8 +270,9 @@ export function ConnectorEditor({
         </Button>
       </div>
       <p className="text-xs leading-relaxed text-muted-foreground">
-        Point the copilot at any MCP endpoint — the portal stores it for the whole org (super-admin only). The token
-        is kept server-side and never shown again.
+        Request a connector in the portal registry. A server-side privileged capability is required; opening this form
+        does not prove authorization, and save can be denied. Connector scope follows portal policy. Submitted tokens
+        are stored server-side and are not returned to Desktop.
       </p>
 
       {importOpen && (
@@ -297,7 +298,10 @@ export function ConnectorEditor({
           <Input onChange={event => set('label', event.target.value)} placeholder="Stripe MCP" value={form.label} />
         </Field>
         <Field label="Transport">
-          <Select onValueChange={value => set('transport', value as ConnectorFormState['transport'])} value={form.transport}>
+          <Select
+            onValueChange={value => set('transport', value as ConnectorFormState['transport'])}
+            value={form.transport}
+          >
             <SelectTrigger>
               <SelectValue />
             </SelectTrigger>

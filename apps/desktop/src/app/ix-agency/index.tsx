@@ -82,29 +82,50 @@ export function IxAgencyView(props: React.ComponentProps<'section'>) {
       >
         <p className="font-medium text-foreground">Three native engines, one shared Memory</p>
         <p className="mt-1">
-          Map each client workspace to one Brand or App ID so Knowledge, customer Memory,
-          credentials, and spend stay isolated. Subject identity and consent determine what may
-          continue across approved channels.
+          Map each client workspace to one Brand or App ID so Knowledge, customer Memory, credentials, and spend stay
+          isolated. Subject identity and consent determine what may continue across approved channels.
         </p>
         <ul className="mt-2 grid gap-1 sm:grid-cols-3">
-          <li><strong className="text-foreground">QuestX:</strong> connected per-App setup; kiosk completion approved pilots.</li>
-          <li><strong className="text-foreground">ContentX + Postiz:</strong> publishing live; Memory automation rolling out.</li>
-          <li><strong className="text-foreground">KioskX:</strong> connected deployment; kiosk Worlds approved pilots.</li>
+          <li>
+            <strong className="text-foreground">QuestX:</strong> connected per-App setup; kiosk completion approved
+            pilots.
+          </li>
+          <li>
+            <strong className="text-foreground">ContentX + Postiz:</strong> publishing live; Memory automation rolling
+            out.
+          </li>
+          <li>
+            <strong className="text-foreground">KioskX:</strong> connected deployment; kiosk Worlds approved pilots.
+          </li>
         </ul>
         <p className="mt-2">
-          Discount-code and payout review workflows are roadmap, not live Desktop actions.
-          Workspace access is provisioned through the Intelliverse portal or an administrator;
-          named role administration remains roadmap.
+          Discount-code and payout review workflows are roadmap, not live Desktop actions. Sign-in requires an
+          admin-authorized work email provisioned through the Intelliverse portal. Current authorization is enforced by
+          portal entitlements and server-side capability checks; a unified named-role administration panel remains
+          roadmap. OS-admin prompts only authorize local installation or VPN changes—they do not grant Intelliverse
+          permissions.
+        </p>
+        <p className="mt-2">
+          Clients, engagements, and invoice drafts are local to this device, are not synced platform records, and do not
+          send invoices or process payments. Back up or export is not available in this early-access workspace; clearing
+          app data removes these records.
+        </p>
+        <p className="mt-2">
+          First run is a guided sequence: email OTP, portal entitlement, assigned credentials, VPN backend and profile,
+          VPN verification, LiteLLM verification, then local agent initialization. Open Connect to see each current
+          state, retry a failed step, or use an administrator-supplied override.
         </p>
         <a
           className="mt-2 inline-flex font-medium text-foreground underline underline-offset-4"
-          href="https://router.intelli-verse-x.ai/apps?utm_source=ivx-agency-desktop&utm_medium=referral&utm_campaign=native_engines&utm_content=connected_setup"
+          href="https://router.intelli-verse-x.ai/apps?intent=connected-engine-setup&role=agency-operator&engine=all&utm_source=ivx-agency-desktop&utm_medium=referral&utm_campaign=native_engines&utm_content=connected_setup"
           rel="noreferrer"
           target="_blank"
         >
           Review the connected-engine setup and pilot path
         </a>
-        <span className="mx-2 text-muted-foreground" aria-hidden="true">·</span>
+        <span aria-hidden="true" className="mx-2 text-muted-foreground">
+          ·
+        </span>
         <a
           className="mt-2 inline-flex font-medium text-foreground underline underline-offset-4"
           href="https://router.intelli-verse-x.ai/demo?intent=agency-connected-engine-pilot&utm_source=ivx-agency-desktop&utm_medium=referral&utm_campaign=native_engines&utm_content=pilot_request"

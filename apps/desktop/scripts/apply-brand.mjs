@@ -39,9 +39,7 @@ export function resolveBrandId(raw = process.env.DESKTOP_BRAND) {
   const id = String(raw || '').trim() || DEFAULT_BRAND
 
   if (!KNOWN_BRANDS.includes(id)) {
-    throw new Error(
-      `Unknown DESKTOP_BRAND "${id}" — expected one of: ${KNOWN_BRANDS.join(', ')}`
-    )
+    throw new Error(`Unknown DESKTOP_BRAND "${id}" — expected one of: ${KNOWN_BRANDS.join(', ')}`)
   }
 
   return id
@@ -65,6 +63,7 @@ export function brandedBuilderConfig(brand, pkg) {
 
   build.appId = brand.appId
   build.productName = brand.productName
+  build.copyright = brand.copyright
   build.artifactName = `${brand.artifactPrefix}-\${version}-\${os}-\${arch}.\${ext}`
   build.icon = brand.icon
   build.protocols = [{ name: `${brand.productName} Protocol`, schemes: [brand.protocolScheme] }]
@@ -134,7 +133,13 @@ export function brandedBuilderConfig(brand, pkg) {
       '!dist/apple-touch-icon.png'
     ]
   } else {
-    build.files = [...(build.files || []), '!public/quizverse', '!public/quizverse/**', '!dist/quizverse', '!dist/quizverse/**']
+    build.files = [
+      ...(build.files || []),
+      '!public/quizverse',
+      '!public/quizverse/**',
+      '!dist/quizverse',
+      '!dist/quizverse/**'
+    ]
   }
 
   // The exe-stamp icon rides along as an extraResource; point it at the
@@ -195,5 +200,7 @@ const isMain = process.argv[1] && path.resolve(process.argv[1]) === fileURLToPat
 
 if (isMain) {
   const brand = applyBrand()
-  console.log(`[apply-brand] brand: ${brand.id} (${brand.productName}) → build/brand.json + build/electron-builder-brand.json`)
+  console.log(
+    `[apply-brand] brand: ${brand.id} (${brand.productName}) → build/brand.json + build/electron-builder-brand.json`
+  )
 }

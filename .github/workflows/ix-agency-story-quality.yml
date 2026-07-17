@@ -4,10 +4,17 @@ on:
   pull_request:
     paths:
       - "apps/desktop/brands/ix-agency.json"
+      - "apps/desktop/assets/**"
       - "apps/desktop/download-site/**"
+      - "apps/desktop/electron/**"
+      - "apps/desktop/scripts/apply-brand.mjs"
+      - "apps/desktop/scripts/check-brand-separation.mjs"
       - "apps/desktop/src/app/ix-agency/**"
+      - "apps/desktop/src/lib/brand*"
       - "apps/desktop/package.json"
       - "package-lock.json"
+      - ".github/workflows/desktop-release.yml"
+      - ".github/workflows/desktop-auto-release.yml"
       - ".github/workflows/ix-agency-story-quality.yml"
 
 permissions:
@@ -15,13 +22,27 @@ permissions:
 
 jobs:
   story-contract:
+    strategy:
+      fail-fast: false
+      matrix:
+        brand: [ix-agency, quizverse]
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
+    env:
+      DESKTOP_BRAND: ${{ matrix.brand }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
       - run: npm ci
-      - run: npm --workspace apps/desktop run test:ui -- src/app/ix-agency/story-contract.test.ts
+      - name: Typecheck Desktop
+        run: npm --workspace apps/desktop run typecheck
+      - name: Run IX Agency story and brand tests
+        run: npm --workspace apps/desktop run test:ui -- src/app/ix-agency/story-contract.test.ts src/lib/brand.test.ts
+      - name: Build selected brand
+        run: npm --workspace apps/desktop run build
+      - name: Verify package identity and brand separation
+        working-directory: apps/desktop
+        run: node scripts/check-brand-separation.mjs

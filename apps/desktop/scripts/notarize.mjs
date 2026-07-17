@@ -7,11 +7,7 @@ function run(command, args) {
   return new Promise((resolve, reject) => {
     execFile(command, args, (error, stdout, stderr) => {
       if (error) {
-        reject(
-          new Error(
-            `${command} ${args.join(' ')} failed: ${stderr?.trim() || stdout?.trim() || error.message}`
-          )
-        )
+        reject(new Error(`${command} ${args.join(' ')} failed: ${stderr?.trim() || stdout?.trim() || error.message}`))
         return
       }
       resolve({ stdout, stderr })
@@ -76,18 +72,59 @@ export default async function notarize(context) {
   const keyId = String(process.env.APPLE_API_KEY_ID || '').trim()
   const issuer = String(process.env.APPLE_API_ISSUER || '').trim()
   const rawApiKey = process.env.APPLE_API_KEY
-  if (!rawApiKey || !keyId || !issuer) {
-    console.log(
-      'Skipping notarization: APPLE_API_KEY, APPLE_API_KEY_ID, and APPLE_API_ISSUER are not fully configured.'
-    )
+
+  if (rawApiKey && keyId && issuer) {
+    const { keyPath, cleanup } = resolveApiKeyPath(rawApiKey)
+    const zipPath = path.join(appOutDir, `${appName}.zip`)
+    try {
+      await run('ditto', ['-c', '-k', '--sequesterRsrc', '--keepParent', appPath, zipPath])
+      await run('xcrun', [
+        'notarytool',
+        'submit',
+        zipPath,
+        '--key',
+        keyPath,
+        '--key-id',
+        keyId,
+        '--issuer',
+        issuer,
+        '--wait'
+      ])
+      await run('xcrun', ['stapler', 'staple', '-v', appPath])
+    } finally {
+      try {
+        fs.rmSync(zipPath, { force: true })
+      } catch {
+        // Best-effort cleanup.
+      }
+      cleanup()
+    }
     return
   }
 
-  const { keyPath, cleanup } = resolveApiKeyPath(rawApiKey)
+  const appleId = String(process.env.APPLE_ID || '').trim()
+  const password = String(process.env.APPLE_APP_SPECIFIC_PASSWORD || '').trim()
+  const teamId = String(process.env.APPLE_TEAM_ID || '').trim()
+  if (!appleId || !password || !teamId) {
+    console.log('Skipping notarization: no complete Apple notary credentials are configured.')
+    return
+  }
+
   const zipPath = path.join(appOutDir, `${appName}.zip`)
   try {
     await run('ditto', ['-c', '-k', '--sequesterRsrc', '--keepParent', appPath, zipPath])
-    await run('xcrun', ['notarytool', 'submit', zipPath, '--key', keyPath, '--key-id', keyId, '--issuer', issuer, '--wait'])
+    await run('xcrun', [
+      'notarytool',
+      'submit',
+      zipPath,
+      '--apple-id',
+      appleId,
+      '--password',
+      password,
+      '--team-id',
+      teamId,
+      '--wait'
+    ])
     await run('xcrun', ['stapler', 'staple', '-v', appPath])
   } finally {
     try {
@@ -95,6 +132,5 @@ export default async function notarize(context) {
     } catch {
       // Best-effort cleanup.
     }
-    cleanup()
   }
 }

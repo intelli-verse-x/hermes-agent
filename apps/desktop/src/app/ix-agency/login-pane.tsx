@@ -101,7 +101,7 @@ export function LoginPane({ detail, onSignedIn }: { detail?: string; onSignedIn:
           <h2 className="text-sm font-semibold">Sign in to IVX Agency</h2>
           <p className="text-xs text-muted-foreground">
             {step === 'email'
-              ? 'Enter your admin email — we email you a 6-digit code. Nothing here needs the VPN.'
+              ? 'Enter an admin-authorized work email with an active IVX Agency portal entitlement. We email you a 6-digit code; the VPN is not needed for this step.'
               : `Code sent to ${email}. It expires in 5 minutes.`}
           </p>
           {detail && step === 'email' && <p className="text-[0.68rem] text-muted-foreground/60">{detail}</p>}
@@ -115,7 +115,7 @@ export function LoginPane({ detail, onSignedIn }: { detail?: string; onSignedIn:
               void sendCode()
             }}
           >
-            <Field label="Admin email">
+            <Field label="Admin-authorized work email">
               <Input
                 autoComplete="email"
                 autoFocus
@@ -129,6 +129,10 @@ export function LoginPane({ detail, onSignedIn }: { detail?: string; onSignedIn:
               {busy ? <Codicon name="loading~spin" size="0.8125rem" /> : <Codicon name="mail" size="0.8125rem" />}
               Email me a code
             </Button>
+            <p className="text-[0.68rem] leading-relaxed text-muted-foreground/70">
+              A successful code check does not create access. If your tenant or entitlement is not provisioned, ask your
+              administrator through the portal. Early access has no universal support-response SLA.
+            </p>
           </form>
         ) : (
           <form

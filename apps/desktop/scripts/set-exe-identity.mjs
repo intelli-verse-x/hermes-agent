@@ -1,22 +1,12 @@
 #!/usr/bin/env node
 // set-exe-identity.mjs — stamp the Hermes icon + version metadata onto the
-// built Hermes.exe using rcedit, completely decoupled from electron-builder's
-// signing path.
+// built desktop executable using rcedit before electron-builder signs it.
 //
 // WHY THIS EXISTS
 // ---------------
-// apps/desktop/package.json sets build.win.signAndEditExecutable=false. That
-// flag is load-bearing: turning electron-builder's own exe-editing ON also
-// re-enables its signtool step, which fetches winCodeSign-2.6.0.7z, whose
-// macOS symlinks crash 7-Zip on non-admin Windows (no Developer Mode = no
-// SeCreateSymbolicLinkPrivilege). That is an unfixable dead end — we do NOT
-// try to extract winCodeSign.
-//
-// The cost of disabling signAndEditExecutable is that electron-builder also
-// skips rcedit, so the unpacked Hermes.exe keeps the stock Electron icon and
-// "Electron" taskbar name. This script restores the icon + identity by calling
-// rcedit DIRECTLY. rcedit is a pure PE resource editor: no signing, no certs,
-// no winCodeSign, no symlinks.
+// This explicit stamp keeps product metadata deterministic across package
+// targets. Public Windows release now requires electron-builder's
+// Authenticode path; CI rejects missing or invalid signatures.
 //
 // HOW IT RUNS
 // -----------

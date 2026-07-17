@@ -573,7 +573,9 @@ export function CopilotTab() {
                 <Codicon className="mb-2 text-muted-foreground/50" name="sparkle" size="1.5rem" />
                 <p className="font-medium">IVX Agency copilot — native</p>
                 <p className="mt-1">
-                  LiteLLM streaming with the full admin-mcp tool estate. Writes always stop for your confirmation.
+                  LiteLLM streaming with the tools enabled for your portal account. Tool operations classified as writes
+                  require an unexpired confirmation challenge; read-only calls do not. Server-side authorization still
+                  applies, and a connector can define stricter controls.
                 </p>
               </div>
             )}

@@ -8,10 +8,12 @@ on users' machines — and what CI does for you on every merge.
 1. Bump `"version"` in `apps/desktop/package.json` (e.g. `0.17.1` → `0.17.2`).
 2. Merge to `main`.
 
-That's it. CI (`desktop-auto-release.yml`) notices the version on `main` is
-newer than what the S3 feed serves, builds macOS + Windows + Linux with
-electron-builder, publishes everything to the feed, verifies the public feed
-end to end, and tags the commit `ix-desktop-v<version>`.
+CI (`desktop-auto-release.yml`) notices the version on `main` is newer than
+what the S3 feed serves, builds macOS + Windows + Linux with electron-builder,
+publishes everything to the feed, verifies the public feed end to end, and
+tags the commit `ix-desktop-v<version>`. Public release is fail-closed:
+macOS signing/notarization and Windows Authenticode credentials must be
+configured before either platform can publish.
 
 Installed apps poll the feed on launch and every 4 hours — the non-blocking
 **Update available** button pops up in the IX Agency status strip and the tray;
@@ -62,7 +64,7 @@ the updater only ever requests the channel files above).
 | Workflow | Trigger | What it does |
 |---|---|---|
 | `desktop-auto-release.yml` | every merge to `main` touching `apps/desktop/**` | Compares `package.json` version to the live feed. Same version → no-op. Newer → calls the release chain, then pushes the `ix-desktop-v<version>` tag. |
-| `desktop-release.yml` | called by auto-release, or `ix-desktop-v*` tag push, or manual dispatch | 3-OS matrix: typecheck + unit tests, build, `electron-builder --publish always` → S3 feed. Then the `verify-feed` job checks the public feed end to end. |
+| `desktop-release.yml` | called by auto-release, or `ix-desktop-v*` tag push, or manual dispatch | 3-OS matrix: typecheck + unit tests, build without publishing, verify signing/notarization or Linux manifest integrity, then upload installers, channel files, and matching trust metadata to S3. The `verify-feed` job checks the public feed end to end. |
 
 The `verify-feed` job runs `apps/desktop/scripts/verify-update-feed.mjs`,
 which fails the release if any channel file or artifact is not publicly
@@ -79,9 +81,11 @@ EXPECT_VERSION=0.17.1 node apps/desktop/scripts/verify-update-feed.mjs
 
 - **Windows (NSIS)** and **Linux AppImage**: true in-place update
   (download → install → restart).
-- **macOS**: in-place update requires a **signed** build (Squirrel.Mac).
-  Until `CSC_LINK`/notarization secrets are set, unsigned mac builds fall
-  back to opening the download page for a drag-install.
+- **macOS**: release requires a Developer ID certificate plus complete Apple
+  notarization credentials. CI refuses to publish when either is missing.
+- **Windows**: release requires an Authenticode code-signing certificate in
+  `WINDOWS_CSC_LINK` / `WINDOWS_CSC_KEY_PASSWORD`. CI refuses to publish an
+  unsigned installer. Users must not bypass SmartScreen.
 - **Windows MSI / Linux deb/rpm**: no in-place path — the app still checks
   the feed and the update button opens the download page
   (`https://intelliverse-x-desktop.s3.amazonaws.com/index.html`, republished

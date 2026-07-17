@@ -276,8 +276,7 @@
       "target": [
         "nsis",
         "msi"
-      ],
-      "signAndEditExecutable": false
+      ]
     },
     "linux": {
       "category": "Development",

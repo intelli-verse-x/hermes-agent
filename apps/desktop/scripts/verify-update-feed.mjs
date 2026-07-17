@@ -19,21 +19,22 @@
 
 import { loadBrand } from './apply-brand.mjs'
 
-const FEED = (process.env.UPDATE_FEED_URL || loadBrand().updateFeedUrl).replace(/\/+$/, '')
+const brand = loadBrand()
+const FEED = (process.env.UPDATE_FEED_URL || brand.updateFeedUrl).replace(/\/+$/, '')
 const EXPECT_VERSION = (process.env.EXPECT_VERSION || '').trim()
 
 const CHANNELS = [
-  { os: 'mac', file: 'latest-mac.yml' },
-  { os: 'windows', file: 'latest.yml' },
-  { os: 'linux', file: 'latest-linux.yml' }
+  { os: 'mac', file: 'latest-mac.yml', trustFile: 'trust-mac.json' },
+  { os: 'windows', file: 'latest.yml', trustFile: 'trust-win.json' },
+  { os: 'linux', file: 'latest-linux.yml', trustFile: 'trust-linux.json' }
 ]
 
 let failures = 0
-const fail = (msg) => {
+const fail = msg => {
   failures++
   console.error(`  FAIL  ${msg}`)
 }
-const ok = (msg) => console.log(`  ok    ${msg}`)
+const ok = msg => console.log(`  ok    ${msg}`)
 
 /** Minimal parse of electron-builder channel yml: version + files[{url,size}]. */
 function parseChannel(yml) {
@@ -51,7 +52,7 @@ async function head(url) {
 }
 
 const versions = new Set()
-for (const { os, file } of CHANNELS) {
+for (const { os, file, trustFile } of CHANNELS) {
   const url = `${FEED}/${file}`
   console.log(`── ${os}: ${url}`)
   let body
@@ -74,6 +75,22 @@ for (const { os, file } of CHANNELS) {
   versions.add(version)
   ok(`${file} v${version} (${files.length} artifacts)`)
   if (!files.length) fail(`${file} lists no artifacts`)
+
+  try {
+    const trustResponse = await fetch(`${FEED}/${trustFile}`, { cache: 'no-store' })
+    if (trustResponse.status !== 200) {
+      fail(`${trustFile} -> HTTP ${trustResponse.status}`)
+    } else {
+      const trust = await trustResponse.json()
+      if (trust.version !== version) fail(`${trustFile} version=${trust.version || '<none>'}, channel=${version}`)
+      else if (trust.verified !== true) fail(`${trustFile} is not verified`)
+      else if (trust.publisher !== brand.author) fail(`${trustFile} publisher=${trust.publisher || '<none>'}`)
+      else ok(`${trustFile} verifies ${brand.author} v${version}`)
+    }
+  } catch (e) {
+    fail(`${trustFile} -> ${e.message}`)
+  }
+
   for (const f of files) {
     const artifactUrl = `${FEED}/${encodeURIComponent(f.url).replace(/%2F/g, '/')}`
     try {

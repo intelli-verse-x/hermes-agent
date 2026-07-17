@@ -100,7 +100,10 @@ if (brand && fs.existsSync(builderConfigPath)) {
   const expectations = [
     ['appId', config.appId, brand.appId],
     ['productName', config.productName, brand.productName],
+    ['copyright', config.copyright, brand.copyright],
     ['artifactName', config.artifactName, `${brand.artifactPrefix}-\${version}-\${os}-\${arch}.\${ext}`],
+    ['protocol', config.protocols?.[0]?.schemes?.[0], brand.protocolScheme],
+    ['icon', config.icon, brand.icon],
     ['linux.executableName', config.linux?.executableName, brand.executableName],
     ['publish[s3].path', (config.publish || []).find(p => p?.provider === 's3')?.path, brand.s3PublishPath]
   ]
@@ -110,6 +113,16 @@ if (brand && fs.existsSync(builderConfigPath)) {
       ok(`builder config ${label} = ${actual}`)
     } else {
       fail(`builder config ${label} is "${actual}", expected "${expected}"`)
+    }
+  }
+
+  for (const asset of [brand.icon, brand.iconIco]) {
+    const candidates = asset.endsWith('.ico') ? [asset] : [`${asset}.icns`, `${asset}.ico`, `${asset}.png`]
+
+    if (candidates.some(candidate => fs.existsSync(path.join(desktopRoot, candidate)))) {
+      ok(`brand asset exists for ${asset}`)
+    } else {
+      fail(`brand asset missing for ${asset} (checked ${candidates.join(', ')})`)
     }
   }
 } else if (brand) {
@@ -177,7 +190,8 @@ if (!fs.existsSync(assetsDir)) {
     let productNameHits = countOccurrences(chunkText, otherManifest.productName)
 
     for (const allowedString of PRODUCT_NAME_ALLOWLIST[brandId]) {
-      productNameHits -= countOccurrences(chunkText, allowedString) * countOccurrences(allowedString, otherManifest.productName)
+      productNameHits -=
+        countOccurrences(chunkText, allowedString) * countOccurrences(allowedString, otherManifest.productName)
     }
 
     if (productNameHits === 0) {
@@ -192,7 +206,10 @@ if (!fs.existsSync(assetsDir)) {
 const ELECTRON_BUNDLES = [
   { file: 'electron-main.mjs', markers: MAIN_MARKERS },
   // The preload only carries IPC channel strings — no supervisor/VPN symbols.
-  { file: 'electron-preload.js', markers: { 'ix-agency': [IPC_PREFIX['ix-agency']], quizverse: [IPC_PREFIX.quizverse] } }
+  {
+    file: 'electron-preload.js',
+    markers: { 'ix-agency': [IPC_PREFIX['ix-agency']], quizverse: [IPC_PREFIX.quizverse] }
+  }
 ]
 
 for (const { file, markers } of ELECTRON_BUNDLES) {
@@ -218,7 +235,9 @@ for (const { file, markers } of ELECTRON_BUNDLES) {
   if (text.includes(IPC_PREFIX[brandId])) {
     ok(`dist/${file}: own IPC surface (${IPC_PREFIX[brandId]}*) present`)
   } else {
-    fail(`dist/${file}: own IPC surface (${IPC_PREFIX[brandId]}*) missing — markers drifted or the brand surface was dropped`)
+    fail(
+      `dist/${file}: own IPC surface (${IPC_PREFIX[brandId]}*) missing — markers drifted or the brand surface was dropped`
+    )
   }
 }
 

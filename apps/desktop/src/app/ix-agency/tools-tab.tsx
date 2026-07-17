@@ -13,7 +13,13 @@ import { notify, notifyError } from '@/store/notifications'
 import { DetailColumn, ListColumn, ListStrip, MasterDetail } from '../master-detail'
 import { PanelEmpty, PanelListRow, PanelMeta, PanelSectionLabel } from '../overlays/panel'
 
-import { CONNECTOR_BUNDLES, ConnectorEditor, type ConnectorFormState, EMPTY_CONNECTOR_FORM, formFromDraft } from './connector-editor'
+import {
+  CONNECTOR_BUNDLES,
+  ConnectorEditor,
+  type ConnectorFormState,
+  EMPTY_CONNECTOR_FORM,
+  formFromDraft
+} from './connector-editor'
 import mcpTilesData from './data/mcp-tiles.json'
 import { $ixDisabledMcpTiles, $ixSync, runIxSync, setMcpTileEnabled } from './sync-store'
 import type { IxMcpTileItem } from './types'
@@ -145,7 +151,8 @@ export function ToolsTab({ query }: { query: string }) {
   )
 
   const filteredConnectors = connectors.filter(
-    connector => !q || normalize(`${connector.id} ${connector.label} ${connector.url} ${connector.category}`).includes(q)
+    connector =>
+      !q || normalize(`${connector.id} ${connector.label} ${connector.url} ${connector.category}`).includes(q)
   )
 
   const groups = [...new Set(filteredTiles.map(tile => tile.group || 'Other'))]
@@ -173,7 +180,7 @@ export function ToolsTab({ query }: { query: string }) {
           />
         </div>
         <Switch
-          aria-label={`Enable ${title}`}
+          aria-label={`${disabled ? 'Show' : 'Hide'} ${title} on this device`}
           checked={!disabled}
           onCheckedChange={enabled => setMcpTileEnabled(id, enabled)}
           size="xs"
@@ -200,7 +207,13 @@ export function ToolsTab({ query }: { query: string }) {
           <ListStrip
             left={<span className="truncate text-[0.65rem] text-muted-foreground/60">{detailLine}</span>}
             right={
-              <Button disabled={busy} onClick={() => void refresh()} size="icon-xs" title="Refresh directory + lamps" variant="ghost">
+              <Button
+                disabled={busy}
+                onClick={() => void refresh()}
+                size="icon-xs"
+                title="Refresh directory + lamps"
+                variant="ghost"
+              >
                 <Codicon name={busy ? 'loading~spin' : 'refresh'} size="0.8125rem" />
               </Button>
             }
@@ -251,7 +264,7 @@ export function ToolsTab({ query }: { query: string }) {
                 {selectedConnector.label}
               </h3>
               <Badge variant="muted">{bundleLabel(selectedConnector.category)}</Badge>
-              {!selectedConnector.enabled && <Badge variant="warn">disabled org-wide</Badge>}
+              {!selectedConnector.enabled && <Badge variant="warn">disabled by portal policy</Badge>}
             </div>
             {lampBadge(lampFor(selectedConnector.id))}
             {lampFor(selectedConnector.id)?.detail && (
@@ -261,7 +274,10 @@ export function ToolsTab({ query }: { query: string }) {
             )}
             <PanelMeta
               rows={[
-                { label: 'Connector id', value: <code className="font-mono text-[0.68rem]">{selectedConnector.id}</code> },
+                {
+                  label: 'Connector id',
+                  value: <code className="font-mono text-[0.68rem]">{selectedConnector.id}</code>
+                },
                 {
                   label: 'MCP URL',
                   value: <code className="break-all font-mono text-[0.68rem]">{selectedConnector.url}</code>
@@ -269,7 +285,9 @@ export function ToolsTab({ query }: { query: string }) {
                 { label: 'Transport', value: selectedConnector.transport },
                 { label: 'Auth header', value: selectedConnector.authHeader },
                 { label: 'Token', value: selectedConnector.hasToken ? 'stored server-side' : 'none' },
-                ...(selectedConnector.appIds.length ? [{ label: 'Apps', value: selectedConnector.appIds.join(', ') }] : []),
+                ...(selectedConnector.appIds.length
+                  ? [{ label: 'Apps', value: selectedConnector.appIds.join(', ') }]
+                  : []),
                 ...(selectedConnector.bundles.length
                   ? [{ label: 'Bundles', value: selectedConnector.bundles.map(bundleLabel).join(', ') }]
                   : []),
@@ -322,8 +340,9 @@ export function ToolsTab({ query }: { query: string }) {
               </Button>
             </div>
             <p className="text-[0.68rem] leading-relaxed text-muted-foreground/70">
-              Registered through the admin portal&apos;s dynamic connector registry (super-admin). Disable org-wide to
-              pull it from everyone; the switch in the list only hides it on this machine.
+              The portal registry enforces organization-wide connector changes with a server-side privileged capability.
+              These buttons request that operation and can still be denied. The list switch only shows or hides the
+              connector on this device; it does not enable, disable, or authorize the connector for anyone else.
             </p>
           </div>
         ) : selectedTile ? (
@@ -338,7 +357,9 @@ export function ToolsTab({ query }: { query: string }) {
                 {lampFor(selectedTile.id)?.detail}
               </p>
             )}
-            {selectedTile.blurb && <p className="text-xs leading-relaxed text-muted-foreground">{selectedTile.blurb}</p>}
+            {selectedTile.blurb && (
+              <p className="text-xs leading-relaxed text-muted-foreground">{selectedTile.blurb}</p>
+            )}
             <PanelMeta
               rows={[
                 { label: 'Tile id', value: <code className="font-mono text-[0.68rem]">{selectedTile.id}</code> },
@@ -350,13 +371,13 @@ export function ToolsTab({ query }: { query: string }) {
               ]}
             />
             <p className="text-[0.68rem] leading-relaxed text-muted-foreground/70">
-              Add this MCP server to the agent via Capabilities → MCP, or reach every tile at once through the
-              admin-mcp gateway (Connect tab).
+              Add this MCP server to the agent via Capabilities → MCP, or reach every tile at once through the admin-mcp
+              gateway (Connect tab).
             </p>
           </div>
         ) : (
           <PanelEmpty
-            description="Every MCP tool the org's admin-mcp gateway fans out to, plus your dynamic connectors — all attached automatically at sign-in. Lamps: green = tools/list works, grey = auth required, red = unreachable."
+            description="Tools and dynamic connectors returned for the signed-in account. Availability depends on portal entitlement, connector policy, and current credentials. The local switch only changes this device. Lamps: green = tools/list works, grey = auth required, red = unreachable."
             icon="plug"
             title="Org MCP tools"
           />

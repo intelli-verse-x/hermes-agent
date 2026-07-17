@@ -13,10 +13,10 @@
 #     brands at that version,
 #   - or run manually (workflow_dispatch).
 #
-# Each job builds with electron-builder and publishes DIRECTLY to the brand's
-# S3 prefix (s3://intelliverse-x-desktop/ix-agency/ or .../quizverse/, from
-# the brand overlay in build/electron-builder-brand.json): installers +
-# per-platform channel files (latest.yml / latest-mac.yml / latest-linux.yml).
+# Each job builds with electron-builder, verifies platform trust, then uploads
+# to the brand's S3 prefix (s3://intelliverse-x-desktop/ix-agency/ or
+# .../quizverse/): installers + per-platform channel files
+# (latest.yml / latest-mac.yml / latest-linux.yml) + matching trust metadata.
 # Installed apps poll their own brand's feed with electron-updater's generic
 # provider (electron/ix-updater.ts) — the "Update available" button pops up
 # within 4 h and installs in place.
@@ -24,11 +24,13 @@
 # Required repo secrets:
 #   AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY — IAM user
 #     intelliverse-x-desktop-ci (S3 read/write on that bucket only).
-# Optional (macOS signing + notarization; unsigned builds still publish, but
-# mac in-place auto-update needs a signed app — unsigned falls back to
-# opening the .dmg URL):
+# Required for public macOS signing + notarization:
 #   CSC_LINK / CSC_KEY_PASSWORD — Developer ID cert (base64 .p12 / password)
 #   APPLE_ID / APPLE_APP_SPECIFIC_PASSWORD / APPLE_TEAM_ID — notarytool
+# Required for public Windows Authenticode signing:
+#   WINDOWS_CSC_LINK / WINDOWS_CSC_KEY_PASSWORD — code-signing cert
+# The release job fails closed when either platform's signing credentials are
+# absent. Unsigned macOS/Windows installers must never reach the public feed.
 name: desktop-release
 
 on:
@@ -97,21 +99,94 @@ jobs:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_DEFAULT_REGION: us-east-1
-          # macOS signing/notarization (skipped when unset; CSC_IDENTITY_AUTO_DISCOVERY
-          # avoids electron-builder hunting a keychain identity that isn't there).
-          CSC_LINK: ${{ secrets.CSC_LINK }}
-          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+          MAC_CSC_LINK: ${{ secrets.CSC_LINK }}
+          MAC_CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+          WINDOWS_CSC_LINK: ${{ secrets.WINDOWS_CSC_LINK }}
+          WINDOWS_CSC_KEY_PASSWORD: ${{ secrets.WINDOWS_CSC_KEY_PASSWORD }}
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-          CSC_IDENTITY_AUTO_DISCOVERY: ${{ secrets.CSC_LINK != '' }}
-        # Unset EMPTY signing vars: electron-builder treats an empty CSC_LINK
-        # as a certificate *path* and dies with "<cwd> not a file".
         run: |
-          for v in CSC_LINK CSC_KEY_PASSWORD APPLE_ID APPLE_APP_SPECIFIC_PASSWORD APPLE_TEAM_ID; do
+          if [ "$RUNNER_OS" = "macOS" ]; then
+            for v in MAC_CSC_LINK MAC_CSC_KEY_PASSWORD APPLE_ID APPLE_APP_SPECIFIC_PASSWORD APPLE_TEAM_ID; do
+              if [ -z "${!v:-}" ]; then
+                echo "Refusing to publish unsigned/unnotarized macOS installers: missing $v" >&2
+                exit 1
+              fi
+            done
+            export CSC_LINK="$MAC_CSC_LINK"
+            export CSC_KEY_PASSWORD="$MAC_CSC_KEY_PASSWORD"
+            export CSC_IDENTITY_AUTO_DISCOVERY=true
+          elif [ "$RUNNER_OS" = "Windows" ]; then
+            for v in WINDOWS_CSC_LINK WINDOWS_CSC_KEY_PASSWORD; do
+              if [ -z "${!v:-}" ]; then
+                echo "Refusing to publish unsigned Windows installers: missing $v" >&2
+                exit 1
+              fi
+            done
+            export CSC_LINK="$WINDOWS_CSC_LINK"
+            export CSC_KEY_PASSWORD="$WINDOWS_CSC_KEY_PASSWORD"
+            export CSC_IDENTITY_AUTO_DISCOVERY=true
+          else
+            unset CSC_LINK CSC_KEY_PASSWORD CSC_IDENTITY_AUTO_DISCOVERY
+          fi
+          for v in MAC_CSC_LINK MAC_CSC_KEY_PASSWORD WINDOWS_CSC_LINK WINDOWS_CSC_KEY_PASSWORD; do
             if [ -z "${!v:-}" ]; then unset "$v"; fi
           done
-          npm run builder -- --publish always
+          # Build locally first. Nothing reaches the public feed until the
+          # platform trust checks below succeed.
+          npm run builder -- --publish never
+
+          VERSION="$(node -p "require('./package.json').version")"
+          PRODUCT_NAME="$(node -p "require('./brands/${DESKTOP_BRAND}.json').productName")"
+          if [ "$RUNNER_OS" = "macOS" ]; then
+            TRUST_OS=mac
+            VERIFIED_APP=false
+            for app in release/mac*/"$PRODUCT_NAME.app"; do
+              [ -d "$app" ] || continue
+              codesign --verify --deep --strict --verbose=2 "$app"
+              xcrun stapler validate "$app"
+              spctl --assess --type execute --verbose=2 "$app"
+              VERIFIED_APP=true
+            done
+            [ "$VERIFIED_APP" = "true" ] || { echo "No signed macOS app bundle found" >&2; exit 1; }
+            for dmg in release/*.dmg; do
+              [ -f "$dmg" ] || continue
+              spctl --assess --type install --verbose=2 "$dmg"
+            done
+          elif [ "$RUNNER_OS" = "Windows" ]; then
+            TRUST_OS=win
+            powershell -NoProfile -Command '$files = Get-ChildItem release -File | Where-Object { $_.Extension -in ".exe", ".msi" }; if (-not $files) { throw "No Windows installers found" }; foreach ($file in $files) { $sig = Get-AuthenticodeSignature $file.FullName; if ($sig.Status -ne "Valid") { throw "$($file.Name) signature is $($sig.Status)" }; if ($sig.SignerCertificate.Subject -notmatch "Intelliverse") { throw "$($file.Name) publisher is not Intelliverse X" } }'
+          else
+            TRUST_OS=linux
+          fi
+
+          TRUST_OS="$TRUST_OS" VERSION="$VERSION" PRODUCT_NAME="$PRODUCT_NAME" node -e '
+            const fs = require("node:fs");
+            fs.writeFileSync(
+              `release/trust-${process.env.TRUST_OS}.json`,
+              JSON.stringify({
+                version: process.env.VERSION,
+                verified: true,
+                publisher: "Intelliverse X",
+                commit: process.env.GITHUB_SHA,
+                generatedAt: new Date().toISOString()
+              }, null, 2) + "\n"
+            );
+          '
+          aws s3 cp release/ "s3://intelliverse-x-desktop/${DESKTOP_BRAND}/" \
+            --recursive \
+            --exclude "*" \
+            --include "*.dmg" \
+            --include "*.zip" \
+            --include "*.exe" \
+            --include "*.msi" \
+            --include "*.AppImage" \
+            --include "*.deb" \
+            --include "*.rpm" \
+            --include "*.blockmap" \
+            --include "latest*.yml" \
+            --include "trust-${TRUST_OS}.json"
 
       - name: Upload installers as workflow artifacts (debug/QA convenience)
         uses: actions/upload-artifact@v4
