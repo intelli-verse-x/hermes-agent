@@ -14,6 +14,7 @@ const IDENTITY_FIELDS = [
   'appId',
   'artifactPrefix',
   'executableName',
+  'iconSha256',
   'productName',
   'protocolScheme',
   's3PublishPath',
@@ -42,6 +43,13 @@ describe('brand manifests', () => {
   it('each brand publishes to its own S3 prefix and polls its own feed', () => {
     for (const manifest of MANIFESTS) {
       expect(manifest.updateFeedUrl.endsWith(`/${manifest.s3PublishPath}`), manifest.id).toBe(true)
+    }
+  })
+
+  it('pins canonical icon assets and never uses the retired Hermes protocol', () => {
+    for (const manifest of MANIFESTS) {
+      expect(manifest.iconSha256).toMatch(/^[0-9a-f]{64}$/)
+      expect(manifest.protocolScheme).not.toBe('hermes')
     }
   })
 

@@ -18,6 +18,7 @@
 // DESKTOP_BRAND's manifest feed; UPDATE_FEED_URL overrides it.
 
 import { loadBrand } from './apply-brand.mjs'
+import { sha512Base64, validateTrustMetadata } from './trust-metadata.mjs'
 
 const brand = loadBrand()
 const FEED = (process.env.UPDATE_FEED_URL || brand.updateFeedUrl).replace(/\/+$/, '')
@@ -25,7 +26,7 @@ const EXPECT_VERSION = (process.env.EXPECT_VERSION || '').trim()
 
 const CHANNELS = [
   { os: 'mac', file: 'latest-mac.yml', trustFile: 'trust-mac.json' },
-  { os: 'windows', file: 'latest.yml', trustFile: 'trust-win.json' },
+  { os: 'win', file: 'latest.yml', trustFile: 'trust-win.json' },
   { os: 'linux', file: 'latest-linux.yml', trustFile: 'trust-linux.json' }
 ]
 
@@ -36,13 +37,16 @@ const fail = msg => {
 }
 const ok = msg => console.log(`  ok    ${msg}`)
 
-/** Minimal parse of electron-builder channel yml: version + files[{url,size}]. */
+/** Minimal parse of electron-builder channel yml: version + files[{url,sha512,size}]. */
 function parseChannel(yml) {
   const version = (yml.match(/^version:\s*(\S+)/m) || [])[1] || ''
   const files = []
-  // entries look like:  "  - url: NAME"  followed by "    size: N"
-  const re = /-\s*url:\s*(\S+)[\s\S]*?size:\s*(\d+)/g
-  for (let m; (m = re.exec(yml)); ) files.push({ url: m[1], size: Number(m[2]) })
+  const re = /-\s*url:\s*(\S+)[\s\S]*?sha512:\s*(\S+)[\s\S]*?size:\s*(\d+)/g
+
+  for (let m; (m = re.exec(yml)); ) {
+    files.push({ sha512: m[2], size: Number(m[3]), url: m[1] })
+  }
+
   return { version, files }
 }
 
@@ -82,10 +86,17 @@ for (const { os, file, trustFile } of CHANNELS) {
       fail(`${trustFile} -> HTTP ${trustResponse.status}`)
     } else {
       const trust = await trustResponse.json()
-      if (trust.version !== version) fail(`${trustFile} version=${trust.version || '<none>'}, channel=${version}`)
-      else if (trust.verified !== true) fail(`${trustFile} is not verified`)
-      else if (trust.publisher !== brand.author) fail(`${trustFile} publisher=${trust.publisher || '<none>'}`)
-      else ok(`${trustFile} verifies ${brand.author} v${version}`)
+      const valid = validateTrustMetadata(trust, {
+        brand,
+        channelFile: file,
+        channelSha512: sha512Base64(body),
+        files,
+        os,
+        version
+      })
+
+      if (!valid) fail(`${trustFile} does not exactly bind ${brand.id} ${file} and its signed artifacts`)
+      else ok(`${trustFile} exactly verifies ${brand.author} ${brand.productName} v${version}`)
     }
   } catch (e) {
     fail(`${trustFile} -> ${e.message}`)

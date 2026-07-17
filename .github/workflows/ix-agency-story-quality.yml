@@ -3,13 +3,14 @@ name: IX Agency story quality
 on:
   pull_request:
     paths:
-      - "apps/desktop/brands/ix-agency.json"
+      - "apps/desktop/brands/**"
       - "apps/desktop/assets/**"
       - "apps/desktop/download-site/**"
       - "apps/desktop/electron/**"
-      - "apps/desktop/scripts/apply-brand.mjs"
-      - "apps/desktop/scripts/check-brand-separation.mjs"
+      - "apps/desktop/index.html"
+      - "apps/desktop/scripts/**"
       - "apps/desktop/src/app/ix-agency/**"
+      - "apps/desktop/src/app/quizverse/**"
       - "apps/desktop/src/lib/brand*"
       - "apps/desktop/package.json"
       - "package-lock.json"
@@ -39,8 +40,13 @@ jobs:
       - run: npm ci
       - name: Typecheck Desktop
         run: npm --workspace apps/desktop run typecheck
-      - name: Run IX Agency story and brand tests
-        run: npm --workspace apps/desktop run test:ui -- src/app/ix-agency/story-contract.test.ts src/lib/brand.test.ts
+      - name: Run Desktop story, identity, and trust tests
+        run: |
+          npm --workspace apps/desktop run test:ui -- \
+            src/app/ix-agency/story-contract.test.ts \
+            src/app/quizverse/story-contract.test.ts \
+            src/lib/brand.test.ts
+          node --test apps/desktop/scripts/trust-metadata.test.mjs
       - name: Build selected brand
         run: npm --workspace apps/desktop run build
       - name: Verify package identity and brand separation

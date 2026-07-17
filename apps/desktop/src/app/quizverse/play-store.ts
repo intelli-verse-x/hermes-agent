@@ -523,7 +523,6 @@ export const PLAY_MODES: readonly PlayMode[] = [
   unavailable('personality', 'PersonalityRec', 'Personality Rec', '🎭', 'The reference mode is not implemented and publishes no recommendation protocol.'),
   unavailable('tiktok', 'TikTokQuizzes', 'TikTok Quizzes', '📱', 'The reference mode is not implemented and publishes no licensed feed.'),
   unavailable('proc-story', 'ProcStoryline', 'Proc Storyline', '📖', 'The reference mode is not implemented and publishes no storyline engine.'),
-  unavailable('blockchain', 'Blockchain', 'Blockchain', '⛓️', 'The reference mode is not implemented and publishes no wallet game contract.'),
   unavailable('word-assoc', 'WordAssoc', 'Word Assoc', '🔡', 'The reference mode is not implemented and publishes no scoring contract.'),
   unavailable('context-clues', 'ContextClues', 'Context Clues', '🔍', 'The reference mode is not implemented and publishes no scoring contract.'),
   unavailable('creative-eval', 'CreativeEval', 'Creative Eval', '🎨', 'The reference mode is not implemented and publishes no judging contract.')

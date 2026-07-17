@@ -29,6 +29,7 @@
 //      inactive brand's main-process/preload code, including the preload's
 //      exposed window.hermesDesktop namespace.
 
+import crypto from 'node:crypto'
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -73,6 +74,14 @@ function ok(message) {
 }
 
 console.log(`[check-brand-separation] brand: ${brandId}`)
+
+const packageJson = JSON.parse(fs.readFileSync(path.join(desktopRoot, 'package.json'), 'utf8'))
+
+if (packageJson.name === '@intelliverse-x/desktop') {
+  ok(`source package identity = ${packageJson.name}`)
+} else {
+  fail(`source package identity is "${packageJson.name}", expected "@intelliverse-x/desktop"`)
+}
 
 // ── 1. build/brand.json ─────────────────────────────────────────────────────
 const brandJsonPath = path.join(desktopRoot, 'build', 'brand.json')
@@ -123,6 +132,20 @@ if (brand && fs.existsSync(builderConfigPath)) {
       ok(`brand asset exists for ${asset}`)
     } else {
       fail(`brand asset missing for ${asset} (checked ${candidates.join(', ')})`)
+    }
+  }
+
+  const canonicalIcon = path.join(desktopRoot, `${brand.icon}.png`)
+
+  if (!fs.existsSync(canonicalIcon)) {
+    fail(`canonical brand icon missing: ${canonicalIcon}`)
+  } else {
+    const digest = crypto.createHash('sha256').update(fs.readFileSync(canonicalIcon)).digest('hex')
+
+    if (digest === brand.iconSha256) {
+      ok(`canonical icon digest = ${digest}`)
+    } else {
+      fail(`canonical icon digest is ${digest}, expected ${brand.iconSha256}`)
     }
   }
 } else if (brand) {

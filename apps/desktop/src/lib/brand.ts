@@ -23,6 +23,7 @@ export interface DesktopBrand {
   homepage: string
   protocolScheme: string
   icon: string
+  iconSha256: string
   iconIco: string
   markSvg: string
   touchIcon: string
@@ -39,9 +40,7 @@ export interface DesktopBrand {
 
 export const DESKTOP_BRAND_ID: string = import.meta.env.VITE_DESKTOP_BRAND || 'ix-agency'
 
-export const BRAND: DesktopBrand = (
-  DESKTOP_BRAND_ID === 'quizverse' ? quizverseBrand : ixAgencyBrand
-) as DesktopBrand
+export const BRAND: DesktopBrand = (DESKTOP_BRAND_ID === 'quizverse' ? quizverseBrand : ixAgencyBrand) as DesktopBrand
 
 export const BRAND_NAME = BRAND.productName
 

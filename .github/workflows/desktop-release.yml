@@ -26,9 +26,12 @@
 #     intelliverse-x-desktop-ci (S3 read/write on that bucket only).
 # Required for public macOS signing + notarization:
 #   CSC_LINK / CSC_KEY_PASSWORD — Developer ID cert (base64 .p12 / password)
-#   APPLE_ID / APPLE_APP_SPECIFIC_PASSWORD / APPLE_TEAM_ID — notarytool
+#   APPLE_TEAM_ID plus either:
+#   APPLE_API_KEY / APPLE_API_KEY_ID / APPLE_API_ISSUER, or
+#   APPLE_ID / APPLE_APP_SPECIFIC_PASSWORD — notarytool
 # Required for public Windows Authenticode signing:
 #   WINDOWS_CSC_LINK / WINDOWS_CSC_KEY_PASSWORD — code-signing cert
+#   WINDOWS_SIGNER_SHA256 — expected signing-certificate thumbprint
 # The release job fails closed when either platform's signing credentials are
 # absent. Unsigned macOS/Windows installers must never reach the public feed.
 name: desktop-release
@@ -103,22 +106,41 @@ jobs:
           MAC_CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
           WINDOWS_CSC_LINK: ${{ secrets.WINDOWS_CSC_LINK }}
           WINDOWS_CSC_KEY_PASSWORD: ${{ secrets.WINDOWS_CSC_KEY_PASSWORD }}
+          WINDOWS_SIGNER_SHA256: ${{ secrets.WINDOWS_SIGNER_SHA256 }}
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
+          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
         run: |
           if [ "$RUNNER_OS" = "macOS" ]; then
-            for v in MAC_CSC_LINK MAC_CSC_KEY_PASSWORD APPLE_ID APPLE_APP_SPECIFIC_PASSWORD APPLE_TEAM_ID; do
+            for v in MAC_CSC_LINK MAC_CSC_KEY_PASSWORD APPLE_TEAM_ID; do
               if [ -z "${!v:-}" ]; then
                 echo "Refusing to publish unsigned/unnotarized macOS installers: missing $v" >&2
                 exit 1
               fi
             done
+            if [ -n "${APPLE_API_KEY:-}" ] || [ -n "${APPLE_API_KEY_ID:-}" ] || [ -n "${APPLE_API_ISSUER:-}" ]; then
+              for v in APPLE_API_KEY APPLE_API_KEY_ID APPLE_API_ISSUER; do
+                if [ -z "${!v:-}" ]; then
+                  echo "Refusing incomplete Apple API-key notarization: missing $v" >&2
+                  exit 1
+                fi
+              done
+            else
+              for v in APPLE_ID APPLE_APP_SPECIFIC_PASSWORD; do
+                if [ -z "${!v:-}" ]; then
+                  echo "Refusing to publish unnotarized macOS installers: missing $v (or complete Apple API-key credentials)" >&2
+                  exit 1
+                fi
+              done
+            fi
             export CSC_LINK="$MAC_CSC_LINK"
             export CSC_KEY_PASSWORD="$MAC_CSC_KEY_PASSWORD"
             export CSC_IDENTITY_AUTO_DISCOVERY=true
           elif [ "$RUNNER_OS" = "Windows" ]; then
-            for v in WINDOWS_CSC_LINK WINDOWS_CSC_KEY_PASSWORD; do
+            for v in WINDOWS_CSC_LINK WINDOWS_CSC_KEY_PASSWORD WINDOWS_SIGNER_SHA256; do
               if [ -z "${!v:-}" ]; then
                 echo "Refusing to publish unsigned Windows installers: missing $v" >&2
                 exit 1
@@ -130,7 +152,7 @@ jobs:
           else
             unset CSC_LINK CSC_KEY_PASSWORD CSC_IDENTITY_AUTO_DISCOVERY
           fi
-          for v in MAC_CSC_LINK MAC_CSC_KEY_PASSWORD WINDOWS_CSC_LINK WINDOWS_CSC_KEY_PASSWORD; do
+          for v in MAC_CSC_LINK MAC_CSC_KEY_PASSWORD WINDOWS_CSC_LINK WINDOWS_CSC_KEY_PASSWORD WINDOWS_SIGNER_SHA256; do
             if [ -z "${!v:-}" ]; then unset "$v"; fi
           done
           # Build locally first. Nothing reaches the public feed until the
@@ -141,39 +163,84 @@ jobs:
           PRODUCT_NAME="$(node -p "require('./brands/${DESKTOP_BRAND}.json').productName")"
           if [ "$RUNNER_OS" = "macOS" ]; then
             TRUST_OS=mac
+            CHANNEL_FILE=latest-mac.yml
             VERIFIED_APP=false
+            MAC_SIGNER_ID=
+            MAC_SIGNER_SUBJECT=
             for app in release/mac*/"$PRODUCT_NAME.app"; do
               [ -d "$app" ] || continue
               codesign --verify --deep --strict --verbose=2 "$app"
               xcrun stapler validate "$app"
               spctl --assess --type execute --verbose=2 "$app"
+              SIGN_INFO="$(codesign --display --verbose=4 "$app" 2>&1)"
+              SIGNER_ID="$(printf '%s\n' "$SIGN_INFO" | awk -F= '/^TeamIdentifier=/{print $2; exit}')"
+              SIGNER_SUBJECT="$(printf '%s\n' "$SIGN_INFO" | awk -F= '/^Authority=Developer ID Application:/{print substr($0, index($0, "=") + 1); exit}')"
+              [ "$SIGNER_ID" = "$APPLE_TEAM_ID" ] || {
+                echo "macOS signer team $SIGNER_ID does not match APPLE_TEAM_ID" >&2
+                exit 1
+              }
+              [ -n "$SIGNER_SUBJECT" ] || { echo "Developer ID Application authority missing" >&2; exit 1; }
+              [ -z "$MAC_SIGNER_ID" ] || [ "$MAC_SIGNER_ID" = "$SIGNER_ID" ] || {
+                echo "macOS artifacts use different signer teams" >&2
+                exit 1
+              }
+              MAC_SIGNER_ID="$SIGNER_ID"
+              MAC_SIGNER_SUBJECT="$SIGNER_SUBJECT"
               VERIFIED_APP=true
             done
             [ "$VERIFIED_APP" = "true" ] || { echo "No signed macOS app bundle found" >&2; exit 1; }
+            VERIFIED_DMG=false
             for dmg in release/*.dmg; do
               [ -f "$dmg" ] || continue
               spctl --assess --type install --verbose=2 "$dmg"
+              VERIFIED_DMG=true
             done
+            [ "$VERIFIED_DMG" = "true" ] || { echo "No signed macOS DMG found" >&2; exit 1; }
+            TRUST_SIGNER_ID="$MAC_SIGNER_ID" TRUST_SIGNER_SUBJECT="$MAC_SIGNER_SUBJECT" node -e '
+              const fs = require("node:fs");
+              fs.writeFileSync("release/trust-signer.json", JSON.stringify({
+                id: process.env.TRUST_SIGNER_ID,
+                method: "apple-developer-id",
+                subject: process.env.TRUST_SIGNER_SUBJECT
+              }));
+            '
           elif [ "$RUNNER_OS" = "Windows" ]; then
             TRUST_OS=win
-            powershell -NoProfile -Command '$files = Get-ChildItem release -File | Where-Object { $_.Extension -in ".exe", ".msi" }; if (-not $files) { throw "No Windows installers found" }; foreach ($file in $files) { $sig = Get-AuthenticodeSignature $file.FullName; if ($sig.Status -ne "Valid") { throw "$($file.Name) signature is $($sig.Status)" }; if ($sig.SignerCertificate.Subject -notmatch "Intelliverse") { throw "$($file.Name) publisher is not Intelliverse X" } }'
+            CHANNEL_FILE=latest.yml
+            powershell -NoProfile -Command '
+              $files = Get-ChildItem release -File | Where-Object { $_.Extension -in ".exe", ".msi" }
+              if (-not $files) { throw "No Windows installers found" }
+              $expected = $env:WINDOWS_SIGNER_SHA256.Replace(" ", "").ToUpperInvariant()
+              $identity = $null
+              foreach ($file in $files) {
+                $sig = Get-AuthenticodeSignature $file.FullName
+                if ($sig.Status -ne "Valid") { throw "$($file.Name) signature is $($sig.Status)" }
+                $hasher = [System.Security.Cryptography.SHA256]::Create()
+                try {
+                  $thumbprint = [System.BitConverter]::ToString(
+                    $hasher.ComputeHash($sig.SignerCertificate.RawData)
+                  ).Replace("-", "").ToUpperInvariant()
+                } finally {
+                  $hasher.Dispose()
+                }
+                if ($thumbprint -ne $expected) { throw "$($file.Name) signer $thumbprint does not match WINDOWS_SIGNER_SHA256" }
+                $current = @{ id = $thumbprint; method = "windows-authenticode"; subject = $sig.SignerCertificate.Subject }
+                if ($identity -and ($identity.id -ne $current.id -or $identity.subject -ne $current.subject)) {
+                  throw "Windows artifacts use different signing identities"
+                }
+                $identity = $current
+              }
+              $identity | ConvertTo-Json -Compress | Set-Content -Encoding utf8 release/trust-signer.json
+            '
           else
             TRUST_OS=linux
+            CHANNEL_FILE=latest-linux.yml
+            node -e 'require("node:fs").writeFileSync("release/trust-signer.json", JSON.stringify({ id: null, method: "sha512-channel-manifest", subject: null }));'
           fi
 
-          TRUST_OS="$TRUST_OS" VERSION="$VERSION" PRODUCT_NAME="$PRODUCT_NAME" node -e '
-            const fs = require("node:fs");
-            fs.writeFileSync(
-              `release/trust-${process.env.TRUST_OS}.json`,
-              JSON.stringify({
-                version: process.env.VERSION,
-                verified: true,
-                publisher: "Intelliverse X",
-                commit: process.env.GITHUB_SHA,
-                generatedAt: new Date().toISOString()
-              }, null, 2) + "\n"
-            );
-          '
+          TRUST_OS="$TRUST_OS" node scripts/trust-metadata.mjs
+          # Upload binaries first, then the channel, and the exact trust binding
+          # last. A channel/trust mismatch keeps the public page fail-closed.
           aws s3 cp release/ "s3://intelliverse-x-desktop/${DESKTOP_BRAND}/" \
             --recursive \
             --exclude "*" \
@@ -184,9 +251,14 @@ jobs:
             --include "*.AppImage" \
             --include "*.deb" \
             --include "*.rpm" \
-            --include "*.blockmap" \
-            --include "latest*.yml" \
-            --include "trust-${TRUST_OS}.json"
+            --include "*.blockmap"
+          aws s3 cp "release/${CHANNEL_FILE}" "s3://intelliverse-x-desktop/${DESKTOP_BRAND}/${CHANNEL_FILE}" \
+            --content-type "text/yaml" \
+            --cache-control "no-cache"
+          aws s3 cp "release/trust-${TRUST_OS}.json" \
+            "s3://intelliverse-x-desktop/${DESKTOP_BRAND}/trust-${TRUST_OS}.json" \
+            --content-type "application/json" \
+            --cache-control "no-cache"
 
       - name: Upload installers as workflow artifacts (debug/QA convenience)
         uses: actions/upload-artifact@v4
@@ -227,7 +299,7 @@ jobs:
   # public S3 feed serves the new version on every channel and every artifact
   # it references is downloadable with the exact size the channel file records.
   verify-feed:
-    needs: build-publish
+    needs: [build-publish, publish-download-page]
     strategy:
       fail-fast: false
       matrix:
@@ -238,6 +310,12 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+      - name: Verify the deployed download page matches this release
+        run: |
+          curl --fail --location --retry 5 \
+            https://intelliverse-x-desktop.s3.amazonaws.com/index.html \
+            --output /tmp/deployed-download.html
+          cmp apps/desktop/download-site/index.html /tmp/deployed-download.html
       - name: Verify the ${{ matrix.brand }} update feed serves this version
         env:
           DESKTOP_BRAND: ${{ matrix.brand }}

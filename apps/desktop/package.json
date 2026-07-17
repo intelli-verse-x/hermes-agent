@@ -1,8 +1,8 @@
 {
-  "name": "hermes",
+  "name": "@intelliverse-x/desktop",
   "productName": "IVX Agency",
   "private": true,
-  "version": "0.17.5",
+  "version": "0.17.6",
   "description": "IVX Agency Desktop — growth-ops desktop for agencies and brands by Intelliverse X.",
   "homepage": "https://admin.intelli-verse-x.ai",
   "author": "Intelliverse X",
@@ -164,7 +164,7 @@
       {
         "name": "IVX Agency Protocol",
         "schemes": [
-          "hermes"
+          "ivx-agency"
         ]
       }
     ],

@@ -128,7 +128,7 @@ export function IxAgencyView(props: React.ComponentProps<'section'>) {
         </span>
         <a
           className="mt-2 inline-flex font-medium text-foreground underline underline-offset-4"
-          href="https://router.intelli-verse-x.ai/demo?intent=agency-connected-engine-pilot&utm_source=ivx-agency-desktop&utm_medium=referral&utm_campaign=native_engines&utm_content=pilot_request"
+          href="https://router.intelli-verse-x.ai/demo?intent=agency-connected-engine-pilot&role=agency-operator&engine=all&utm_source=ivx-agency-desktop&utm_medium=referral&utm_campaign=native_engines&utm_content=pilot_request"
           rel="noreferrer"
           target="_blank"
         >

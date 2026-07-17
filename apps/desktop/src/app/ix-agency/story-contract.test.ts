@@ -56,7 +56,11 @@ describe('IVX Agency ecosystem story', () => {
     expect(indexText).toContain('utm_source=ivx-agency-desktop')
     expect(indexText).toContain('utm_campaign=native_engines')
     expect(indexText).toContain('intent=agency-connected-engine-pilot')
+    expect(indexText).toContain('intent=agency-connected-engine-pilot&role=agency-operator&engine=all')
     expect(indexText).toContain('Request an agency connected-engine pilot')
+    expect(downloadText).toContain('utm_source=ivx-agency-download')
+    expect(downloadText).toContain('utm_content=pre_download_setup')
+    expect(downloadText).toContain('utm_content=post_download_pilot')
   })
 
   it('discloses local-only CRM and role boundaries', () => {
@@ -95,7 +99,18 @@ describe('IVX Agency ecosystem story', () => {
   it('keeps package identity and required brand assets explicit', () => {
     expect(brandSource).toContain('"productName": "IVX Agency"')
     expect(brandSource).toContain('"copyright": "Copyright © 2026 Intelliverse X"')
+    expect(brandSource).toContain('"protocolScheme": "ivx-agency"')
+    expect(brandSource).toContain('"iconSha256":')
+    expect(packageSource).toContain('"name": "@intelliverse-x/desktop"')
     expect(packageSource).toContain('"appId": "ai.intelli-verse-x.ix-agency"')
     expect(packageSource).toContain('"icon": "assets/icon"')
+  })
+
+  it('uses one public name and artifact-exact trust gating', () => {
+    expect(downloadSource).not.toContain('IVX Admin Desktop')
+    expect(downloadText).toContain('Desktop is the operator surface')
+    expect(downloadText).toContain('trust.schemaVersion === 1')
+    expect(downloadText).toContain('trust.channel?.sha512 === (await sha512Base64(manifestText))')
+    expect(downloadText).toContain('artifact?.sha512 === file.sha512')
   })
 })

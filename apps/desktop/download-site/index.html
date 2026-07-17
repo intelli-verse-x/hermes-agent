@@ -3,7 +3,8 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="robots" content="noindex, nofollow" />
+    <meta name="robots" content="index, follow" />
+    <link rel="canonical" href="https://intelliverse-x-desktop.s3.amazonaws.com/index.html" />
     <title>Download IVX Agency — Intelliverse X</title>
     <meta
       name="description"
@@ -436,7 +437,7 @@
     <div class="wrap">
       <nav class="product-tabs" role="tablist" aria-label="Desktop app instructions">
         <button class="product-tab" id="tab-ix" role="tab" aria-controls="panel-ix" aria-selected="true" tabindex="0">
-          IVX Admin Desktop
+          IVX Agency
         </button>
         <button
           class="product-tab"
@@ -464,6 +465,23 @@
             <span id="reldate"></span>
           </div>
         </header>
+
+        <div class="note">
+          <b>Need an App ID or a scoped pilot before installing?</b>
+          <a
+            href="https://router.intelli-verse-x.ai/apps?intent=connected-engine-setup&amp;role=agency-operator&amp;engine=all&amp;utm_source=ivx-agency-download&amp;utm_medium=referral&amp;utm_campaign=native_engines&amp;utm_content=pre_download_setup"
+            target="_blank"
+            rel="noreferrer"
+            >Create an App ID and review connected setup</a
+          >
+          or
+          <a
+            href="https://router.intelli-verse-x.ai/demo?intent=agency-connected-engine-pilot&amp;role=agency-operator&amp;engine=all&amp;utm_source=ivx-agency-download&amp;utm_medium=referral&amp;utm_campaign=native_engines&amp;utm_content=pre_download_pilot"
+            target="_blank"
+            rel="noreferrer"
+            >request a connected-engine pilot</a
+          >. Desktop is the operator surface; it does not create platform entitlements, App IDs, or pilot approval.
+        </div>
 
         <div class="primary">
           <div class="primary-card">
@@ -534,6 +552,20 @@
               rel="noreferrer"
               >Need access? Ask your admin</a
             >
+            <a
+              class="btn ghost"
+              href="https://router.intelli-verse-x.ai/apps?intent=connected-engine-setup&amp;role=agency-operator&amp;engine=all&amp;utm_source=ivx-agency-download&amp;utm_medium=referral&amp;utm_campaign=native_engines&amp;utm_content=post_download_setup"
+              target="_blank"
+              rel="noreferrer"
+              >Review connected setup →</a
+            >
+            <a
+              class="btn ghost"
+              href="https://router.intelli-verse-x.ai/demo?intent=agency-connected-engine-pilot&amp;role=agency-operator&amp;engine=all&amp;utm_source=ivx-agency-download&amp;utm_medium=referral&amp;utm_campaign=native_engines&amp;utm_content=post_download_pilot"
+              target="_blank"
+              rel="noreferrer"
+              >Scope a pilot →</a
+            >
           </p>
         </section>
 
@@ -559,8 +591,7 @@
           <h1>QuizVerse Desktop</h1>
           <p class="sub">
             The learner and player app for TutorX, native games, competitions, Link &amp; Play, and player-scoped AI
-            chat. It is separate from IVX Admin Desktop and does not include agency, employee, VPN, or admin-portal
-            tools.
+            chat. It is separate from IVX Agency and does not include agency, employee, VPN, or admin-portal tools.
           </p>
           <div class="verpill">
             <span class="dot" id="qv-version-dot"></span>
@@ -850,7 +881,7 @@
             Applications, Windows Settings, or your package manager. Standard OS uninstall may leave app data so a
             reinstall can recover it. To remove everything, sign out, quit QuizVerse, back up any local TutorX work you
             need, uninstall the app, and then delete only the QuizVerse app-data folder listed above. Never delete the
-            IVX Admin Desktop data folder.
+            IVX Agency data folder.
           </p>
         </section>
 
@@ -958,13 +989,58 @@
         return { version, releaseDate, files }
       }
 
-      async function loadTrust(feed, os, version) {
-        if (!version) return false
+      const TRUST_POLICIES = {
+        linux: { method: 'sha512-channel-manifest', signerRequired: false },
+        mac: { method: 'apple-developer-id', signerRequired: true },
+        win: { method: 'windows-authenticode', signerRequired: true }
+      }
+
+      async function sha512Base64(text) {
+        const digest = await crypto.subtle.digest('SHA-512', new TextEncoder().encode(text))
+        const bytes = new Uint8Array(digest)
+        let binary = ''
+
+        for (const byte of bytes) binary += String.fromCharCode(byte)
+
+        return btoa(binary)
+      }
+
+      async function loadTrust(feed, os, brand, manifestFile, manifestText, manifest) {
+        if (!manifest.version || !manifest.files.length) return false
         try {
           const response = await fetch(feed + 'trust-' + os + '.json', { cache: 'no-store' })
           if (!response.ok) return false
           const trust = await response.json()
-          return trust.version === version && trust.verified === true
+          const policy = TRUST_POLICIES[os]
+          const signerValid = policy.signerRequired
+            ? Boolean(trust.verification?.signer?.id && trust.verification?.signer?.subject)
+            : trust.verification?.signer === null
+          const artifactsValid =
+            Array.isArray(trust.artifacts) &&
+            trust.artifacts.length === manifest.files.length &&
+            manifest.files.every((file, index) => {
+              const artifact = trust.artifacts[index]
+
+              return artifact?.url === file.url && artifact?.size === file.size && artifact?.sha512 === file.sha512
+            })
+
+          return (
+            trust.schemaVersion === 1 &&
+            trust.brand?.id === brand.id &&
+            trust.brand?.productName === brand.productName &&
+            trust.brand?.appId === brand.appId &&
+            trust.platform === os &&
+            trust.version === manifest.version &&
+            trust.publisher === 'Intelliverse X' &&
+            trust.verification?.status === 'verified' &&
+            trust.verification?.method === policy.method &&
+            signerValid &&
+            trust.channel?.file === manifestFile &&
+            trust.channel?.sha512 === (await sha512Base64(manifestText)) &&
+            /^[0-9a-f]{40}$/i.test(trust.provenance?.releaseCommit || '') &&
+            /^\d+$/.test(String(trust.provenance?.workflowRunId || '')) &&
+            artifactsValid
+          )
         } catch {
           return false
         }
@@ -1019,8 +1095,16 @@
             try {
               const res = await fetch(FEED + file, { cache: 'no-store' })
               if (!res.ok) throw new Error('HTTP ' + res.status)
-              results[os] = parseManifest(await res.text())
-              results[os].trusted = await loadTrust(FEED, os, results[os].version)
+              const manifestText = await res.text()
+              results[os] = parseManifest(manifestText)
+              results[os].trusted = await loadTrust(
+                FEED,
+                os,
+                { appId: 'ai.intelli-verse-x.ix-agency', id: 'ix-agency', productName: 'IVX Agency' },
+                file,
+                manifestText,
+                results[os]
+              )
             } catch (e) {
               results[os] = { version: '', releaseDate: '', files: [], error: String(e) }
             }
@@ -1087,8 +1171,16 @@
             try {
               const res = await fetch(feed + file, { cache: 'no-store' })
               if (!res.ok) throw new Error('HTTP ' + res.status)
-              results[os] = parseManifest(await res.text())
-              results[os].trusted = await loadTrust(feed, os, results[os].version)
+              const manifestText = await res.text()
+              results[os] = parseManifest(manifestText)
+              results[os].trusted = await loadTrust(
+                feed,
+                os,
+                { appId: 'ai.intelli-verse-x.quizverse', id: 'quizverse', productName: 'QuizVerse' },
+                file,
+                manifestText,
+                results[os]
+              )
             } catch (e) {
               results[os] = { version: '', releaseDate: '', files: [], error: String(e) }
             }
