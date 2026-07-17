@@ -30,5 +30,7 @@ describe('IVX Agency ecosystem story', () => {
     expect(source).toContain('router.intelli-verse-x.ai/apps')
     expect(source).toContain('utm_source=ivx-agency-desktop')
     expect(source).toContain('utm_campaign=native_engines')
+    expect(source).toContain('intent=agency-connected-engine-pilot')
+    expect(source).toContain('Request an agency connected-engine pilot')
   })
 })

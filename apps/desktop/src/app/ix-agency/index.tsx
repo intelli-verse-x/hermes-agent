@@ -104,6 +104,15 @@ export function IxAgencyView(props: React.ComponentProps<'section'>) {
         >
           Review the connected-engine setup and pilot path
         </a>
+        <span className="mx-2 text-muted-foreground" aria-hidden="true">·</span>
+        <a
+          className="mt-2 inline-flex font-medium text-foreground underline underline-offset-4"
+          href="https://router.intelli-verse-x.ai/demo?intent=agency-connected-engine-pilot&utm_source=ivx-agency-desktop&utm_medium=referral&utm_campaign=native_engines&utm_content=pilot_request"
+          rel="noreferrer"
+          target="_blank"
+        >
+          Request an agency connected-engine pilot
+        </a>
       </aside>
       {mode === 'copilot' && <CopilotTab />}
       {mode === 'clients' && <ClientsTab query={query} />}
