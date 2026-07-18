@@ -12,9 +12,24 @@ import { loadBrand } from './apply-brand.mjs'
 export const TRUST_SCHEMA_VERSION = 1
 
 export const PLATFORM_POLICIES = {
-  linux: { channelFile: 'latest-linux.yml', method: 'sha512-channel-manifest', signerRequired: false },
-  mac: { channelFile: 'latest-mac.yml', method: 'apple-developer-id', signerRequired: true },
-  win: { channelFile: 'latest.yml', method: 'windows-authenticode', signerRequired: true }
+  linux: {
+    channelFile: 'latest-linux.yml',
+    expectedSignerField: null,
+    method: 'sha512-channel-manifest',
+    signerPattern: null
+  },
+  mac: {
+    channelFile: 'latest-mac.yml',
+    expectedSignerField: 'appleTeamId',
+    method: 'apple-developer-id',
+    signerPattern: /^[A-Z0-9]{10}$/
+  },
+  win: {
+    channelFile: 'latest.yml',
+    expectedSignerField: 'windowsSignerSha256',
+    method: 'windows-authenticode',
+    signerPattern: /^[A-F0-9]{64}$/
+  }
 }
 
 export function sha512Base64(value) {
@@ -27,6 +42,29 @@ function required(value, label) {
   }
 
   return String(value).trim()
+}
+
+function normalizeSignerId(os, value) {
+  const normalized = required(value, `${os} expected signer id`).replace(/\s/g, '').toUpperCase()
+  const pattern = PLATFORM_POLICIES[os]?.signerPattern
+
+  if (!pattern?.test(normalized)) {
+    throw new Error(`Invalid ${os} expected signer id`)
+  }
+
+  return normalized
+}
+
+export function loadExpectedSignerId(brandId, os) {
+  const policy = PLATFORM_POLICIES[os]
+
+  if (!policy) throw new Error(`Unsupported TRUST_OS "${os}"`)
+  if (!policy.expectedSignerField) return null
+
+  const policyPath = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../release-signers.json')
+  const releaseSigners = JSON.parse(fs.readFileSync(policyPath, 'utf8'))
+
+  return normalizeSignerId(os, releaseSigners?.[brandId]?.[policy.expectedSignerField])
 }
 
 export function readChannel(releaseDir, channelFile) {
@@ -76,7 +114,10 @@ export function readChannel(releaseDir, channelFile) {
   return { artifacts, sha512: sha512Base64(text), text, version }
 }
 
-export function validateTrustMetadata(trust, { brand, channelFile, channelSha512, files, os, version }) {
+export function validateTrustMetadata(
+  trust,
+  { brand, channelFile, channelSha512, expectedSignerId, files, os, version }
+) {
   if (trust?.schemaVersion !== TRUST_SCHEMA_VERSION) return false
   if (trust?.brand?.id !== brand.id || trust?.brand?.productName !== brand.productName) return false
   if (trust?.brand?.appId !== brand.appId || trust?.platform !== os || trust?.version !== version) return false
@@ -84,9 +125,23 @@ export function validateTrustMetadata(trust, { brand, channelFile, channelSha512
 
   const policy = PLATFORM_POLICIES[os]
 
-  if (!policy || trust.verification.method !== policy.method) return false
-  if (policy.signerRequired) {
-    if (!trust.verification.signer?.id || !trust.verification.signer?.subject) return false
+  if (!policy || trust?.verification?.method !== policy.method) return false
+  if (policy.expectedSignerField) {
+    let expected
+
+    try {
+      expected = normalizeSignerId(os, expectedSignerId)
+    } catch {
+      return false
+    }
+
+    if (
+      String(trust.verification.signer?.id || '')
+        .replace(/\s/g, '')
+        .toUpperCase() !== expected
+    )
+      return false
+    if (!trust.verification.signer?.subject) return false
   } else if (trust.verification.signer !== null) {
     return false
   }
@@ -111,7 +166,8 @@ export function generateTrustMetadata({
   releaseDir,
   runAttempt,
   runId,
-  signer
+  signer,
+  expectedSignerId
 }) {
   const policy = PLATFORM_POLICIES[os]
 
@@ -123,8 +179,16 @@ export function generateTrustMetadata({
     throw new Error(`Signer method "${signer?.method || '<none>'}" does not match ${os} policy "${policy.method}"`)
   }
 
-  if (policy.signerRequired) {
-    required(signer?.id, `${os} signer id`)
+  if (policy.expectedSignerField) {
+    const expected = normalizeSignerId(os, expectedSignerId)
+    const actual = String(required(signer?.id, `${os} signer id`))
+      .replace(/\s/g, '')
+      .toUpperCase()
+
+    if (actual !== expected) {
+      throw new Error(`${os} signer id does not match the source-controlled release policy`)
+    }
+
     required(signer?.subject, `${os} signer subject`)
   } else if (signer?.id != null || signer?.subject != null) {
     throw new Error(`${os} checksum policy must not claim a code-signing identity`)
@@ -154,7 +218,7 @@ export function generateTrustMetadata({
     schemaVersion: TRUST_SCHEMA_VERSION,
     verification: {
       method: policy.method,
-      signer: policy.signerRequired ? { id: signer.id, subject: signer.subject } : null,
+      signer: policy.expectedSignerField ? { id: signer.id, subject: signer.subject } : null,
       status: 'verified'
     },
     version: channel.version
@@ -166,9 +230,11 @@ function main() {
   const os = required(process.env.TRUST_OS, 'TRUST_OS')
   const signerPath = path.join(releaseDir, 'trust-signer.json')
   const signer = JSON.parse(fs.readFileSync(signerPath, 'utf8').replace(/^\uFEFF/, ''))
+  const brand = loadBrand()
   const trust = generateTrustMetadata({
-    brand: loadBrand(),
+    brand,
     commit: process.env.GITHUB_SHA,
+    expectedSignerId: loadExpectedSignerId(brand.id, os),
     os,
     releaseDir,
     runAttempt: process.env.GITHUB_RUN_ATTEMPT,

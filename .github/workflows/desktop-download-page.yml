@@ -5,6 +5,8 @@ on:
     branches: [main]
     paths:
       - "apps/desktop/download-site/index.html"
+      - "apps/desktop/release-signers.json"
+      - "apps/desktop/scripts/check-release-signers.mjs"
       - ".github/workflows/desktop-download-page.yml"
   workflow_dispatch: {}
 
@@ -14,6 +16,7 @@ concurrency:
 
 permissions:
   contents: read
+  id-token: write
 
 jobs:
   deploy:
@@ -22,6 +25,12 @@ jobs:
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
 
+      - name: Configure short-lived AWS credentials
+        uses: aws-actions/configure-aws-credentials@ff717079ee2060e4bcee96c4779b553acc87447c # v4
+        with:
+          aws-region: us-east-1
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+
       - name: Enforce fail-closed source
         run: |
           ! grep -Eiq 'xattr -cr|run anyway|open anyway|IVX Admin Desktop' \
@@ -29,11 +38,10 @@ jobs:
           grep -Fq 'trust.schemaVersion === 1' apps/desktop/download-site/index.html
           grep -Fq 'Pending release trust verification' apps/desktop/download-site/index.html
           grep -Fq 'do not bypass Gatekeeper' apps/desktop/download-site/index.html
+          node apps/desktop/scripts/check-release-signers.mjs
 
       - name: Deploy only the download page
         env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_DEFAULT_REGION: us-east-1
         run: |
           aws s3 cp apps/desktop/download-site/index.html \

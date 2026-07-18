@@ -4,9 +4,9 @@
 # On every push (merge) to main that touches apps/desktop or the desktop
 # workflows, this decides whether a release is needed:
 #   - reads the version in apps/desktop/package.json,
-#   - skips only if EVERY brand's public S3 feed (ix-agency/ AND quizverse/)
-#     already serves that version (so ordinary merges that don't bump the
-#     version are no-ops, and a brand that missed a release catches up),
+#   - skips only if EVERY brand's public S3 feed has all three manifests,
+#     exact artifact/trust bindings, pinned signer identities, and the current
+#     version (so partial or untrusted releases automatically recover),
 #   - otherwise runs the full desktop-release build+publish chain (2 brands
 #     x 3 OS -> s3://intelliverse-x-desktop/<brand>/) and then tags the
 #     commit ix-desktop-v<version> for traceability.
@@ -25,6 +25,7 @@ on:
 
 permissions:
   contents: write # to push the ix-desktop-v<version> tag after publishing
+  id-token: write # delegated to the reusable release workflow for AWS OIDC
 
 concurrency:
   group: desktop-auto-release
@@ -38,24 +39,24 @@ jobs:
       version: ${{ steps.check.outputs.version }}
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
-      - name: Compare package.json version with every brand's live S3 feed
+      - run: npm ci
+      - name: Verify every brand/platform release record
         id: check
         run: |
           VERSION="$(node -p "require('./apps/desktop/package.json').version")"
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           RELEASE=false
           for BRAND in ix-agency quizverse; do
-            LIVE="$(curl -sf "https://intelliverse-x-desktop.s3.amazonaws.com/$BRAND/latest-mac.yml" \
-              | awk '/^version:/ {print $2; exit}' || true)"
-            echo "brand=$BRAND package.json=$VERSION live-feed=${LIVE:-<none>}"
-            if [ "$VERSION" != "$LIVE" ]; then
+            echo "Verifying $BRAND v$VERSION across macOS, Windows, and Linux."
+            if ! EXPECT_VERSION="$VERSION" DESKTOP_BRAND="$BRAND" \
+              node apps/desktop/scripts/verify-update-feed.mjs; then
               RELEASE=true
-              echo "Brand $BRAND needs v$VERSION (feed has ${LIVE:-nothing})."
+              echo "Brand $BRAND is absent, partial, untrusted, or stale; release recovery required."
             fi
           done
           echo "release=$RELEASE" >> "$GITHUB_OUTPUT"
           if [ "$RELEASE" = "false" ]; then
-            echo "Every brand feed already serves v$VERSION — nothing to release."
+            echo "Every brand/platform manifest, artifact, and trust record verifies at v$VERSION — nothing to release."
           fi
 
   release:

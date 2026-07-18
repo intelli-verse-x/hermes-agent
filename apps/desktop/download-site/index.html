@@ -482,8 +482,8 @@
             >request a connected-engine pilot</a
           >. Desktop is the operator surface; it does not create platform entitlements, App IDs, or pilot approval.
           <small style="display: block; margin-top: 8px">
-            This page keeps a bounded first-touch campaign, click-ID, and journey tuple in this browser for up to 90 days
-            and forwards it to portal, setup, and pilot handoffs. It stores no credentials or entitlement.
+            This page keeps a bounded first-touch campaign, click-ID, and journey tuple in this browser for up to 90
+            days and forwards it to portal, setup, and pilot handoffs. It stores no credentials or entitlement.
           </small>
         </div>
 
@@ -982,18 +982,21 @@
 
         const inbound = new URLSearchParams(location.search)
         const values = Object.fromEntries(
-          ATTRIBUTION_FIELDS.map(field => [field, cleanAttributionValue(inbound.get(field))]).filter(([, value]) =>
-            Boolean(value)
-          )
+          ATTRIBUTION_FIELDS.map(field => [
+            field,
+            cleanAttributionValue(inbound.get(`first_${field}`)) || cleanAttributionValue(inbound.get(field))
+          ]).filter(([, value]) => Boolean(value))
         )
 
         if (Object.keys(values).length === 0) return null
 
         const capturedAt = Date.now()
+        const inboundAttributionId = cleanAttributionValue(inbound.get('attribution_id'))
         const attributionId =
-          typeof crypto.randomUUID === 'function'
+          inboundAttributionId ||
+          (typeof crypto.randomUUID === 'function'
             ? crypto.randomUUID()
-            : `desktop-${capturedAt}-${Math.random().toString(36).slice(2, 14)}`
+            : `desktop-${capturedAt}-${Math.random().toString(36).slice(2, 14)}`)
         const firstTouch = {
           attributionId,
           capturedAt,
@@ -1025,7 +1028,10 @@
 
       function applyHopContext(target) {
         if (target.hostname === 'admin.intelli-verse-x.ai') {
-          target.searchParams.set('intent', target.pathname.includes('/team') ? 'request-agency-access' : 'agency-portal')
+          target.searchParams.set(
+            'intent',
+            target.pathname.includes('/team') ? 'request-agency-access' : 'agency-portal'
+          )
           target.searchParams.set('role', 'agency-operator')
           target.searchParams.set('engine', 'all')
         } else if (target.hostname === 'quizverse.world') {
@@ -1140,6 +1146,38 @@
         mac: { method: 'apple-developer-id', signerRequired: true },
         win: { method: 'windows-authenticode', signerRequired: true }
       }
+      // Source-controlled expectations are deliberately independent of the
+      // trust documents. Empty values keep downloads disabled until a code
+      // owner pins identities established out of band.
+      const EXPECTED_RELEASE_SIGNERS = Object.freeze({
+        'ix-agency': Object.freeze({ appleTeamId: '', windowsSignerSha256: '' }),
+        quizverse: Object.freeze({ appleTeamId: '', windowsSignerSha256: '' })
+      })
+
+      function expectedSignerValid(os, brandId, signer) {
+        const expected = EXPECTED_RELEASE_SIGNERS[brandId]
+        const teamId = String(expected?.appleTeamId || '').toUpperCase()
+        const certificateSha256 = String(expected?.windowsSignerSha256 || '')
+          .replace(/\s/g, '')
+          .toUpperCase()
+        const actualId = String(signer?.id || '')
+          .replace(/\s/g, '')
+          .toUpperCase()
+
+        // A brand is releasable only after both publisher identities are
+        // independently pinned. This also prevents a partial Linux-only feed.
+        if (!/^[A-Z0-9]{10}$/.test(teamId) || !/^[A-F0-9]{64}$/.test(certificateSha256)) return false
+        if (os === 'linux') return signer === null
+        if (!signer?.subject) return false
+        if (os === 'mac') {
+          return actualId === teamId
+        }
+        if (os === 'win') {
+          return actualId === certificateSha256
+        }
+
+        return false
+      }
 
       async function sha512Base64(text) {
         const digest = await crypto.subtle.digest('SHA-512', new TextEncoder().encode(text))
@@ -1158,9 +1196,7 @@
           if (!response.ok) return false
           const trust = await response.json()
           const policy = TRUST_POLICIES[os]
-          const signerValid = policy.signerRequired
-            ? Boolean(trust.verification?.signer?.id && trust.verification?.signer?.subject)
-            : trust.verification?.signer === null
+          const signerValid = expectedSignerValid(os, brand.id, trust.verification?.signer)
           const artifactsValid =
             Array.isArray(trust.artifacts) &&
             trust.artifacts.length === manifest.files.length &&

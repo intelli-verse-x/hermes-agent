@@ -36,6 +36,7 @@ test('generates artifact-exact signer-pinned trust metadata', () => {
     const trust = generateTrustMetadata({
       brand,
       commit: '0123456789abcdef0123456789abcdef01234567',
+      expectedSignerId: 'TEAMID1234',
       generatedAt: '2026-07-17T00:01:00.000Z',
       os: 'mac',
       releaseDir,
@@ -51,6 +52,7 @@ test('generates artifact-exact signer-pinned trust metadata', () => {
       brand,
       channelFile: 'latest-mac.yml',
       channelSha512: sha512Base64(channelText),
+      expectedSignerId: 'TEAMID1234',
       files: [{ sha512: sha512Base64(artifact), size: artifact.byteLength, url }],
       os: 'mac',
       version: '1.2.3'
@@ -67,6 +69,38 @@ test('generates artifact-exact signer-pinned trust metadata', () => {
     assert.equal(
       validateTrustMetadata({ ...trust, verification: { ...trust.verification, signer: null } }, context),
       false
+    )
+    assert.equal(
+      validateTrustMetadata(
+        {
+          ...trust,
+          verification: {
+            ...trust.verification,
+            signer: { ...trust.verification.signer, id: 'OTHERID123' }
+          }
+        },
+        context
+      ),
+      false
+    )
+    assert.equal(validateTrustMetadata(trust, { ...context, expectedSignerId: '' }), false)
+    assert.throws(
+      () =>
+        generateTrustMetadata({
+          brand,
+          commit: '0123456789abcdef0123456789abcdef01234567',
+          expectedSignerId: 'OTHERID123',
+          os: 'mac',
+          releaseDir,
+          runAttempt: '1',
+          runId: '12345',
+          signer: {
+            id: 'TEAMID1234',
+            method: 'apple-developer-id',
+            subject: 'Developer ID Application: Intelliverse X (TEAMID1234)'
+          }
+        }),
+      /does not match the source-controlled release policy/
     )
   } finally {
     fs.rmSync(releaseDir, { force: true, recursive: true })
@@ -87,4 +121,53 @@ test('refuses a signer method that does not match the platform policy', () => {
       }),
     /does not match mac policy/
   )
+})
+
+test('requires the source-controlled Windows certificate SHA-256', () => {
+  const releaseDir = fs.mkdtempSync(path.join(os.tmpdir(), 'desktop-trust-win-'))
+  const artifact = Buffer.from('authenticode installer fixture')
+  const url = 'IVX-Agency-1.2.3-win-x64.exe'
+  const channelText = [
+    'version: 1.2.3',
+    'files:',
+    `  - url: ${url}`,
+    `    sha512: ${sha512Base64(artifact)}`,
+    `    size: ${artifact.byteLength}`,
+    ''
+  ].join('\n')
+  const expectedSignerId = 'A'.repeat(64)
+
+  fs.writeFileSync(path.join(releaseDir, url), artifact)
+  fs.writeFileSync(path.join(releaseDir, 'latest.yml'), channelText)
+
+  try {
+    const trust = generateTrustMetadata({
+      brand,
+      commit: '0123456789abcdef0123456789abcdef01234567',
+      expectedSignerId,
+      os: 'win',
+      releaseDir,
+      runAttempt: '1',
+      runId: '12345',
+      signer: {
+        id: expectedSignerId,
+        method: 'windows-authenticode',
+        subject: 'CN=Intelliverse X'
+      }
+    })
+    const context = {
+      brand,
+      channelFile: 'latest.yml',
+      channelSha512: sha512Base64(channelText),
+      expectedSignerId,
+      files: [{ sha512: sha512Base64(artifact), size: artifact.byteLength, url }],
+      os: 'win',
+      version: '1.2.3'
+    }
+
+    assert.equal(validateTrustMetadata(trust, context), true)
+    assert.equal(validateTrustMetadata(trust, { ...context, expectedSignerId: 'B'.repeat(64) }), false)
+  } finally {
+    fs.rmSync(releaseDir, { force: true, recursive: true })
+  }
 })

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// End-to-end verification of the IX Agency auto-update feed on S3.
+// End-to-end verification of a branded Desktop auto-update feed on S3.
 //
 // Checks, for every electron-updater channel file (mac / windows / linux):
 //   1. the channel file is publicly fetchable (HTTP 200),
@@ -18,7 +18,7 @@
 // DESKTOP_BRAND's manifest feed; UPDATE_FEED_URL overrides it.
 
 import { loadBrand } from './apply-brand.mjs'
-import { sha512Base64, validateTrustMetadata } from './trust-metadata.mjs'
+import { loadExpectedSignerId, sha512Base64, validateTrustMetadata } from './trust-metadata.mjs'
 
 const brand = loadBrand()
 const FEED = (process.env.UPDATE_FEED_URL || brand.updateFeedUrl).replace(/\/+$/, '')
@@ -90,6 +90,7 @@ for (const { os, file, trustFile } of CHANNELS) {
         brand,
         channelFile: file,
         channelSha512: sha512Base64(body),
+        expectedSignerId: loadExpectedSignerId(brand.id, os),
         files,
         os,
         version

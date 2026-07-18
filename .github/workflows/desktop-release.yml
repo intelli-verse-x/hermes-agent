@@ -1,7 +1,7 @@
 # desktop-release.yml — branded desktop release chain (fork-only; upstream
 # hermes-agent has no packaged-release CI). Full docs: apps/desktop/RELEASING.md
 #
-# One repo ships TWO branded desktop apps (IX Agency + QuizVerse) from the
+# One repo ships TWO branded desktop apps (IVX Agency + QuizVerse) from the
 # same Hermes core — the build matrix is 2 brands x 3 OS. DESKTOP_BRAND
 # selects the flavor (apps/desktop/brands/<brand>.json owns the identity).
 #
@@ -21,9 +21,9 @@
 # provider (electron/ix-updater.ts) — the "Update available" button pops up
 # within 4 h and installs in place.
 #
-# Required repo secrets:
-#   AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY — IAM user
-#     intelliverse-x-desktop-ci (S3 read/write on that bucket only).
+# Required repo secret:
+#   AWS_ROLE_ARN — GitHub OIDC role scoped to release-path writes in the
+#     intelliverse-x-desktop bucket. Static AWS access keys are not accepted.
 # Required for public macOS signing + notarization:
 #   CSC_LINK / CSC_KEY_PASSWORD — Developer ID cert (base64 .p12 / password)
 #   APPLE_TEAM_ID plus either:
@@ -41,6 +41,10 @@ on:
     tags: ["ix-desktop-v*"]
   workflow_dispatch: {}
   workflow_call: {}
+
+permissions:
+  contents: read
+  id-token: write
 
 concurrency:
   group: desktop-release-${{ github.ref }}
@@ -87,6 +91,8 @@ jobs:
         run: |
           npx tsc -p . --noEmit
           npx tsx --test electron/ix-updater.test.ts electron/ix-status.test.ts electron/qv-deeptutor.test.ts
+          node --test scripts/trust-metadata.test.mjs
+          node scripts/check-release-signers.mjs
 
       - name: Build renderer + electron bundles
         working-directory: apps/desktop
@@ -96,11 +102,15 @@ jobs:
         working-directory: apps/desktop
         run: node scripts/check-brand-separation.mjs
 
+      - name: Configure short-lived AWS credentials
+        uses: aws-actions/configure-aws-credentials@ff717079ee2060e4bcee96c4779b553acc87447c # v4
+        with:
+          aws-region: us-east-1
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+
       - name: Package + publish to S3 feed
         working-directory: apps/desktop
         env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_DEFAULT_REGION: us-east-1
           MAC_CSC_LINK: ${{ secrets.CSC_LINK }}
           MAC_CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
@@ -114,6 +124,16 @@ jobs:
           APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
           APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
         run: |
+          EXPECTED_APPLE_TEAM_ID="$(node -p "require('./release-signers.json')[process.env.DESKTOP_BRAND].appleTeamId.toUpperCase()")"
+          EXPECTED_WINDOWS_SIGNER_SHA256="$(node -p "require('./release-signers.json')[process.env.DESKTOP_BRAND].windowsSignerSha256.replace(/\s/g, '').toUpperCase()")"
+          if ! [[ "$EXPECTED_APPLE_TEAM_ID" =~ ^[A-Z0-9]{10}$ ]]; then
+            echo "Refusing publication: source-controlled Apple Team ID is not pinned for $DESKTOP_BRAND" >&2
+            exit 1
+          fi
+          if ! [[ "$EXPECTED_WINDOWS_SIGNER_SHA256" =~ ^[A-F0-9]{64}$ ]]; then
+            echo "Refusing publication: source-controlled Windows signer SHA-256 is not pinned for $DESKTOP_BRAND" >&2
+            exit 1
+          fi
           if [ "$RUNNER_OS" = "macOS" ]; then
             for v in MAC_CSC_LINK MAC_CSC_KEY_PASSWORD APPLE_TEAM_ID; do
               if [ -z "${!v:-}" ]; then
@@ -121,6 +141,10 @@ jobs:
                 exit 1
               fi
             done
+            if [ "$APPLE_TEAM_ID" != "$EXPECTED_APPLE_TEAM_ID" ]; then
+              echo "APPLE_TEAM_ID does not match the source-controlled release signer policy" >&2
+              exit 1
+            fi
             if [ -n "${APPLE_API_KEY:-}" ] || [ -n "${APPLE_API_KEY_ID:-}" ] || [ -n "${APPLE_API_ISSUER:-}" ]; then
               for v in APPLE_API_KEY APPLE_API_KEY_ID APPLE_API_ISSUER; do
                 if [ -z "${!v:-}" ]; then
@@ -146,6 +170,10 @@ jobs:
                 exit 1
               fi
             done
+            if [ "$(printf '%s' "$WINDOWS_SIGNER_SHA256" | tr -d ' ' | tr '[:lower:]' '[:upper:]')" != "$EXPECTED_WINDOWS_SIGNER_SHA256" ]; then
+              echo "WINDOWS_SIGNER_SHA256 does not match the source-controlled release signer policy" >&2
+              exit 1
+            fi
             export CSC_LINK="$WINDOWS_CSC_LINK"
             export CSC_KEY_PASSWORD="$WINDOWS_CSC_KEY_PASSWORD"
             export CSC_IDENTITY_AUTO_DISCOVERY=true
@@ -284,10 +312,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - name: Configure short-lived AWS credentials
+        uses: aws-actions/configure-aws-credentials@ff717079ee2060e4bcee96c4779b553acc87447c # v4
+        with:
+          aws-region: us-east-1
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
       - name: Upload download-site/index.html to s3://intelliverse-x-desktop/index.html
         env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_DEFAULT_REGION: us-east-1
         run: |
           aws s3 cp apps/desktop/download-site/index.html s3://intelliverse-x-desktop/index.html \
