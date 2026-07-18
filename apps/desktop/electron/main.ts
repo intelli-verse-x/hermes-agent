@@ -692,10 +692,12 @@ function readPersistedThemeSource() {
       return parsed.themeSource
     }
   } catch {
-    // Missing / malformed → follow the OS like a fresh install.
+    // Missing / malformed → brand default below.
   }
 
-  return 'system'
+  // IX Agency ships dark-first so cold-launch vibrancy/titlebar match the app
+  // before the renderer syncs. QuizVerse keeps OS-tracking (`system`).
+  return IS_IX_AGENCY_BRAND ? 'dark' : 'system'
 }
 
 function writePersistedThemeSource(mode) {
