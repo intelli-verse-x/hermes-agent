@@ -27,6 +27,9 @@ const indexSource = read('src/app/ix-agency/index.tsx')
 const downloadSource = read('download-site/index.html')
 const brandSource = read('brands/ix-agency.json')
 const packageSource = read('package.json')
+const nativePlaySource = read('src/app/quizverse/native-play.tsx')
+const skillsSource = read('src/app/ix-agency/data/skills.json')
+const mcpTilesSource = read('src/app/ix-agency/data/mcp-tiles.json')
 
 const releaseSigners = JSON.parse(read('release-signers.json')) as Record<
   string,
@@ -54,10 +57,51 @@ describe('IVX Agency ecosystem story', () => {
   it('uses precise per-engine availability labels', () => {
     expect(indexText).toContain('connected per-App setup')
     expect(indexText).toContain('ContentX + Postiz:')
-    expect(indexText).toContain('connected workspace and channel publishing')
+    expect(indexText).toContain('configured ContentX workspace')
+    expect(indexText).toContain('selected connected Postiz channels')
     expect(indexText).toContain('Memory automation rolling out')
     expect(indexText).toContain('connected deployment')
     expect(indexText).toContain('kiosk Worlds approved pilots')
+  })
+
+  it('states the qualified six-stage connected journey', () => {
+    for (const source of [indexText, downloadText]) {
+      expect(source).toContain(
+        'approved content → QuestX quest → participant movement → KioskX kiosk → product handoff → consent-scoped Memory'
+      )
+      expect(source).toContain('operator approval')
+    }
+
+    const skills = JSON.parse(skillsSource) as { items: Array<{ content: string; id: string }> }
+    const skillsText = compact(skills.items.find(item => item.id === 'content-signoff-queue')?.content || '')
+
+    expect(skillsText).toContain('configured ContentX')
+    expect(skillsText).toContain('selected connected Postiz channel')
+    expect(skillsText).toContain('do not claim publication until publish history confirms it')
+    expect(skillsSource).not.toContain('auto-publishes')
+    expect(mcpTilesSource).toContain('do not assume an embedded credential')
+    expect(mcpTilesSource).not.toContain('org key baked in')
+  })
+
+  it('keeps raw OS emoji decorative with accessible platform text', () => {
+    const dom = new JSDOM(downloadSource)
+    const heroIcons = [...dom.window.document.querySelectorAll<HTMLElement>('.os-ico')]
+    const platformIcons = [...dom.window.document.querySelectorAll<HTMLElement>('h3 > span[aria-hidden="true"]')]
+
+    expect(heroIcons).toHaveLength(2)
+    expect(heroIcons.every(icon => icon.getAttribute('aria-hidden') === 'true')).toBe(true)
+    expect(platformIcons).toHaveLength(6)
+
+    for (const name of ['macOS', 'Windows', 'Linux', 'Ubuntu / Linux']) {
+      expect(dom.window.document.body.textContent).toContain(name)
+    }
+  })
+
+  it('exposes informative quiz media without duplicating adjacent copy', () => {
+    expect(nativePlaySource).toContain('alt={question.mediaAlt || `Visual clue for question ${index + 1}`}')
+    expect(nativePlaySource).not.toContain('question.mediaUrl && <img alt=""')
+    expect(nativePlaySource).toContain('alt=""\n          aria-hidden="true"')
+    expect(nativePlaySource).toContain('<span aria-hidden="true" className="text-2xl">{mode.icon}</span>')
   })
 
   it('keeps unimplemented agency workflows roadmap-honest', () => {

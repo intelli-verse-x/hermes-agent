@@ -89,6 +89,8 @@ export function normalizePlayQuestions(payload: unknown): PlayQuestion[] {
       correctIndex,
       explanation: String(raw.explanation ?? ''),
       id: String(raw.id ?? raw.questionId ?? raw.question_id ?? `question-${index}`),
+      mediaAlt:
+        String(raw.mediaAlt ?? raw.media_alt ?? raw.imageAlt ?? raw.image_alt ?? raw.alt ?? '').trim() || undefined,
       mediaUrl: String(raw.mediaUrl ?? raw.media_url ?? raw.image ?? raw.audio ?? raw.video ?? '') || undefined,
       options: answerOptions,
       prompt

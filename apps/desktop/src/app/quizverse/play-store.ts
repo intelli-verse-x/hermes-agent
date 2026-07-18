@@ -25,6 +25,7 @@ export interface PlayQuestion {
   options: string[]
   correctIndex: number
   explanation?: string
+  mediaAlt?: string
   mediaUrl?: string
 }
 

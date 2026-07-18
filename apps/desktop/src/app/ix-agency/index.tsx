@@ -85,14 +85,19 @@ export function IxAgencyView(props: React.ComponentProps<'section'>) {
           Map each client workspace to one Brand or App ID so Knowledge, customer Memory, credentials, and spend stay
           isolated. Subject identity and consent determine what may continue across approved channels.
         </p>
+        <p className="mt-2">
+          Connected operating sequence: approved content → QuestX quest → participant movement → KioskX kiosk → product
+          handoff → consent-scoped Memory. Each stage still requires its applicable mapping, entitlement, connected
+          service, and operator approval; this summary does not claim that a stage has executed.
+        </p>
         <ul className="mt-2 grid gap-1 sm:grid-cols-3">
           <li>
             <strong className="text-foreground">QuestX:</strong> connected per-App setup; kiosk completion approved
             pilots.
           </li>
           <li>
-            <strong className="text-foreground">ContentX + Postiz:</strong> connected workspace and channel publishing;
-            Memory automation rolling out.
+            <strong className="text-foreground">ContentX + Postiz:</strong> publishing from a configured ContentX
+            workspace to selected connected Postiz channels; Memory automation rolling out.
           </li>
           <li>
             <strong className="text-foreground">KioskX:</strong> connected deployment; kiosk Worlds approved pilots.
