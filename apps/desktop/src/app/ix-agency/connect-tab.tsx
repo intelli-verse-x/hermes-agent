@@ -103,7 +103,11 @@ export function ConnectTab() {
   }
 
   if (!settings) {
-    return null
+    return (
+      <div className="mx-auto max-w-2xl px-5 py-6 text-xs text-muted-foreground" role="status">
+        Loading Connect settings…
+      </div>
+    )
   }
 
   const patch = (partial: Partial<IxAgencyRendererSettings>) => setSettings({ ...settings, ...partial })
@@ -200,6 +204,18 @@ export function ConnectTab() {
     setInitLog('')
 
     try {
+      // Persist a typed (unsaved) Cognito secret before init so the button
+      // isn't a dead-end when the user just pasted credentials.
+      if (cognitoSecretDraft.trim()) {
+        await bridge.saveSettings({
+          cognitoOauth2Url: settings.cognitoOauth2Url,
+          cognitoClientId: settings.cognitoClientId,
+          cognitoClientSecret: cognitoSecretDraft.trim()
+        })
+        setCognitoSecretDraft('')
+        setSettings(await bridge.getSettings())
+      }
+
       const result = await bridge.hermesInit()
 
       setInitLog(intelliversePublicText(result.log))
@@ -355,6 +371,17 @@ export function ConnectTab() {
               value={settings.customChatModels}
             />
           </Field>
+          <div className="flex items-center gap-2">
+            <Button disabled={saveState === 'saving'} onClick={() => void save()} size="sm">
+              {saveState === 'saving' ? 'Saving…' : 'Save LiteLLM settings'}
+            </Button>
+            {saveState === 'saved' && (
+              <span className="text-[0.68rem] text-muted-foreground">
+                <Codicon className="mr-1 inline-block text-emerald-500" name="check" size="0.75rem" />
+                Saved
+              </span>
+            )}
+          </div>
           <p className="text-[0.68rem] leading-relaxed text-muted-foreground/70">
             Powers the Copilot tab: streaming chat with the full admin-mcp tool estate. A personal key is provisioned
             automatically on sign-in (enter one here only to override it). The key is encrypted at rest (safeStorage).
@@ -429,7 +456,7 @@ export function ConnectTab() {
               {cognitoBusy ? 'Validating…' : 'Validate credentials'}
             </Button>
             <Button
-              disabled={initBusy || !settings.cognitoClientSecretSet}
+              disabled={initBusy || (!settings.cognitoClientSecretSet && !cognitoSecretDraft.trim())}
               onClick={() => void runHermesInit()}
               size="sm"
             >

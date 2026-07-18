@@ -29,7 +29,7 @@ import { setSessionTodos } from '@/store/todos'
 import type { ClientSessionState } from '../../../types'
 
 import { useGatewayEventHandler } from './gateway-event'
-import { completionErrorText, delegateTaskPayloads, STREAM_DELTA_FLUSH_MS } from './utils'
+import { delegateTaskPayloads, resolveCompletionError, STREAM_DELTA_FLUSH_MS } from './utils'
 
 interface MessageStreamOptions {
   activeSessionIdRef: MutableRefObject<string | null>
@@ -354,7 +354,9 @@ export function useMessageStream({
 
         const streamId = state.streamId
         const finalText = renderMediaTags(text).trim()
-        const completionError = completionErrorText(finalText)
+        // Blank / "(empty)" / "⚠️ No reply" completions must surface as errors
+        // so QuizVerse/Hermes users never see a silent dead-end bubble.
+        const completionError = resolveCompletionError(finalText)
         const normalize = (value: string) => value.replace(/\s+/g, ' ').trim()
 
         const replaceTextPart = (parts: ChatMessagePart[]) => {
@@ -415,14 +417,14 @@ export function useMessageStream({
             const existing = prev[index]
             const existingText = chatMessageText(existing).trim()
 
-            if (existing.pending || (finalText && existingText === finalText)) {
+            if (existing.pending || (finalText && existingText === finalText) || completionError) {
               nextMessages = prev.map((message, messageIndex) =>
                 messageIndex === index ? completeMessage(message) : message
               )
             } else if (finalText) {
               nextMessages = [...prev, newAssistantFromCompletion()]
             }
-          } else if (finalText) {
+          } else if (finalText || completionError) {
             nextMessages = [...prev, newAssistantFromCompletion()]
           }
         }

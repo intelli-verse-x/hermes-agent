@@ -108,6 +108,31 @@ describe('refreshOnboarding', () => {
     expect($desktopOnboarding.get().reason).toContain('setup.status reports configured credentials')
   })
 
+  it('marks onboarding requested so skip does not permanently hide setup', () => {
+    $desktopOnboarding.set(
+      baseState({
+        configured: false,
+        firstRunSkipped: true,
+        requested: false,
+        flow: {
+          status: 'confirming_model',
+          currentModel: 'x',
+          label: 'x',
+          providerSlug: 'y',
+          saving: false
+        }
+      })
+    )
+
+    requestDesktopOnboarding('Add a provider credential before sending your first message.')
+
+    const state = $desktopOnboarding.get()
+    expect(state.requested).toBe(true)
+    expect(state.firstRunSkipped).toBe(true)
+    expect(state.reason).toContain('provider credential')
+    expect(state.flow.status).toBe('idle')
+  })
+
   it('keeps cached providers when onboarding was not re-requested', async () => {
     const api = vi.fn(async ({ path }: { path: string }) => {
       if (path === '/api/providers/oauth') {

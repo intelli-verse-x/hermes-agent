@@ -708,6 +708,20 @@ class TestBuildContextFilesPrompt:
         assert "Ruff for linting" in result
         assert "Project Context" in result
 
+    def test_loads_hermes_home_agents_md_app_id_gbrain(self, tmp_path, monkeypatch):
+        monkeypatch.setenv("HERMES_HOME", str(tmp_path / "hermes_home"))
+        hermes_home = tmp_path / "hermes_home"
+        hermes_home.mkdir()
+        (hermes_home / "AGENTS.md").write_text(
+            "App-ID: ai.intelli-verse-x.quizverse\nStay on QuizVerse.",
+            encoding="utf-8",
+        )
+        (tmp_path / "AGENTS.md").write_text("Use Ruff for linting.")
+        result = build_context_files_prompt(cwd=str(tmp_path))
+        assert "Ruff for linting" in result
+        assert "ai.intelli-verse-x.quizverse" in result
+        assert "App-ID gBrain" in result
+
     def test_loads_cursorrules(self, tmp_path):
         (tmp_path / ".cursorrules").write_text("Always use type hints.")
         result = build_context_files_prompt(cwd=str(tmp_path))

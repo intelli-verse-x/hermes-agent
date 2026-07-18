@@ -238,9 +238,10 @@ export function DesktopOnboardingOverlay({ enabled, onCompleted, requestGateway 
   }
 
   // The user chose "I'll choose a provider later" on first run. Stay out of the
-  // way on every subsequent launch — they re-enter via Settings → Providers
-  // (manual mode), which sets manual=true and bypasses this gate.
-  if (onboarding.firstRunSkipped && !onboarding.manual) {
+  // way on every subsequent launch — until chat (or runtime) explicitly
+  // re-requests setup (`requested`), or they open Settings → Providers
+  // (`manual`). Without this, a skipped first-run left chat silently broken.
+  if (onboarding.firstRunSkipped && !onboarding.manual && !onboarding.requested) {
     return null
   }
 

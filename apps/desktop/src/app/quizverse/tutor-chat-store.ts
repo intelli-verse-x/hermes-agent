@@ -345,11 +345,22 @@ export async function sendTutorMessage(
     tools: [],
     type: 'start_turn'
   }
-  await connect()
+
+  try {
+    await connect()
+  } catch (error) {
+    pendingSend = null
+    failStreaming(error instanceof Error ? error.message : 'Could not connect to TutorX. Try again.')
+
+    return
+  }
 
   if (socket?.readyState === WebSocket.OPEN && pendingSend) {
     socket.send(JSON.stringify(pendingSend))
     pendingSend = null
+  } else if (pendingSend) {
+    pendingSend = null
+    failStreaming('TutorX is not connected. Start TutorX in Setup, then try again.')
   }
 }
 

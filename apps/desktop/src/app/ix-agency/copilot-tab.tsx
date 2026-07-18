@@ -214,6 +214,7 @@ export function CopilotTab() {
   const [draft, setDraft] = useState('')
   const [models, setModels] = useState<{ id: string; label: string }[]>([])
   const [model, setModel] = useState('')
+  const [modelsError, setModelsError] = useState<null | string>(null)
   const [activeSkillIds, setActiveSkillIds] = useState<string[]>([])
   const [lockedSkills, setLockedSkills] = useState<null | string[]>(null)
 
@@ -270,8 +271,12 @@ export function CopilotTab() {
       .then(result => {
         setModels(result.models)
         setModel(current => current || result.defaultModel)
+        setModelsError(null)
       })
-      .catch(() => setModels([]))
+      .catch(error => {
+        setModels([])
+        setModelsError(error instanceof Error ? error.message : 'Could not load chat models.')
+      })
   }, [bridge, refreshConversations])
 
   // "Run natively" hand-off from the Org skills tab.
@@ -613,7 +618,13 @@ export function CopilotTab() {
         {/* Composer */}
         <div className="border-t border-(--ui-border-primary) px-4 py-3">
           <div className="mx-auto max-w-3xl space-y-2">
+            {modelsError && (
+              <p className="rounded-md border border-amber-500/40 bg-amber-950/30 px-3 py-2 text-xs text-amber-100" role="alert">
+                {modelsError} Open Connect → LiteLLM, save a key, then reopen Copilot.
+              </p>
+            )}
             <Textarea
+              aria-label="Copilot message"
               className="min-h-16 resize-none text-sm"
               onChange={event => setDraft(event.target.value)}
               onKeyDown={event => {
@@ -627,10 +638,13 @@ export function CopilotTab() {
             />
             <div className="flex items-center gap-2">
               <select
+                aria-label="Model"
                 className="h-6 rounded border border-(--ui-border-primary) bg-(--ui-bg-quinary) px-1.5 text-[0.7rem]"
+                disabled={!models.length}
                 onChange={event => setModel(event.target.value)}
                 value={model}
               >
+                {!models.length && <option value="">No models loaded</option>}
                 {models.map(m => (
                   <option key={m.id} value={m.id}>
                     {m.label}
@@ -640,7 +654,7 @@ export function CopilotTab() {
               <span className="min-w-0 flex-1 truncate text-[0.65rem] text-muted-foreground/60">
                 Writes require the Confirm button — the model cannot approve itself.
               </span>
-              <Button disabled={busy || !draft.trim()} onClick={() => void send(draft)} size="sm">
+              <Button disabled={busy || !draft.trim() || !models.length || !model} onClick={() => void send(draft)} size="sm">
                 {busy ? <Codicon name="loading~spin" size="0.8125rem" /> : <Codicon name="send" size="0.8125rem" />}
                 Send
               </Button>

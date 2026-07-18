@@ -1,6 +1,7 @@
 import { useStore } from '@nanostores/react'
 import { type MutableRefObject, useCallback, useEffect, useRef } from 'react'
 
+import { sanitizeDesktopProvider } from '@/lib/brand'
 import type { ChatMessage } from '@/lib/chat-messages'
 import { preserveLocalAssistantErrors } from '@/lib/chat-messages'
 import { createClientSessionState } from '@/lib/chat-runtime'
@@ -57,7 +58,7 @@ interface SessionStateCacheOptions {
 
 function syncRuntimeMetadataToView(state: ClientSessionState) {
   setCurrentModel(state.model ?? '')
-  setCurrentProvider(state.provider ?? '')
+  setCurrentProvider(sanitizeDesktopProvider(state.provider))
   setCurrentReasoningEffort(state.reasoningEffort ?? '')
   setCurrentServiceTier(state.serviceTier ?? '')
   setCurrentFastMode(state.fast ?? false)

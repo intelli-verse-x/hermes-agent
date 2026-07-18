@@ -192,8 +192,21 @@ export function SetupTab() {
             />
           </label>
           <Button
-            disabled={!settings?.cognitoDomain || !settings.cognitoClientId || !settings.cognitoIssuer}
+            disabled={!(cognitoDomain.trim() || settings?.cognitoDomain) || !(cognitoClientId.trim() || settings?.cognitoClientId) || !(cognitoIssuer.trim() || settings?.cognitoIssuer)}
             onClick={() => {
+              const readyLocally =
+                Boolean(cognitoDomain.trim()) && Boolean(cognitoClientId.trim()) && Boolean(cognitoIssuer.trim())
+              const alreadySaved =
+                Boolean(settings?.cognitoDomain) &&
+                Boolean(settings?.cognitoClientId) &&
+                Boolean(settings?.cognitoIssuer)
+
+              if (!alreadySaved && readyLocally) {
+                setAccountStatus('Save Cognito fields first, then Connect account.')
+
+                return
+              }
+
               setAccountStatus('Opening secure sign-in…')
               void window.hermesDesktop.quizverse?.authStart()
                 .then(() => setAccountStatus('Complete sign-in in your browser.'))

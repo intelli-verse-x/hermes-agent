@@ -4969,6 +4969,20 @@ def run_conversation(
                     )
                     if _truly_empty and (not _has_structured or _prefill_exhausted) and agent._empty_content_retries < 3:
                         agent._empty_content_retries += 1
+                        # Self-heal: empty streams (LiteLLM in=0/out=0) often
+                        # succeed on the non-stream path. Flip for remaining
+                        # retries in this session (desktop always streams by
+                        # default because stream consumers are registered).
+                        if not getattr(agent, "_disable_streaming", False):
+                            agent._disable_streaming = True
+                            logger.warning(
+                                "Empty response while streaming — switching "
+                                "to non-streaming for retries (model=%s)",
+                                agent.model,
+                            )
+                            agent._buffer_status(
+                                "⚠️ Empty stream — retrying without streaming"
+                            )
                         logger.warning(
                             "Empty response (no content or reasoning) — "
                             "retry %d/3 (model=%s)",

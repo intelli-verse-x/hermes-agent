@@ -50,6 +50,7 @@ export function ToolsTab({ query }: { query: string }) {
   const [selection, setSelection] = useState<Selection>(null)
   const [busy, setBusy] = useState(false)
   const [health, setHealth] = useState<Record<string, IxMcpTileHealth>>({})
+  const [healthError, setHealthError] = useState<null | string>(null)
   const [connectorForm, setConnectorForm] = useState<ConnectorFormState>(EMPTY_CONNECTOR_FORM)
 
   const tiles = sync?.tiles.length ? sync.tiles : BUNDLED_TILES
@@ -66,8 +67,9 @@ export function ToolsTab({ query }: { query: string }) {
         const { results } = await bridge.mcpHealth(refresh)
 
         setHealth(Object.fromEntries(results.map(result => [result.tileId, result])))
-      } catch {
-        // Lamps just stay unknown until the next probe succeeds.
+        setHealthError(null)
+      } catch (error) {
+        setHealthError(error instanceof Error ? error.message : 'MCP health probe failed — lamps unknown.')
       }
     },
     [bridge]
@@ -207,6 +209,11 @@ export function ToolsTab({ query }: { query: string }) {
           />
         }
       >
+        {healthError && (
+          <p className="mx-2 mb-1 rounded border border-amber-500/40 bg-amber-950/30 px-2 py-1 text-[0.65rem] text-amber-100" role="status">
+            {healthError}
+          </p>
+        )}
         {groups.map(group => (
           <div key={group}>
             <PanelSectionLabel className="px-2 pb-0.5 pt-2">{group}</PanelSectionLabel>

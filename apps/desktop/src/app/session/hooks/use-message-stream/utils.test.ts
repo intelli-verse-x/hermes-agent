@@ -4,8 +4,10 @@ import type { GatewayEventPayload } from '@/lib/chat-messages'
 
 import {
   completionErrorText,
+  EMPTY_ASSISTANT_REPLY,
   delegateTaskPayloads,
   hasSessionInfoStatePatch,
+  resolveCompletionError,
   sessionInfoStatePatch,
   toTodoPayload
 } from './utils'
@@ -19,6 +21,19 @@ describe('completionErrorText', () => {
     expect(completionErrorText('Gateway error: nope')).toMatch(/^Gateway error/)
     expect(completionErrorText('here is your answer')).toBeNull()
     expect(completionErrorText('   ')).toBeNull()
+  })
+
+  it('maps empty-marker payloads to a recoverable error', () => {
+    expect(completionErrorText('(empty)')).toBe(EMPTY_ASSISTANT_REPLY)
+    expect(completionErrorText('⚠️ No reply: model returned nothing')).toMatch(/^⚠️\s*No reply/)
+  })
+})
+
+describe('resolveCompletionError', () => {
+  it('treats blank completions as recoverable empty-turn errors', () => {
+    expect(resolveCompletionError('')).toBe(EMPTY_ASSISTANT_REPLY)
+    expect(resolveCompletionError('   ')).toBe(EMPTY_ASSISTANT_REPLY)
+    expect(resolveCompletionError('All good')).toBeNull()
   })
 })
 
