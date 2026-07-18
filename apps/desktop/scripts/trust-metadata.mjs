@@ -9,7 +9,7 @@ import YAML from 'yaml'
 
 import { loadBrand } from './apply-brand.mjs'
 
-export const TRUST_SCHEMA_VERSION = 1
+export const TRUST_SCHEMA_VERSION = 2
 
 export const PLATFORM_POLICIES = {
   linux: {
@@ -55,16 +55,70 @@ function normalizeSignerId(os, value) {
   return normalized
 }
 
+export function normalizeTrustPublicKey(value) {
+  const normalized = required(value, 'trust metadata public key').replace(/\s/g, '')
+  const bytes = Buffer.from(normalized, 'base64')
+
+  if (!bytes.length || bytes.toString('base64') !== normalized) {
+    throw new Error('Invalid trust metadata public key')
+  }
+
+  const key = crypto.createPublicKey({ format: 'der', key: bytes, type: 'spki' })
+
+  if (key.asymmetricKeyType !== 'rsa' || Number(key.asymmetricKeyDetails?.modulusLength || 0) < 3072) {
+    throw new Error('Trust metadata public key must be RSA with at least 3072 bits')
+  }
+
+  return normalized
+}
+
+export function loadReleasePolicy(brandId) {
+  const policyPath = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../release-signers.json')
+  const releaseSigners = JSON.parse(fs.readFileSync(policyPath, 'utf8'))
+  const policy = releaseSigners?.[brandId]
+
+  if (!policy) throw new Error(`Missing release policy for ${brandId}`)
+
+  return policy
+}
+
 export function loadExpectedSignerId(brandId, os) {
   const policy = PLATFORM_POLICIES[os]
 
   if (!policy) throw new Error(`Unsupported TRUST_OS "${os}"`)
   if (!policy.expectedSignerField) return null
 
-  const policyPath = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../release-signers.json')
-  const releaseSigners = JSON.parse(fs.readFileSync(policyPath, 'utf8'))
+  return normalizeSignerId(os, loadReleasePolicy(brandId)?.[policy.expectedSignerField])
+}
 
-  return normalizeSignerId(os, releaseSigners?.[brandId]?.[policy.expectedSignerField])
+export function trustPublicKeySha256(publicKeySpki) {
+  return crypto.createHash('sha256').update(Buffer.from(normalizeTrustPublicKey(publicKeySpki), 'base64')).digest('hex')
+}
+
+export function signTrustMetadata(text, privateKeyPem, expectedPublicKeySpki) {
+  const expected = normalizeTrustPublicKey(expectedPublicKeySpki)
+  const privateKey = crypto.createPrivateKey(required(privateKeyPem, 'TRUST_METADATA_PRIVATE_KEY_PEM'))
+  const actual = crypto.createPublicKey(privateKey).export({ format: 'der', type: 'spki' }).toString('base64')
+
+  if (actual !== expected) {
+    throw new Error('Trust metadata private key does not match the source-controlled public key')
+  }
+
+  return crypto.sign('sha256', Buffer.from(text), privateKey).toString('base64')
+}
+
+export function verifyTrustMetadataSignature(text, signature, publicKeySpki) {
+  try {
+    const publicKey = crypto.createPublicKey({
+      format: 'der',
+      key: Buffer.from(normalizeTrustPublicKey(publicKeySpki), 'base64'),
+      type: 'spki'
+    })
+
+    return crypto.verify('sha256', Buffer.from(text), publicKey, Buffer.from(required(signature, 'signature'), 'base64'))
+  } catch {
+    return false
+  }
 }
 
 export function readChannel(releaseDir, channelFile) {
@@ -116,7 +170,7 @@ export function readChannel(releaseDir, channelFile) {
 
 export function validateTrustMetadata(
   trust,
-  { brand, channelFile, channelSha512, expectedSignerId, files, os, version }
+  { brand, channelFile, channelSha512, expectedSignerId, files, os, releasePolicy, version }
 ) {
   if (trust?.schemaVersion !== TRUST_SCHEMA_VERSION) return false
   if (trust?.brand?.id !== brand.id || trust?.brand?.productName !== brand.productName) return false
@@ -147,6 +201,23 @@ export function validateTrustMetadata(
   }
 
   if (trust?.channel?.file !== channelFile || trust?.channel?.sha512 !== channelSha512) return false
+  let signingKeySha256
+
+  try {
+    signingKeySha256 = trustPublicKeySha256(releasePolicy?.trustMetadataPublicKeySpki)
+  } catch {
+    return false
+  }
+
+  if (trust?.provenance?.repository !== releasePolicy?.provenanceRepository) return false
+  if (trust?.provenance?.workflow !== releasePolicy?.provenanceWorkflow) return false
+  if (trust?.provenance?.signingKeySha256 !== signingKeySha256) return false
+  if (
+    !String(trust?.provenance?.workflowRef || '').startsWith(
+      `${releasePolicy.provenanceRepository}/${releasePolicy.provenanceWorkflow}@refs/`
+    )
+  )
+    return false
   if (!/^[0-9a-f]{40}$/i.test(trust?.provenance?.releaseCommit || '')) return false
   if (!/^\d+$/.test(String(trust?.provenance?.workflowRunId || ''))) return false
   if (!Array.isArray(trust?.artifacts) || trust.artifacts.length !== files.length) return false
@@ -167,12 +238,25 @@ export function generateTrustMetadata({
   runAttempt,
   runId,
   signer,
+  releasePolicy,
+  repository,
+  workflowRef,
   expectedSignerId
 }) {
   const policy = PLATFORM_POLICIES[os]
 
   if (!policy) {
     throw new Error(`Unsupported TRUST_OS "${os}"`)
+  }
+  if (repository !== releasePolicy?.provenanceRepository) {
+    throw new Error('GITHUB_REPOSITORY does not match the source-controlled provenance policy')
+  }
+  if (
+    !String(workflowRef || '').startsWith(
+      `${releasePolicy.provenanceRepository}/${releasePolicy.provenanceWorkflow}@refs/`
+    )
+  ) {
+    throw new Error('GITHUB_WORKFLOW_REF does not match the source-controlled provenance policy')
   }
 
   if (signer?.method !== policy.method) {
@@ -211,6 +295,10 @@ export function generateTrustMetadata({
     platform: os,
     provenance: {
       releaseCommit: required(commit, 'GITHUB_SHA'),
+      repository: required(repository, 'GITHUB_REPOSITORY'),
+      signingKeySha256: trustPublicKeySha256(releasePolicy?.trustMetadataPublicKeySpki),
+      workflow: required(releasePolicy?.provenanceWorkflow, 'provenance workflow policy'),
+      workflowRef: required(workflowRef, 'GITHUB_WORKFLOW_REF'),
       workflowRunAttempt: Number(required(runAttempt, 'GITHUB_RUN_ATTEMPT')),
       workflowRunId: required(runId, 'GITHUB_RUN_ID')
     },
@@ -231,19 +319,30 @@ function main() {
   const signerPath = path.join(releaseDir, 'trust-signer.json')
   const signer = JSON.parse(fs.readFileSync(signerPath, 'utf8').replace(/^\uFEFF/, ''))
   const brand = loadBrand()
+  const releasePolicy = loadReleasePolicy(brand.id)
   const trust = generateTrustMetadata({
     brand,
     commit: process.env.GITHUB_SHA,
     expectedSignerId: loadExpectedSignerId(brand.id, os),
     os,
+    releasePolicy,
     releaseDir,
+    repository: process.env.GITHUB_REPOSITORY,
     runAttempt: process.env.GITHUB_RUN_ATTEMPT,
     runId: process.env.GITHUB_RUN_ID,
-    signer
+    signer,
+    workflowRef: process.env.GITHUB_WORKFLOW_REF
   })
   const output = path.join(releaseDir, `trust-${os}.json`)
+  const text = `${JSON.stringify(trust, null, 2)}\n`
+  const signature = signTrustMetadata(
+    text,
+    process.env.TRUST_METADATA_PRIVATE_KEY_PEM,
+    releasePolicy.trustMetadataPublicKeySpki
+  )
 
-  fs.writeFileSync(output, `${JSON.stringify(trust, null, 2)}\n`, 'utf8')
+  fs.writeFileSync(output, text, 'utf8')
+  fs.writeFileSync(`${output}.sig`, `${signature}\n`, 'utf8')
   console.log(`[trust-metadata] wrote ${output} for ${trust.brand.id} v${trust.version}`)
 }
 

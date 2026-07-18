@@ -35,8 +35,8 @@ jobs:
         run: |
           ! grep -Eiq 'xattr -cr|run anyway|open anyway|IVX Admin Desktop' \
             apps/desktop/download-site/index.html
-          grep -Fq 'trust.schemaVersion === 1' apps/desktop/download-site/index.html
-          grep -Fq 'Pending release trust verification' apps/desktop/download-site/index.html
+          grep -Fq 'trust.schemaVersion === 2' apps/desktop/download-site/index.html
+          grep -Fq 'Downloads disabled: missing' apps/desktop/download-site/index.html
           grep -Fq 'do not bypass Gatekeeper' apps/desktop/download-site/index.html
           node apps/desktop/scripts/check-release-signers.mjs
 
@@ -63,4 +63,4 @@ jobs:
           [ "$actual" = "$expected" ]
           ! grep -Eiq 'xattr -cr|run anyway|open anyway|IVX Admin Desktop' \
             /tmp/deployed-download.html
-          grep -Fq 'trust.schemaVersion === 1' /tmp/deployed-download.html
+          grep -Fq 'trust.schemaVersion === 2' /tmp/deployed-download.html

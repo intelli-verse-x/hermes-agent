@@ -30,7 +30,13 @@ const packageSource = read('package.json')
 
 const releaseSigners = JSON.parse(read('release-signers.json')) as Record<
   string,
-  { appleTeamId: string; windowsSignerSha256: string }
+  {
+    appleTeamId: string
+    provenanceRepository: string
+    provenanceWorkflow: string
+    trustMetadataPublicKeySpki: string
+    windowsSignerSha256: string
+  }
 >
 
 const compact = (source: string) => source.replace(/\s+/g, ' ')
@@ -47,6 +53,8 @@ describe('IVX Agency ecosystem story', () => {
 
   it('uses precise per-engine availability labels', () => {
     expect(indexText).toContain('connected per-App setup')
+    expect(indexText).toContain('ContentX + Postiz:')
+    expect(indexText).toContain('connected workspace and channel publishing')
     expect(indexText).toContain('Memory automation rolling out')
     expect(indexText).toContain('connected deployment')
     expect(indexText).toContain('kiosk Worlds approved pilots')
@@ -119,16 +127,21 @@ describe('IVX Agency ecosystem story', () => {
     expect(downloadSource).not.toContain('IVX Admin Desktop')
     expect(downloadSource).not.toContain('#ivx-admin')
     expect(downloadText).toContain('Desktop is the operator surface')
-    expect(downloadText).toContain('trust.schemaVersion === 1')
+    expect(downloadText).toContain('trust.schemaVersion === 2')
     expect(downloadText).toContain('trust.channel?.sha512 === (await sha512Base64(manifestText))')
     expect(downloadText).toContain('artifact?.sha512 === file.sha512')
     expect(downloadText).toContain('expectedSignerValid(os, brand.id, trust.verification?.signer)')
+    expect(downloadText).toContain(
+      'verifyTrustMetadataSignature(trustText, signature, releasePolicy.trustMetadataPublicKeySpki)'
+    )
+    expect(downloadText).toContain('PLATFORMS.every(os => results[os]?.version === version && results[os]?.trusted)')
+    expect(downloadText).toContain('Downloads disabled: missing')
     expect(downloadText).toContain('actualId === teamId')
     expect(downloadText).toContain('actualId === certificateSha256')
 
     for (const [brandId, signer] of Object.entries(releaseSigners)) {
       expect(downloadText).toContain(
-        `${brandId === 'ix-agency' ? "'ix-agency'" : brandId}: Object.freeze({ appleTeamId: '${signer.appleTeamId}', windowsSignerSha256: '${signer.windowsSignerSha256}' })`
+        `${brandId === 'ix-agency' ? "'ix-agency'" : brandId}: Object.freeze({ appleTeamId: '${signer.appleTeamId}', windowsSignerSha256: '${signer.windowsSignerSha256}', trustMetadataPublicKeySpki: '${signer.trustMetadataPublicKeySpki}', provenanceRepository: '${signer.provenanceRepository}', provenanceWorkflow: '${signer.provenanceWorkflow}' })`
       )
     }
   })

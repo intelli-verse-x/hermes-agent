@@ -1085,6 +1085,7 @@
       // goes stale: every new release CI publishes is picked up automatically.
       const FEED = 'ix-agency/'
       const MANIFESTS = { mac: 'latest-mac.yml', win: 'latest.yml', linux: 'latest-linux.yml' }
+      const PLATFORMS = Object.freeze(Object.keys(MANIFESTS))
 
       const EXT_LABEL = {
         dmg: 'Disk image (.dmg)',
@@ -1150,9 +1151,21 @@
       // trust documents. Empty values keep downloads disabled until a code
       // owner pins identities established out of band.
       const EXPECTED_RELEASE_SIGNERS = Object.freeze({
-        'ix-agency': Object.freeze({ appleTeamId: '', windowsSignerSha256: '' }),
-        quizverse: Object.freeze({ appleTeamId: '', windowsSignerSha256: '' })
+        'ix-agency': Object.freeze({ appleTeamId: '', windowsSignerSha256: '', trustMetadataPublicKeySpki: '', provenanceRepository: 'intelli-verse-x/hermes-agent', provenanceWorkflow: '.github/workflows/desktop-release.yml' }),
+        quizverse: Object.freeze({ appleTeamId: '', windowsSignerSha256: '', trustMetadataPublicKeySpki: '', provenanceRepository: 'intelli-verse-x/hermes-agent', provenanceWorkflow: '.github/workflows/desktop-release.yml' })
       })
+
+      function releasePolicyIssue(brandId) {
+        const expected = EXPECTED_RELEASE_SIGNERS[brandId]
+        const missing = []
+        if (!/^[A-Z0-9]{10}$/.test(String(expected?.appleTeamId || '').toUpperCase())) missing.push('Apple signer approval')
+        if (!/^[A-F0-9]{64}$/.test(String(expected?.windowsSignerSha256 || '').replace(/\s/g, '').toUpperCase()))
+          missing.push('Windows signer approval')
+        if (!expected?.trustMetadataPublicKeySpki) missing.push('provenance signing-key config')
+        if (expected?.provenanceRepository !== 'intelli-verse-x/hermes-agent' || expected?.provenanceWorkflow !== '.github/workflows/desktop-release.yml')
+          missing.push('provenance policy config')
+        return missing.length ? `Downloads disabled: missing ${missing.join(', ')}.` : ''
+      }
 
       function expectedSignerValid(os, brandId, signer) {
         const expected = EXPECTED_RELEASE_SIGNERS[brandId]
@@ -1179,6 +1192,36 @@
         return false
       }
 
+      function base64Bytes(value) {
+        const binary = atob(String(value || '').replace(/\s/g, ''))
+        return Uint8Array.from(binary, character => character.charCodeAt(0))
+      }
+
+      async function verifyTrustMetadataSignature(trustText, signature, publicKeySpki) {
+        try {
+          const key = await crypto.subtle.importKey(
+            'spki',
+            base64Bytes(publicKeySpki),
+            { hash: 'SHA-256', name: 'RSASSA-PKCS1-v1_5' },
+            false,
+            ['verify']
+          )
+          return crypto.subtle.verify(
+            'RSASSA-PKCS1-v1_5',
+            key,
+            base64Bytes(signature),
+            new TextEncoder().encode(trustText)
+          )
+        } catch {
+          return false
+        }
+      }
+
+      async function sha256HexBase64(value) {
+        const digest = await crypto.subtle.digest('SHA-256', base64Bytes(value))
+        return [...new Uint8Array(digest)].map(byte => byte.toString(16).padStart(2, '0')).join('')
+      }
+
       async function sha512Base64(text) {
         const digest = await crypto.subtle.digest('SHA-512', new TextEncoder().encode(text))
         const bytes = new Uint8Array(digest)
@@ -1190,12 +1233,24 @@
       }
 
       async function loadTrust(feed, os, brand, manifestFile, manifestText, manifest) {
-        if (!manifest.version || !manifest.files.length) return false
+        if (!manifest.version || !manifest.files.length) return { reason: 'No published installer', trusted: false }
+        const releasePolicy = EXPECTED_RELEASE_SIGNERS[brand.id]
+        const policyIssue = releasePolicyIssue(brand.id)
+        if (policyIssue) return { reason: policyIssue, trusted: false }
         try {
-          const response = await fetch(feed + 'trust-' + os + '.json', { cache: 'no-store' })
-          if (!response.ok) return false
-          const trust = await response.json()
+          const [response, signatureResponse] = await Promise.all([
+            fetch(feed + 'trust-' + os + '.json', { cache: 'no-store' }),
+            fetch(feed + 'trust-' + os + '.json.sig', { cache: 'no-store' })
+          ])
+          if (!response.ok || !signatureResponse.ok)
+            return { reason: 'Release trust proof is not published', trusted: false }
+          const trustText = await response.text()
+          const signature = await signatureResponse.text()
+          if (!await verifyTrustMetadataSignature(trustText, signature, releasePolicy.trustMetadataPublicKeySpki))
+            return { reason: 'Release trust proof did not independently verify', trusted: false }
+          const trust = JSON.parse(trustText)
           const policy = TRUST_POLICIES[os]
+          const signingKeySha256 = await sha256HexBase64(releasePolicy.trustMetadataPublicKeySpki)
           const signerValid = expectedSignerValid(os, brand.id, trust.verification?.signer)
           const artifactsValid =
             Array.isArray(trust.artifacts) &&
@@ -1206,8 +1261,8 @@
               return artifact?.url === file.url && artifact?.size === file.size && artifact?.sha512 === file.sha512
             })
 
-          return (
-            trust.schemaVersion === 1 &&
+          const trusted =
+            trust.schemaVersion === 2 &&
             trust.brand?.id === brand.id &&
             trust.brand?.productName === brand.productName &&
             trust.brand?.appId === brand.appId &&
@@ -1219,13 +1274,27 @@
             signerValid &&
             trust.channel?.file === manifestFile &&
             trust.channel?.sha512 === (await sha512Base64(manifestText)) &&
+            trust.provenance?.repository === releasePolicy.provenanceRepository &&
+            trust.provenance?.workflow === releasePolicy.provenanceWorkflow &&
+            trust.provenance?.signingKeySha256 === signingKeySha256 &&
+            String(trust.provenance?.workflowRef || '').startsWith(
+              `${releasePolicy.provenanceRepository}/${releasePolicy.provenanceWorkflow}@refs/`
+            ) &&
             /^[0-9a-f]{40}$/i.test(trust.provenance?.releaseCommit || '') &&
             /^\d+$/.test(String(trust.provenance?.workflowRunId || '')) &&
             artifactsValid
-          )
+
+          return {
+            reason: trusted ? '' : 'Release trust proof did not match the pinned signer and provenance policy',
+            trusted
+          }
         } catch {
-          return false
+          return { reason: 'Release trust proof could not be verified', trusted: false }
         }
+      }
+
+      function brandReleaseReady(results, version) {
+        return Boolean(version) && PLATFORMS.every(os => results[os]?.version === version && results[os]?.trusted)
       }
 
       function fileRow(f, feed = FEED) {
@@ -1279,7 +1348,7 @@
               if (!res.ok) throw new Error('HTTP ' + res.status)
               const manifestText = await res.text()
               results[os] = parseManifest(manifestText)
-              results[os].trusted = await loadTrust(
+              const trustResult = await loadTrust(
                 FEED,
                 os,
                 { appId: 'ai.intelli-verse-x.ix-agency', id: 'ix-agency', productName: 'IVX Agency' },
@@ -1287,6 +1356,8 @@
                 manifestText,
                 results[os]
               )
+              results[os].trusted = trustResult.trusted
+              results[os].trustReason = trustResult.reason
             } catch (e) {
               results[os] = { version: '', releaseDate: '', files: [], error: String(e) }
             }
@@ -1302,6 +1373,7 @@
           const d = new Date(rd)
           if (!isNaN(d)) document.getElementById('reldate').textContent = '· ' + d.toLocaleDateString()
         }
+        const releaseReady = brandReleaseReady(results, ver)
 
         // Per-OS cards.
         const cards = { mac: 'card-mac', win: 'card-win', linux: 'card-linux' }
@@ -1309,11 +1381,12 @@
           const holder = document.querySelector('#' + id + ' [data-files]')
           holder.textContent = ''
           const r = results[os]
-          if (r.error || !r.files.length || !r.trusted) {
+          if (r.error || !r.files.length || !r.trusted || !releaseReady) {
             const e = document.createElement('div')
             e.className = 'err'
-            e.textContent =
-              r.files.length && !r.trusted ? 'Pending release trust verification' : 'Temporarily unavailable'
+            e.textContent = r.files.length
+              ? r.trustReason || 'Downloads disabled until every platform release independently verifies.'
+              : 'Temporarily unavailable'
             holder.append(e)
             continue
           }
@@ -1330,7 +1403,7 @@
         const os = detectOS()
         const meta = OS_META[os]
         const btn = document.getElementById('primary-btn')
-        if (os && meta && results[os] && results[os].files.length && results[os].trusted) {
+        if (releaseReady && os && meta && results[os] && results[os].files.length && results[os].trusted) {
           const pick = results[os].files.find(f => extOf(f.url) === PRIMARY_EXT[os]) || results[os].files[0]
           document.getElementById('primary-ico').textContent = meta.ico
           document.getElementById('primary-title').textContent = meta.title
@@ -1355,7 +1428,7 @@
               if (!res.ok) throw new Error('HTTP ' + res.status)
               const manifestText = await res.text()
               results[os] = parseManifest(manifestText)
-              results[os].trusted = await loadTrust(
+              const trustResult = await loadTrust(
                 feed,
                 os,
                 { appId: 'ai.intelli-verse-x.quizverse', id: 'quizverse', productName: 'QuizVerse' },
@@ -1363,6 +1436,8 @@
                 manifestText,
                 results[os]
               )
+              results[os].trusted = trustResult.trusted
+              results[os].trustReason = trustResult.reason
             } catch (e) {
               results[os] = { version: '', releaseDate: '', files: [], error: String(e) }
             }
@@ -1374,7 +1449,8 @@
         const version = document.getElementById('qv-version')
         const dot = document.getElementById('qv-version-dot')
 
-        const trustedRelease = Object.values(results).some(result => result.version === ver && result.trusted)
+        const trustedRelease =
+          Boolean(ver) && PLATFORMS.every(os => results[os]?.version === ver && results[os]?.trusted)
         if (ver && trustedRelease) {
           version.textContent = ver
           document.getElementById('qv-foot-ver').textContent = 'v' + ver
@@ -1387,7 +1463,8 @@
           dot.style.background = 'var(--warn)'
           availability.dataset.state = 'waiting'
           availability.textContent = ver
-            ? 'QuizVerse artifacts exist but no installer is shown until its release trust check passes.'
+            ? releasePolicyIssue('quizverse') ||
+              'QuizVerse artifacts exist, but downloads stay disabled until every platform release independently verifies.'
             : 'QuizVerse Desktop has not been published to the official release feed yet. No download link is available. Return to this page after the release is announced.'
         }
 
@@ -1402,11 +1479,12 @@
           const holder = document.querySelector('#' + id + ' [data-files]')
           holder.textContent = ''
           const result = results[os]
-          if (result.error || !result.files.length || !result.trusted) {
+          if (result.error || !result.files.length || !result.trusted || !trustedRelease) {
             const message = document.createElement('div')
             message.className = 'err'
-            message.textContent =
-              result.files.length && !result.trusted ? 'Pending release trust verification' : 'No published installer'
+            message.textContent = result.files.length
+              ? result.trustReason || 'Downloads disabled until every platform release independently verifies.'
+              : 'No published installer'
             holder.append(message)
             continue
           }
@@ -1421,7 +1499,7 @@
         const os = detectOS()
         const meta = OS_META[os]
         const btn = document.getElementById('qv-primary-btn')
-        if (os && meta && results[os] && results[os].files.length && results[os].trusted) {
+        if (trustedRelease && os && meta && results[os] && results[os].files.length && results[os].trusted) {
           const pick =
             results[os].files.find(artifact => extOf(artifact.url) === PRIMARY_EXT[os]) || results[os].files[0]
           document.getElementById('qv-primary-ico').textContent = meta.ico

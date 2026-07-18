@@ -1,16 +1,38 @@
 import assert from 'node:assert/strict'
+import crypto from 'node:crypto'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import test from 'node:test'
 
-import { generateTrustMetadata, sha512Base64, validateTrustMetadata } from './trust-metadata.mjs'
+import {
+  generateTrustMetadata,
+  sha512Base64,
+  signTrustMetadata,
+  validateTrustMetadata,
+  verifyTrustMetadataSignature
+} from './trust-metadata.mjs'
 
 const brand = {
   appId: 'ai.intelli-verse-x.ix-agency',
   author: 'Intelliverse X',
   id: 'ix-agency',
   productName: 'IVX Agency'
+}
+const { privateKey, publicKey } = crypto.generateKeyPairSync('rsa', {
+  modulusLength: 3072,
+  privateKeyEncoding: { format: 'pem', type: 'pkcs8' },
+  publicKeyEncoding: { format: 'der', type: 'spki' }
+})
+const releasePolicy = {
+  provenanceRepository: 'intelli-verse-x/hermes-agent',
+  provenanceWorkflow: '.github/workflows/desktop-release.yml',
+  trustMetadataPublicKeySpki: publicKey.toString('base64')
+}
+const provenance = {
+  releasePolicy,
+  repository: releasePolicy.provenanceRepository,
+  workflowRef: `${releasePolicy.provenanceRepository}/${releasePolicy.provenanceWorkflow}@refs/tags/ix-desktop-v1.2.3`
 }
 
 test('generates artifact-exact signer-pinned trust metadata', () => {
@@ -39,6 +61,7 @@ test('generates artifact-exact signer-pinned trust metadata', () => {
       expectedSignerId: 'TEAMID1234',
       generatedAt: '2026-07-17T00:01:00.000Z',
       os: 'mac',
+      ...provenance,
       releaseDir,
       runAttempt: '1',
       runId: '12345',
@@ -55,6 +78,7 @@ test('generates artifact-exact signer-pinned trust metadata', () => {
       expectedSignerId: 'TEAMID1234',
       files: [{ sha512: sha512Base64(artifact), size: artifact.byteLength, url }],
       os: 'mac',
+      releasePolicy,
       version: '1.2.3'
     }
 
@@ -91,6 +115,7 @@ test('generates artifact-exact signer-pinned trust metadata', () => {
           commit: '0123456789abcdef0123456789abcdef01234567',
           expectedSignerId: 'OTHERID123',
           os: 'mac',
+          ...provenance,
           releaseDir,
           runAttempt: '1',
           runId: '12345',
@@ -114,6 +139,7 @@ test('refuses a signer method that does not match the platform policy', () => {
         brand,
         commit: '0123456789abcdef0123456789abcdef01234567',
         os: 'mac',
+        ...provenance,
         releaseDir: '/unused',
         runAttempt: '1',
         runId: '12345',
@@ -146,6 +172,7 @@ test('requires the source-controlled Windows certificate SHA-256', () => {
       commit: '0123456789abcdef0123456789abcdef01234567',
       expectedSignerId,
       os: 'win',
+      ...provenance,
       releaseDir,
       runAttempt: '1',
       runId: '12345',
@@ -162,6 +189,7 @@ test('requires the source-controlled Windows certificate SHA-256', () => {
       expectedSignerId,
       files: [{ sha512: sha512Base64(artifact), size: artifact.byteLength, url }],
       os: 'win',
+      releasePolicy,
       version: '1.2.3'
     }
 
@@ -170,4 +198,36 @@ test('requires the source-controlled Windows certificate SHA-256', () => {
   } finally {
     fs.rmSync(releaseDir, { force: true, recursive: true })
   }
+})
+
+test('requires an independently pinned signature and provenance policy', () => {
+  const text = '{"schemaVersion":2}\n'
+  const signature = signTrustMetadata(text, privateKey, releasePolicy.trustMetadataPublicKeySpki)
+
+  assert.equal(verifyTrustMetadataSignature(text, signature, releasePolicy.trustMetadataPublicKeySpki), true)
+  assert.equal(
+    verifyTrustMetadataSignature('{"schemaVersion":2,"tampered":true}\n', signature, releasePolicy.trustMetadataPublicKeySpki),
+    false
+  )
+  assert.equal(verifyTrustMetadataSignature(text, signature, ''), false)
+  assert.throws(
+    () =>
+      generateTrustMetadata({
+        brand,
+        commit: '0123456789abcdef0123456789abcdef01234567',
+        expectedSignerId: 'TEAMID1234',
+        os: 'mac',
+        ...provenance,
+        releaseDir: '/unused',
+        repository: 'attacker/example',
+        runAttempt: '1',
+        runId: '12345',
+        signer: {
+          id: 'TEAMID1234',
+          method: 'apple-developer-id',
+          subject: 'Developer ID Application: Intelliverse X (TEAMID1234)'
+        }
+      }),
+    /does not match the source-controlled provenance policy/
+  )
 })

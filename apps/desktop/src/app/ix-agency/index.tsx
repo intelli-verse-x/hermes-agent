@@ -91,8 +91,8 @@ export function IxAgencyView(props: React.ComponentProps<'section'>) {
             pilots.
           </li>
           <li>
-            <strong className="text-foreground">ContentX + Postiz:</strong> publishing live; Memory automation rolling
-            out.
+            <strong className="text-foreground">ContentX + Postiz:</strong> connected workspace and channel publishing;
+            Memory automation rolling out.
           </li>
           <li>
             <strong className="text-foreground">KioskX:</strong> connected deployment; kiosk Worlds approved pilots.

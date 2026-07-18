@@ -18,9 +18,16 @@
 // DESKTOP_BRAND's manifest feed; UPDATE_FEED_URL overrides it.
 
 import { loadBrand } from './apply-brand.mjs'
-import { loadExpectedSignerId, sha512Base64, validateTrustMetadata } from './trust-metadata.mjs'
+import {
+  loadExpectedSignerId,
+  loadReleasePolicy,
+  sha512Base64,
+  validateTrustMetadata,
+  verifyTrustMetadataSignature
+} from './trust-metadata.mjs'
 
 const brand = loadBrand()
+const releasePolicy = loadReleasePolicy(brand.id)
 const FEED = (process.env.UPDATE_FEED_URL || brand.updateFeedUrl).replace(/\/+$/, '')
 const EXPECT_VERSION = (process.env.EXPECT_VERSION || '').trim()
 
@@ -85,7 +92,15 @@ for (const { os, file, trustFile } of CHANNELS) {
     if (trustResponse.status !== 200) {
       fail(`${trustFile} -> HTTP ${trustResponse.status}`)
     } else {
-      const trust = await trustResponse.json()
+      const signatureResponse = await fetch(`${FEED}/${trustFile}.sig`, { cache: 'no-store' })
+      const trustText = await trustResponse.text()
+      const signature = signatureResponse.status === 200 ? await signatureResponse.text() : ''
+      const signatureValid = verifyTrustMetadataSignature(
+        trustText,
+        signature,
+        releasePolicy.trustMetadataPublicKeySpki
+      )
+      const trust = JSON.parse(trustText)
       const valid = validateTrustMetadata(trust, {
         brand,
         channelFile: file,
@@ -93,10 +108,12 @@ for (const { os, file, trustFile } of CHANNELS) {
         expectedSignerId: loadExpectedSignerId(brand.id, os),
         files,
         os,
+        releasePolicy,
         version
       })
 
-      if (!valid) fail(`${trustFile} does not exactly bind ${brand.id} ${file} and its signed artifacts`)
+      if (!signatureValid) fail(`${trustFile} lacks a valid independently pinned metadata signature`)
+      else if (!valid) fail(`${trustFile} does not exactly bind ${brand.id} ${file} and its signed artifacts`)
       else ok(`${trustFile} exactly verifies ${brand.author} ${brand.productName} v${version}`)
     }
   } catch (e) {

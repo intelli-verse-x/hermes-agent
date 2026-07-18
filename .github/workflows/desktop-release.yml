@@ -24,6 +24,9 @@
 # Required repo secret:
 #   AWS_ROLE_ARN — GitHub OIDC role scoped to release-path writes in the
 #     intelliverse-x-desktop bucket. Static AWS access keys are not accepted.
+#   IX_AGENCY_TRUST_METADATA_PRIVATE_KEY_PEM and
+#   QUIZVERSE_TRUST_METADATA_PRIVATE_KEY_PEM — separate RSA private keys
+#   matching each brand's independently reviewed release-policy pin.
 # Required for public macOS signing + notarization:
 #   CSC_LINK / CSC_KEY_PASSWORD — Developer ID cert (base64 .p12 / password)
 #   APPLE_TEAM_ID plus either:
@@ -117,6 +120,8 @@ jobs:
           WINDOWS_CSC_LINK: ${{ secrets.WINDOWS_CSC_LINK }}
           WINDOWS_CSC_KEY_PASSWORD: ${{ secrets.WINDOWS_CSC_KEY_PASSWORD }}
           WINDOWS_SIGNER_SHA256: ${{ secrets.WINDOWS_SIGNER_SHA256 }}
+          IX_AGENCY_TRUST_METADATA_PRIVATE_KEY_PEM: ${{ secrets.IX_AGENCY_TRUST_METADATA_PRIVATE_KEY_PEM }}
+          QUIZVERSE_TRUST_METADATA_PRIVATE_KEY_PEM: ${{ secrets.QUIZVERSE_TRUST_METADATA_PRIVATE_KEY_PEM }}
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
@@ -126,6 +131,12 @@ jobs:
         run: |
           EXPECTED_APPLE_TEAM_ID="$(node -p "require('./release-signers.json')[process.env.DESKTOP_BRAND].appleTeamId.toUpperCase()")"
           EXPECTED_WINDOWS_SIGNER_SHA256="$(node -p "require('./release-signers.json')[process.env.DESKTOP_BRAND].windowsSignerSha256.replace(/\s/g, '').toUpperCase()")"
+          EXPECTED_TRUST_PUBLIC_KEY="$(node -p "require('./release-signers.json')[process.env.DESKTOP_BRAND].trustMetadataPublicKeySpki.replace(/\s/g, '')")"
+          if [ "$DESKTOP_BRAND" = "ix-agency" ]; then
+            export TRUST_METADATA_PRIVATE_KEY_PEM="${IX_AGENCY_TRUST_METADATA_PRIVATE_KEY_PEM:-}"
+          else
+            export TRUST_METADATA_PRIVATE_KEY_PEM="${QUIZVERSE_TRUST_METADATA_PRIVATE_KEY_PEM:-}"
+          fi
           if ! [[ "$EXPECTED_APPLE_TEAM_ID" =~ ^[A-Z0-9]{10}$ ]]; then
             echo "Refusing publication: source-controlled Apple Team ID is not pinned for $DESKTOP_BRAND" >&2
             exit 1
@@ -134,6 +145,14 @@ jobs:
             echo "Refusing publication: source-controlled Windows signer SHA-256 is not pinned for $DESKTOP_BRAND" >&2
             exit 1
           fi
+          if [ -z "$EXPECTED_TRUST_PUBLIC_KEY" ] || [ -z "${TRUST_METADATA_PRIVATE_KEY_PEM:-}" ]; then
+            echo "Refusing publication: independently approved trust metadata signing key is not configured for $DESKTOP_BRAND" >&2
+            exit 1
+          fi
+          EXPECTED_TRUST_PUBLIC_KEY="$EXPECTED_TRUST_PUBLIC_KEY" node --input-type=module -e '
+            import { signTrustMetadata } from "./scripts/trust-metadata.mjs";
+            signTrustMetadata("release-policy-preflight", process.env.TRUST_METADATA_PRIVATE_KEY_PEM, process.env.EXPECTED_TRUST_PUBLIC_KEY);
+          '
           if [ "$RUNNER_OS" = "macOS" ]; then
             for v in MAC_CSC_LINK MAC_CSC_KEY_PASSWORD APPLE_TEAM_ID; do
               if [ -z "${!v:-}" ]; then
@@ -287,6 +306,10 @@ jobs:
             "s3://intelliverse-x-desktop/${DESKTOP_BRAND}/trust-${TRUST_OS}.json" \
             --content-type "application/json" \
             --cache-control "no-cache"
+          aws s3 cp "release/trust-${TRUST_OS}.json.sig" \
+            "s3://intelliverse-x-desktop/${DESKTOP_BRAND}/trust-${TRUST_OS}.json.sig" \
+            --content-type "application/octet-stream" \
+            --cache-control "no-cache"
 
       - name: Upload installers as workflow artifacts (debug/QA convenience)
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
@@ -301,6 +324,8 @@ jobs:
             apps/desktop/release/*.deb
             apps/desktop/release/*.rpm
             apps/desktop/release/latest*.yml
+            apps/desktop/release/trust-*.json
+            apps/desktop/release/trust-*.json.sig
           if-no-files-found: warn
 
   # Publish the download landing page to the bucket root on every release.
