@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// End-to-end verification of the IX Agency auto-update feed on S3.
+// End-to-end verification of a branded Desktop auto-update feed on S3.
 //
 // Checks, for every electron-updater channel file (mac / windows / linux):
 //   1. the channel file is publicly fetchable (HTTP 200),
@@ -18,30 +18,42 @@
 // DESKTOP_BRAND's manifest feed; UPDATE_FEED_URL overrides it.
 
 import { loadBrand } from './apply-brand.mjs'
+import {
+  loadExpectedSignerId,
+  loadReleasePolicy,
+  sha512Base64,
+  validateTrustMetadata,
+  verifyTrustMetadataSignature
+} from './trust-metadata.mjs'
 
-const FEED = (process.env.UPDATE_FEED_URL || loadBrand().updateFeedUrl).replace(/\/+$/, '')
+const brand = loadBrand()
+const releasePolicy = loadReleasePolicy(brand.id)
+const FEED = (process.env.UPDATE_FEED_URL || brand.updateFeedUrl).replace(/\/+$/, '')
 const EXPECT_VERSION = (process.env.EXPECT_VERSION || '').trim()
 
 const CHANNELS = [
-  { os: 'mac', file: 'latest-mac.yml' },
-  { os: 'windows', file: 'latest.yml' },
-  { os: 'linux', file: 'latest-linux.yml' }
+  { os: 'mac', file: 'latest-mac.yml', trustFile: 'trust-mac.json' },
+  { os: 'win', file: 'latest.yml', trustFile: 'trust-win.json' },
+  { os: 'linux', file: 'latest-linux.yml', trustFile: 'trust-linux.json' }
 ]
 
 let failures = 0
-const fail = (msg) => {
+const fail = msg => {
   failures++
   console.error(`  FAIL  ${msg}`)
 }
-const ok = (msg) => console.log(`  ok    ${msg}`)
+const ok = msg => console.log(`  ok    ${msg}`)
 
-/** Minimal parse of electron-builder channel yml: version + files[{url,size}]. */
+/** Minimal parse of electron-builder channel yml: version + files[{url,sha512,size}]. */
 function parseChannel(yml) {
   const version = (yml.match(/^version:\s*(\S+)/m) || [])[1] || ''
   const files = []
-  // entries look like:  "  - url: NAME"  followed by "    size: N"
-  const re = /-\s*url:\s*(\S+)[\s\S]*?size:\s*(\d+)/g
-  for (let m; (m = re.exec(yml)); ) files.push({ url: m[1], size: Number(m[2]) })
+  const re = /-\s*url:\s*(\S+)[\s\S]*?sha512:\s*(\S+)[\s\S]*?size:\s*(\d+)/g
+
+  for (let m; (m = re.exec(yml)); ) {
+    files.push({ sha512: m[2], size: Number(m[3]), url: m[1] })
+  }
+
   return { version, files }
 }
 
@@ -51,7 +63,7 @@ async function head(url) {
 }
 
 const versions = new Set()
-for (const { os, file } of CHANNELS) {
+for (const { os, file, trustFile } of CHANNELS) {
   const url = `${FEED}/${file}`
   console.log(`── ${os}: ${url}`)
   let body
@@ -74,6 +86,40 @@ for (const { os, file } of CHANNELS) {
   versions.add(version)
   ok(`${file} v${version} (${files.length} artifacts)`)
   if (!files.length) fail(`${file} lists no artifacts`)
+
+  try {
+    const trustResponse = await fetch(`${FEED}/${trustFile}`, { cache: 'no-store' })
+    if (trustResponse.status !== 200) {
+      fail(`${trustFile} -> HTTP ${trustResponse.status}`)
+    } else {
+      const signatureResponse = await fetch(`${FEED}/${trustFile}.sig`, { cache: 'no-store' })
+      const trustText = await trustResponse.text()
+      const signature = signatureResponse.status === 200 ? await signatureResponse.text() : ''
+      const signatureValid = verifyTrustMetadataSignature(
+        trustText,
+        signature,
+        releasePolicy.trustMetadataPublicKeySpki
+      )
+      const trust = JSON.parse(trustText)
+      const valid = validateTrustMetadata(trust, {
+        brand,
+        channelFile: file,
+        channelSha512: sha512Base64(body),
+        expectedSignerId: loadExpectedSignerId(brand.id, os),
+        files,
+        os,
+        releasePolicy,
+        version
+      })
+
+      if (!signatureValid) fail(`${trustFile} lacks a valid independently pinned metadata signature`)
+      else if (!valid) fail(`${trustFile} does not exactly bind ${brand.id} ${file} and its signed artifacts`)
+      else ok(`${trustFile} exactly verifies ${brand.author} ${brand.productName} v${version}`)
+    }
+  } catch (e) {
+    fail(`${trustFile} -> ${e.message}`)
+  }
+
   for (const f of files) {
     const artifactUrl = `${FEED}/${encodeURIComponent(f.url).replace(/%2F/g, '/')}`
     try {

@@ -55,7 +55,7 @@ function ModeGrid({ onSelect }: { onSelect: (mode: PlayMode) => void }) {
               onClick={() => onSelect(mode)}
               type="button"
             >
-              <span className="text-2xl">{mode.icon}</span>
+              <span aria-hidden="true" className="text-2xl">{mode.icon}</span>
               <h3 className="mt-2 text-sm font-semibold">{mode.name}</h3>
               <p className="mt-1 text-xs text-muted-foreground">
                 {mode.available
@@ -135,7 +135,7 @@ function QuizGame({
   if (!mode.available) {
     return (
       <div className="flex h-full flex-col items-center justify-center gap-3 text-center">
-        <div className="text-4xl">{mode.icon}</div><h2>{mode.name}</h2><p className="max-w-md text-xs text-muted-foreground">{mode.reason}</p>
+        <div aria-hidden="true" className="text-4xl">{mode.icon}</div><h2>{mode.name}</h2><p className="max-w-md text-xs text-muted-foreground">{mode.reason}</p>
         <Button onClick={onBack} size="sm">Back to modes</Button>
       </div>
     )
@@ -158,7 +158,12 @@ function QuizGame({
   if (result) {
     return (
       <div className="flex h-full flex-col items-center justify-center gap-4 text-center">
-        <img alt="" className="size-24" src={`${import.meta.env.BASE_URL}quizverse/quizy-front.png`} />
+        <img
+          alt=""
+          aria-hidden="true"
+          className="size-24"
+          src={`${import.meta.env.BASE_URL}quizverse/quizy-front.png`}
+        />
         <h2 className="text-xl font-semibold">Quiz complete!</h2>
         <div className="text-4xl font-bold text-violet-300">{result.score}</div>
         <p className="text-sm text-muted-foreground">{result.correct} of {result.total} correct</p>
@@ -198,7 +203,13 @@ function QuizGame({
           <Button onClick={onBack} size="xs" variant="ghost"><Codicon name="arrow-left" /> Modes</Button>
           <span>{index + 1} / {questions.length} · {provenance}</span>
         </div>
-        {question.mediaUrl && <img alt="" className="mb-4 max-h-64 w-full rounded-xl object-contain" src={question.mediaUrl} />}
+        {question.mediaUrl && (
+          <img
+            alt={question.mediaAlt || `Visual clue for question ${index + 1}`}
+            className="mb-4 max-h-64 w-full rounded-xl object-contain"
+            src={question.mediaUrl}
+          />
+        )}
         <h2 className="text-lg font-semibold">{question.prompt}</h2>
         <div className="mt-5 grid gap-2">
           {question.options.map((option, optionIndex) => (

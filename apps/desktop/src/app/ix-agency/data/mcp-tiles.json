@@ -36,7 +36,7 @@
       "group": "Talk to people",
       "mcpUrl": "https://postiz-mcp.intelli-verse-x.ai/",
       "domain": "postiz-mcp.intelli-verse-x.ai",
-      "mcpAuthHint": "Postiz wrapper MCP (org key baked in): postiz_list_integrations, postiz_list_posts, postiz_find_slot, postiz_create_post, postiz_upload_from_url, postiz_analytics. Use admin_call_mcp tileId 'postiz'."
+      "mcpAuthHint": "Postiz wrapper MCP: access must be assigned through the configured workspace; do not assume an embedded credential. List integrations first and publish only to selected connected channels. Tools: postiz_list_integrations, postiz_list_posts, postiz_find_slot, postiz_create_post, postiz_upload_from_url, postiz_analytics. Use admin_call_mcp tileId 'postiz'."
     },
     {
       "id": "twenty",

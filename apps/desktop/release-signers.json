@@ -1,0 +1,16 @@
+{
+  "ix-agency": {
+    "appleTeamId": "",
+    "windowsSignerSha256": "",
+    "trustMetadataPublicKeySpki": "",
+    "provenanceRepository": "intelli-verse-x/hermes-agent",
+    "provenanceWorkflow": ".github/workflows/desktop-release.yml"
+  },
+  "quizverse": {
+    "appleTeamId": "",
+    "windowsSignerSha256": "",
+    "trustMetadataPublicKeySpki": "",
+    "provenanceRepository": "intelli-verse-x/hermes-agent",
+    "provenanceWorkflow": ".github/workflows/desktop-release.yml"
+  }
+}

@@ -3,11 +3,12 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="robots" content="noindex" />
-    <title>Download IX Agency — Intelliverse X</title>
+    <meta name="robots" content="index, follow" />
+    <link rel="canonical" href="https://intelliverse-x-desktop.s3.amazonaws.com/index.html" />
+    <title>Download IVX Agency — Intelliverse X</title>
     <meta
       name="description"
-      content="Download the IX Agency desktop app for macOS, Windows and Linux. Auto-updating build from the Intelliverse X release feed."
+      content="Early-access IVX Agency desktop installers for admin-authorized users. Downloads appear only when release artifacts are available."
     />
     <style>
       :root {
@@ -24,152 +25,411 @@
         --warn: #fbbf24;
         --radius: 14px;
       }
-      * { box-sizing: border-box; }
-      html, body { margin: 0; padding: 0; }
+      * {
+        box-sizing: border-box;
+      }
+      html,
       body {
-        background:
-          radial-gradient(1200px 600px at 50% -10%, rgba(109, 139, 255, 0.18), transparent 60%),
-          var(--bg);
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        background: radial-gradient(1200px 600px at 50% -10%, rgba(109, 139, 255, 0.18), transparent 60%), var(--bg);
         color: var(--text);
-        font: 15px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        font:
+          15px/1.55 -apple-system,
+          BlinkMacSystemFont,
+          'Segoe UI',
+          Roboto,
+          Helvetica,
+          Arial,
+          sans-serif;
         -webkit-font-smoothing: antialiased;
         min-height: 100vh;
       }
       .product-tabs {
-        display: flex; gap: 8px; margin: 0 auto 32px; padding: 5px;
-        width: fit-content; max-width: 100%; border: 1px solid var(--border);
-        border-radius: 12px; background: var(--panel);
+        display: flex;
+        gap: 8px;
+        margin: 0 auto 32px;
+        padding: 5px;
+        width: fit-content;
+        max-width: 100%;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        background: var(--panel);
       }
       .product-tab {
-        appearance: none; border: 1px solid transparent; border-radius: 8px;
-        background: transparent; color: var(--muted); cursor: pointer;
-        font: inherit; font-weight: 650; padding: 9px 16px;
+        appearance: none;
+        border: 1px solid transparent;
+        border-radius: 8px;
+        background: transparent;
+        color: var(--muted);
+        cursor: pointer;
+        font: inherit;
+        font-weight: 650;
+        padding: 9px 16px;
       }
-      .product-tab:hover { color: var(--text); background: var(--panel-2); }
-      .product-tab[aria-selected="true"] {
-        color: #fff; border-color: rgba(109, 139, 255, 0.55);
+      .product-tab:hover {
+        color: var(--text);
+        background: var(--panel-2);
+      }
+      .product-tab[aria-selected='true'] {
+        color: #fff;
+        border-color: rgba(109, 139, 255, 0.55);
         background: linear-gradient(135deg, rgba(109, 139, 255, 0.28), rgba(160, 107, 255, 0.22));
       }
-      .product-tab:focus-visible, a:focus-visible, button:focus-visible, summary:focus-visible {
-        outline: 3px solid var(--accent); outline-offset: 3px;
+      .product-tab:focus-visible,
+      a:focus-visible,
+      button:focus-visible,
+      summary:focus-visible {
+        outline: 3px solid var(--accent);
+        outline-offset: 3px;
       }
-      [role="tabpanel"][hidden] { display: none; }
-      .wrap { max-width: 960px; margin: 0 auto; padding: 56px 20px 80px; }
-      header { text-align: center; margin-bottom: 40px; }
+      [role='tabpanel'][hidden] {
+        display: none;
+      }
+      .wrap {
+        max-width: 960px;
+        margin: 0 auto;
+        padding: 56px 20px 80px;
+      }
+      header {
+        text-align: center;
+        margin-bottom: 40px;
+      }
       .logo {
-        width: 60px; height: 60px; border-radius: 16px; margin: 0 auto 18px;
+        width: 60px;
+        height: 60px;
+        border-radius: 16px;
+        margin: 0 auto 18px;
         background: linear-gradient(135deg, var(--accent), var(--accent-2));
-        display: grid; place-items: center; font-size: 30px; font-weight: 800; color: #fff;
+        display: grid;
+        place-items: center;
+        font-size: 30px;
+        font-weight: 800;
+        color: #fff;
         box-shadow: 0 12px 40px rgba(109, 139, 255, 0.35);
       }
-      h1 { font-size: 30px; margin: 0 0 8px; letter-spacing: -0.02em; }
-      .sub { color: var(--muted); margin: 0 auto; max-width: 560px; }
-      .verpill {
-        display: inline-flex; align-items: center; gap: 8px; margin-top: 16px;
-        padding: 6px 14px; border: 1px solid var(--border); border-radius: 999px;
-        background: var(--panel); color: var(--muted); font-size: 13px;
+      h1 {
+        font-size: 30px;
+        margin: 0 0 8px;
+        letter-spacing: -0.02em;
       }
-      .verpill b { color: var(--text); font-weight: 600; }
-      .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ok); }
+      .sub {
+        color: var(--muted);
+        margin: 0 auto;
+        max-width: 560px;
+      }
+      .verpill {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        margin-top: 16px;
+        padding: 6px 14px;
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        background: var(--panel);
+        color: var(--muted);
+        font-size: 13px;
+      }
+      .verpill b {
+        color: var(--text);
+        font-weight: 600;
+      }
+      .dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: var(--ok);
+      }
 
-      .primary { margin: 34px 0 12px; }
+      .primary {
+        margin: 34px 0 12px;
+      }
       .primary-card {
-        display: flex; align-items: center; gap: 18px; justify-content: space-between;
-        padding: 22px 24px; border: 1px solid var(--border); border-radius: var(--radius);
+        display: flex;
+        align-items: center;
+        gap: 18px;
+        justify-content: space-between;
+        padding: 22px 24px;
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
         background: linear-gradient(180deg, var(--panel-2), var(--panel));
         flex-wrap: wrap;
       }
-      .primary-card .who { display: flex; align-items: center; gap: 16px; }
-      .os-ico { font-size: 32px; }
-      .primary-card h2 { margin: 0; font-size: 18px; }
-      .primary-card p { margin: 2px 0 0; color: var(--muted); font-size: 13px; }
+      .primary-card .who {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+      }
+      .os-ico {
+        font-size: 32px;
+      }
+      .primary-card h2 {
+        margin: 0;
+        font-size: 18px;
+      }
+      .primary-card p {
+        margin: 2px 0 0;
+        color: var(--muted);
+        font-size: 13px;
+      }
       .btn {
-        display: inline-flex; align-items: center; gap: 9px; cursor: pointer;
-        padding: 12px 22px; border-radius: 10px; border: 0; text-decoration: none;
-        font-weight: 600; font-size: 15px; color: #fff;
+        display: inline-flex;
+        align-items: center;
+        gap: 9px;
+        cursor: pointer;
+        padding: 12px 22px;
+        border-radius: 10px;
+        border: 0;
+        text-decoration: none;
+        font-weight: 600;
+        font-size: 15px;
+        color: #fff;
         background: linear-gradient(135deg, var(--accent), var(--accent-2));
-        box-shadow: 0 8px 24px rgba(109, 139, 255, 0.3); transition: transform 0.06s ease, opacity 0.2s;
+        box-shadow: 0 8px 24px rgba(109, 139, 255, 0.3);
+        transition:
+          transform 0.06s ease,
+          opacity 0.2s;
       }
-      .btn:hover { opacity: 0.94; }
-      .btn:active { transform: translateY(1px); }
+      .btn:hover {
+        opacity: 0.94;
+      }
+      .btn:active {
+        transform: translateY(1px);
+      }
       .btn.ghost {
-        background: transparent; color: var(--text); border: 1px solid var(--border); box-shadow: none;
-        font-size: 13px; padding: 9px 15px; font-weight: 500;
+        background: transparent;
+        color: var(--text);
+        border: 1px solid var(--border);
+        box-shadow: none;
+        font-size: 13px;
+        padding: 9px 15px;
+        font-weight: 500;
       }
-      .btn.ghost:hover { background: var(--panel-2); }
+      .btn.ghost:hover {
+        background: var(--panel-2);
+      }
 
-      .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 28px; }
-      @media (max-width: 720px) { .grid { grid-template-columns: 1fr; } }
-      .card {
-        border: 1px solid var(--border); border-radius: var(--radius); background: var(--panel);
-        padding: 20px; display: flex; flex-direction: column; gap: 12px;
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 16px;
+        margin-top: 28px;
       }
-      .card h3 { margin: 0; font-size: 15px; display: flex; align-items: center; gap: 9px; }
-      .card .files { display: flex; flex-direction: column; gap: 8px; margin-top: 2px; }
+      @media (max-width: 720px) {
+        .grid {
+          grid-template-columns: 1fr;
+        }
+      }
+      .card {
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        background: var(--panel);
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      .card h3 {
+        margin: 0;
+        font-size: 15px;
+        display: flex;
+        align-items: center;
+        gap: 9px;
+      }
+      .card .files {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        margin-top: 2px;
+      }
       .file {
-        display: flex; align-items: center; justify-content: space-between; gap: 10px;
-        padding: 9px 12px; border: 1px solid var(--border); border-radius: 9px;
-        background: var(--panel-2); text-decoration: none; color: var(--text); font-size: 13px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        padding: 9px 12px;
+        border: 1px solid var(--border);
+        border-radius: 9px;
+        background: var(--panel-2);
+        text-decoration: none;
+        color: var(--text);
+        font-size: 13px;
         transition: border-color 0.15s;
       }
-      .file:hover { border-color: var(--accent); }
-      .file .ext { font-weight: 600; }
-      .file .sz { color: var(--muted-2); font-size: 12px; }
-      .tag { font-size: 11px; color: var(--muted-2); border: 1px solid var(--border); border-radius: 6px; padding: 1px 6px; }
+      .file:hover {
+        border-color: var(--accent);
+      }
+      .file .ext {
+        font-weight: 600;
+      }
+      .file .sz {
+        color: var(--muted-2);
+        font-size: 12px;
+      }
+      .tag {
+        font-size: 11px;
+        color: var(--muted-2);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 1px 6px;
+      }
 
-      section.steps { margin-top: 44px; }
-      section.steps h2, section.notes h2 { font-size: 16px; margin: 0 0 14px; }
-      ol.steps-list { margin: 0; padding-left: 20px; color: var(--muted); }
-      ol.steps-list li { margin-bottom: 8px; }
-      ol.steps-list b { color: var(--text); font-weight: 600; }
+      section.steps {
+        margin-top: 44px;
+      }
+      section.steps h2,
+      section.notes h2 {
+        font-size: 16px;
+        margin: 0 0 14px;
+      }
+      ol.steps-list {
+        margin: 0;
+        padding-left: 20px;
+        color: var(--muted);
+      }
+      ol.steps-list li {
+        margin-bottom: 8px;
+      }
+      ol.steps-list b {
+        color: var(--text);
+        font-weight: 600;
+      }
       .note {
-        margin-top: 40px; border: 1px solid var(--border); border-left: 3px solid var(--warn);
-        border-radius: 10px; background: var(--panel); padding: 16px 18px; color: var(--muted); font-size: 13px;
+        margin-top: 40px;
+        border: 1px solid var(--border);
+        border-left: 3px solid var(--warn);
+        border-radius: 10px;
+        background: var(--panel);
+        padding: 16px 18px;
+        color: var(--muted);
+        font-size: 13px;
       }
-      .note b { color: var(--text); }
-      details.verify { margin-top: 10px; }
-      details.verify summary { cursor: pointer; color: var(--muted); font-size: 12px; }
+      .note b {
+        color: var(--text);
+      }
+      details.verify {
+        margin-top: 10px;
+      }
+      details.verify summary {
+        cursor: pointer;
+        color: var(--muted);
+        font-size: 12px;
+      }
       details.verify code {
-        display: block; margin-top: 8px; padding: 10px; background: #0a0c11; border: 1px solid var(--border);
-        border-radius: 8px; font-size: 11px; color: var(--muted); overflow-x: auto; white-space: pre-wrap; word-break: break-all;
+        display: block;
+        margin-top: 8px;
+        padding: 10px;
+        background: #0a0c11;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        font-size: 11px;
+        color: var(--muted);
+        overflow-x: auto;
+        white-space: pre-wrap;
+        word-break: break-all;
       }
-      footer { margin-top: 56px; text-align: center; color: var(--muted-2); font-size: 12px; }
-      footer a { color: var(--muted); }
-      .err { color: var(--warn); }
+      footer {
+        margin-top: 56px;
+        text-align: center;
+        color: var(--muted-2);
+        font-size: 12px;
+      }
+      footer a {
+        color: var(--muted);
+      }
+      .err {
+        color: var(--warn);
+      }
       .qv-logo {
         background: linear-gradient(135deg, #7c3aed, #db2777 55%, #f59e0b);
         box-shadow: 0 12px 40px rgba(168, 85, 247, 0.32);
       }
-      .guide { margin-top: 40px; }
-      .guide h2 { margin: 0 0 14px; font-size: 20px; }
-      .guide h3 { margin: 22px 0 8px; font-size: 15px; }
-      .guide p, .guide li { color: var(--muted); }
-      .guide ul, .guide ol { margin: 8px 0 0; padding-left: 22px; }
-      .guide li { margin: 7px 0; }
-      .guide b, .guide strong { color: var(--text); }
+      .guide {
+        margin-top: 40px;
+      }
+      .guide h2 {
+        margin: 0 0 14px;
+        font-size: 20px;
+      }
+      .guide h3 {
+        margin: 22px 0 8px;
+        font-size: 15px;
+      }
+      .guide p,
+      .guide li {
+        color: var(--muted);
+      }
+      .guide ul,
+      .guide ol {
+        margin: 8px 0 0;
+        padding-left: 22px;
+      }
+      .guide li {
+        margin: 7px 0;
+      }
+      .guide b,
+      .guide strong {
+        color: var(--text);
+      }
       .guide code {
-        padding: 1px 5px; border: 1px solid var(--border); border-radius: 5px;
-        background: #0a0c11; color: var(--text); font-size: 0.9em;
+        padding: 1px 5px;
+        border: 1px solid var(--border);
+        border-radius: 5px;
+        background: #0a0c11;
+        color: var(--text);
+        font-size: 0.9em;
       }
-      .guide-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+      .guide-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+      }
       .guide-card {
-        border: 1px solid var(--border); border-radius: var(--radius);
-        background: var(--panel); padding: 18px;
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        background: var(--panel);
+        padding: 18px;
       }
-      .guide-card h3 { margin-top: 0; }
+      .guide-card h3 {
+        margin-top: 0;
+      }
       .availability {
-        margin: 20px 0 0; border: 1px solid var(--border); border-radius: 10px;
-        background: var(--panel); padding: 14px 16px; color: var(--muted);
+        margin: 20px 0 0;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        background: var(--panel);
+        padding: 14px 16px;
+        color: var(--muted);
       }
-      .availability[data-state="ready"] { border-left: 3px solid var(--ok); }
-      .availability[data-state="waiting"] { border-left: 3px solid var(--warn); }
+      .availability[data-state='ready'] {
+        border-left: 3px solid var(--ok);
+      }
+      .availability[data-state='waiting'] {
+        border-left: 3px solid var(--warn);
+      }
       @media (max-width: 720px) {
-        .wrap { padding: 28px 14px 56px; }
-        .product-tabs { width: 100%; }
-        .product-tab { flex: 1; padding: 9px 8px; }
-        .guide-grid { grid-template-columns: 1fr; }
-        .primary-card { align-items: flex-start; }
-        .btn { width: 100%; justify-content: center; }
+        .wrap {
+          padding: 28px 14px 56px;
+        }
+        .product-tabs {
+          width: 100%;
+        }
+        .product-tab {
+          flex: 1;
+          padding: 9px 8px;
+        }
+        .guide-grid {
+          grid-template-columns: 1fr;
+        }
+        .primary-card {
+          align-items: flex-start;
+        }
+        .btn {
+          width: 100%;
+          justify-content: center;
+        }
       }
     </style>
   </head>
@@ -177,124 +437,163 @@
     <div class="wrap">
       <nav class="product-tabs" role="tablist" aria-label="Desktop app instructions">
         <button class="product-tab" id="tab-ix" role="tab" aria-controls="panel-ix" aria-selected="true" tabindex="0">
-          IVX Admin Desktop
+          IVX Agency
         </button>
-        <button class="product-tab" id="tab-quizverse" role="tab" aria-controls="panel-quizverse" aria-selected="false" tabindex="-1">
+        <button
+          class="product-tab"
+          id="tab-quizverse"
+          role="tab"
+          aria-controls="panel-quizverse"
+          aria-selected="false"
+          tabindex="-1"
+        >
           QuizVerse Desktop
         </button>
       </nav>
 
       <main id="panel-ix" role="tabpanel" aria-labelledby="tab-ix" tabindex="0">
-      <header>
-        <div class="logo">IX</div>
-        <h1>Download IX Agency</h1>
-        <p class="sub">
-          The Intelliverse X desktop app — one place for the copilot, every platform tool, the company VPN and the
-          local Hermes agent. Installs auto-update from the release feed.
-        </p>
-        <div class="verpill">
-          <span class="dot"></span>
-          <span>Latest version <b id="version">…</b></span>
-          <span id="reldate"></span>
-        </div>
-      </header>
-
-      <div class="primary">
-        <div class="primary-card">
-          <div class="who">
-            <span class="os-ico" id="primary-ico">💻</span>
-            <div>
-              <h2 id="primary-title">Detecting your platform…</h2>
-              <p id="primary-desc">Pick your download below.</p>
-            </div>
+        <header>
+          <div class="logo">IVX</div>
+          <h1>Download IVX Agency</h1>
+          <p class="sub">
+            The Intelliverse X operator surface for the native copilot, enabled platform tools, the company VPN and the
+            local agent runtime. This early-access page is not a public self-serve release.
+          </p>
+          <div class="verpill">
+            <span class="dot"></span>
+            <span>Latest version <b id="version">…</b></span>
+            <span id="reldate"></span>
           </div>
-          <a class="btn" id="primary-btn" href="#downloads" style="visibility: hidden">Download</a>
+        </header>
+
+        <div class="note">
+          <b>Need an App ID or a scoped pilot before installing?</b>
+          <a
+            href="https://router.intelli-verse-x.ai/apps?intent=connected-engine-setup&amp;role=agency-operator&amp;engine=all&amp;utm_source=ivx-agency-download&amp;utm_medium=referral&amp;utm_campaign=native_engines&amp;utm_content=pre_download_setup"
+            target="_blank"
+            rel="noreferrer"
+            >Create an App ID and review connected setup</a
+          >
+          or
+          <a
+            href="https://router.intelli-verse-x.ai/demo?intent=agency-connected-engine-pilot&amp;role=agency-operator&amp;engine=all&amp;utm_source=ivx-agency-download&amp;utm_medium=referral&amp;utm_campaign=native_engines&amp;utm_content=pre_download_pilot"
+            target="_blank"
+            rel="noreferrer"
+            >request a connected-engine pilot</a
+          >. Desktop is the operator surface; it does not create platform entitlements, App IDs, or pilot approval.
+          <small style="display: block; margin-top: 8px">
+            This page keeps a bounded first-touch campaign, click-ID, and journey tuple in this browser for up to 90
+            days and forwards it to portal, setup, and pilot handoffs. It stores no credentials or entitlement.
+          </small>
         </div>
-      </div>
 
-      <div class="grid" id="downloads">
-        <div class="card" id="card-mac">
-          <h3>🍎 macOS <span class="tag">Apple Silicon</span></h3>
-          <div class="files" data-files>…</div>
+        <div class="primary">
+          <div class="primary-card">
+            <div class="who">
+              <span class="os-ico" id="primary-ico" aria-hidden="true">💻</span>
+              <div>
+                <h2 id="primary-title">Detecting your platform…</h2>
+                <p id="primary-desc">Pick your download below.</p>
+              </div>
+            </div>
+            <a class="btn" id="primary-btn" href="#downloads" style="visibility: hidden">Download</a>
+          </div>
         </div>
-        <div class="card" id="card-win">
-          <h3>🪟 Windows <span class="tag">x64</span></h3>
-          <div class="files" data-files>…</div>
+
+        <div class="grid" id="downloads">
+          <div class="card" id="card-mac">
+            <h3><span aria-hidden="true">🍎</span> macOS <span class="tag">Apple Silicon</span></h3>
+            <div class="files" data-files>…</div>
+          </div>
+          <div class="card" id="card-win">
+            <h3><span aria-hidden="true">🪟</span> Windows <span class="tag">x64</span></h3>
+            <div class="files" data-files>…</div>
+          </div>
+          <div class="card" id="card-linux">
+            <h3><span aria-hidden="true">🐧</span> Linux <span class="tag">x86_64</span></h3>
+            <div class="files" data-files>…</div>
+          </div>
         </div>
-        <div class="card" id="card-linux">
-          <h3>🐧 Linux <span class="tag">x86_64</span></h3>
-          <div class="files" data-files>…</div>
+
+        <section class="steps">
+          <h2>Eligibility and guided first run</h2>
+          <ol class="steps-list">
+            <li>
+              <b>Confirm access first.</b> Sign-in requires an admin-authorized work email with an active IVX Agency
+              portal entitlement. The email code expires after 5 minutes; the signed-in session lasts up to 12 hours.
+            </li>
+            <li>
+              <b>Install the VPN backend before first run:</b> macOS/Linux require
+              <code style="display: inline; padding: 1px 5px">wireguard-tools</code>; Windows requires WireGuard for
+              Windows. VPN connection may show an OS-admin password or UAC prompt.
+            </li>
+            <li>
+              <b>Provisioning is guided after sign-in.</b> The app checks portal entitlement, retrieves only credentials
+              assigned to that user, imports the VPN profile, tests VPN and LiteLLM, and initializes the local agent
+              runtime. Each step can fail independently; open <b>Settings → Connect</b> to inspect status, retry, or
+              enter an administrator-supplied override.
+            </li>
+            <li>
+              <b>Credential boundary:</b> gateway, model-service, VPN, and confidential service-client credentials are
+              tenant-scoped, stored through operating-system protected storage where supported, and remain revocable by
+              the issuing administrator. Public OAuth clients do not have a client secret.
+            </li>
+            <li>
+              <b>Support boundary:</b> no response-time SLA is included with early access. Redact tokens, personal data,
+              and local paths before sending logs to
+              <a href="mailto:support@intelli-verse-x.ai">support@intelli-verse-x.ai</a>.
+            </li>
+          </ol>
+          <p style="margin-top: 14px">
+            <a class="btn ghost" href="https://admin.intelli-verse-x.ai/admin/portal" target="_blank" rel="noreferrer"
+              >Open the admin portal →</a
+            >
+            <a
+              class="btn ghost"
+              id="handbook"
+              href="https://admin.intelli-verse-x.ai/admin/team"
+              target="_blank"
+              rel="noreferrer"
+              >Need access? Ask your admin</a
+            >
+            <a
+              class="btn ghost"
+              href="https://router.intelli-verse-x.ai/apps?intent=connected-engine-setup&amp;role=agency-operator&amp;engine=all&amp;utm_source=ivx-agency-download&amp;utm_medium=referral&amp;utm_campaign=native_engines&amp;utm_content=post_download_setup"
+              target="_blank"
+              rel="noreferrer"
+              >Review connected setup →</a
+            >
+            <a
+              class="btn ghost"
+              href="https://router.intelli-verse-x.ai/demo?intent=agency-connected-engine-pilot&amp;role=agency-operator&amp;engine=all&amp;utm_source=ivx-agency-download&amp;utm_medium=referral&amp;utm_campaign=native_engines&amp;utm_content=post_download_pilot"
+              target="_blank"
+              rel="noreferrer"
+              >Scope a pilot →</a
+            >
+          </p>
+        </section>
+
+        <div class="note">
+          <b>Connected operating sequence:</b> approved content → QuestX quest → participant movement → KioskX kiosk →
+          product handoff → consent-scoped Memory. Every stage still requires its applicable Brand or App ID mapping,
+          entitlement, connected service, and operator approval. ContentX publishing starts from a configured workspace
+          and reaches only selected connected Postiz channels; this page does not prove that any stage has executed.
         </div>
-      </div>
 
-      <section class="steps">
-        <h2>After you install</h2>
-        <ol class="steps-list">
-          <li><b>Open the app and sign in</b> with your work email — you'll get a 6-digit code by email. The session lasts 12 hours.</li>
-          <li><b>Everything else is automatic.</b> On sign-in the app fetches your credentials from the portal (gateway token, personal LiteLLM key, VPN profile, Cognito secret), connects the company VPN (expect an admin-password / UAC prompt) and initializes the local Hermes agent. No values to paste.</li>
-          <li><b>One prerequisite:</b> install the VPN backend — macOS <code style="display:inline;padding:1px 5px">brew install wireguard-tools</code>, Windows "WireGuard for Windows".</li>
-          <li>Prefer manual control? <b>Settings → Connect</b> still accepts your own values — anything you set there is never overwritten.</li>
-        </ol>
-        <p style="margin-top: 14px">
-          <a class="btn ghost" href="https://admin.intelli-verse-x.ai/admin/portal" target="_blank" rel="noreferrer">Open the admin portal →</a>
-          <a class="btn ghost" id="handbook" href="https://admin.intelli-verse-x.ai/admin/team" target="_blank" rel="noreferrer">Need access? Ask your admin</a>
-          <a class="btn ghost" href="#admin-setup">Admin? How to grant access ↓</a>
-        </p>
-      </section>
+        <div class="note">
+          <b>Installer trust policy:</b> do not bypass Gatekeeper, SmartScreen, certificate, or publisher warnings.
+          macOS releases must identify a notarized Intelliverse X Developer ID application; Windows releases must show
+          the expected Intelliverse X publisher. If the operating system cannot verify the artifact, stop and ask your
+          administrator for a verified build. Compare the SHA-512 value shown with each download against the release
+          manifest before installation. Linux packages are early-access artifacts; verify the checksum and follow your
+          organization's package policy.
+        </div>
 
-      <section class="steps" id="admin-setup">
-        <h2>For admins — how to give a user access (step by step)</h2>
-        <ol class="steps-list">
-          <li>
-            <b>Open team management:</b> go to
-            <a href="https://admin.intelli-verse-x.ai/admin/team" target="_blank" rel="noreferrer">admin.intelli-verse-x.ai/admin/team</a>
-            and sign in with your email OTP. You need <b>super admin</b> or <b>owner</b> privilege to see the invite form.
-          </li>
-          <li>
-            <b>Click "Invite someone"</b> and fill in:
-            <ul style="margin: 6px 0 0; padding-left: 18px">
-              <li><b>Subject</b> — the user's exact work email (or a whole domain to cover a team).</li>
-              <li><b>Apps</b> — pick the app chips they need, or "All apps".</li>
-              <li><b>Privilege</b> — <code style="display:inline;padding:1px 5px">owner</code> / <code style="display:inline;padding:1px 5px">manager</code> / <code style="display:inline;padding:1px 5px">viewer</code>.</li>
-              <li><b>Bundles</b> (advanced) — revenue, growth, support, content, analytics, engineering.</li>
-            </ul>
-            You can only grant apps, tiers and bundles at or below your own level.
-          </li>
-          <li><b>Submit.</b> The access grant is active immediately for the user's next sign-in.</li>
-          <li>
-            <b>Send the invite yourself.</b> The page shows a copyable invite note —
-            <b>nothing is emailed automatically</b>, so paste it to the user along with a link to this download page.
-          </li>
-          <li>
-            <b>Done — no credentials to hand out.</b> On the user's first sign-in the app auto-provisions
-            everything server-side: gateway token, a personal LiteLLM key, a personal VPN profile and the
-            Cognito secret.
-          </li>
-        </ol>
-        <p style="margin-top: 12px; color: var(--muted); font-size: 13px">
-          To revoke access later, delete the user's grant on the same
-          <a href="https://admin.intelli-verse-x.ai/admin/team" target="_blank" rel="noreferrer">team page</a>
-          — it takes effect at their next login.
-        </p>
-      </section>
-
-      <div class="note">
-        <b>First launch on macOS:</b> this build isn't notarized yet, so Gatekeeper will say
-        <i>“IX Agency” is damaged and can’t be opened</i>. It isn't damaged — that's the quarantine flag on
-        unsigned downloads. Drag the app to <b>Applications</b>, then run this once in Terminal and open it normally:
-        <details class="verify" open>
-          <summary>the one-time command</summary>
-          <code>xattr -cr "/Applications/IX Agency.app"</code>
-        </details>
-        On Windows you may see a SmartScreen prompt (choose <b>More info → Run anyway</b>).
-        Only ever install IX Agency from this page.
-      </div>
-
-      <footer>
-        Served from the Intelliverse X release feed ·
-        <a href="https://admin.intelli-verse-x.ai" target="_blank" rel="noreferrer">admin.intelli-verse-x.ai</a>
-        · <span id="foot-ver"></span>
-      </footer>
+        <footer>
+          Served from the Intelliverse X release feed ·
+          <a href="https://admin.intelli-verse-x.ai" target="_blank" rel="noreferrer">admin.intelli-verse-x.ai</a>
+          · <span id="foot-ver"></span>
+        </footer>
       </main>
 
       <main id="panel-quizverse" role="tabpanel" aria-labelledby="tab-quizverse" tabindex="0" hidden>
@@ -302,8 +601,8 @@
           <div class="logo qv-logo" aria-hidden="true">QV</div>
           <h1>QuizVerse Desktop</h1>
           <p class="sub">
-            The learner and player app for TutorX, native games, competitions, Link &amp; Play, and player-scoped AI chat.
-            It is separate from IVX Admin Desktop and does not include agency, employee, VPN, or admin-portal tools.
+            The learner and player app for TutorX, native games, competitions, Link &amp; Play, and player-scoped AI
+            chat. It is separate from IVX Agency and does not include agency, employee, VPN, or admin-portal tools.
           </p>
           <div class="verpill">
             <span class="dot" id="qv-version-dot"></span>
@@ -311,7 +610,8 @@
             <span id="qv-reldate"></span>
           </div>
           <div class="availability" id="qv-availability" data-state="waiting" role="status" aria-live="polite">
-            Checking the official QuizVerse release feed. Download buttons appear only when release artifacts are published.
+            Checking the official QuizVerse release feed. Download buttons appear only when release artifacts are
+            published.
           </div>
         </header>
 
@@ -330,15 +630,15 @@
 
         <div class="grid" id="qv-downloads">
           <div class="card" id="qv-card-mac">
-            <h3>🍎 macOS <span class="tag">Apple Silicon</span></h3>
+            <h3><span aria-hidden="true">🍎</span> macOS <span class="tag">Apple Silicon</span></h3>
             <div class="files" data-files>Checking…</div>
           </div>
           <div class="card" id="qv-card-win">
-            <h3>🪟 Windows <span class="tag">x64</span></h3>
+            <h3><span aria-hidden="true">🪟</span> Windows <span class="tag">x64</span></h3>
             <div class="files" data-files>Checking…</div>
           </div>
           <div class="card" id="qv-card-linux">
-            <h3>🐧 Ubuntu / Linux <span class="tag">x86_64</span></h3>
+            <h3><span aria-hidden="true">🐧</span> Ubuntu / Linux <span class="tag">x86_64</span></h3>
             <div class="files" data-files>Checking…</div>
           </div>
         </div>
@@ -351,31 +651,45 @@
               <ol>
                 <li>Download the <b>QuizVerse macOS .dmg</b> from this page.</li>
                 <li>Open it and drag <b>QuizVerse</b> to Applications, then launch it from Applications.</li>
-                <li>If macOS blocks an unnotarized build, first try <b>System Settings → Privacy &amp; Security → Open Anyway</b>. If it reports that the official download is damaged, run <code>xattr -cr "/Applications/QuizVerse.app"</code> once. Do not bypass warnings for a file obtained anywhere else.</li>
+                <li>
+                  If macOS cannot verify the developer or notarization ticket, do not bypass the warning. Stop and
+                  request a signed, notarized build from your administrator.
+                </li>
               </ol>
             </article>
             <article class="guide-card">
               <h3>Windows</h3>
               <ol>
                 <li>Download the <b>.exe installer</b>; use the MSI only when your organization requires it.</li>
-                <li>Run the installer, choose the install location if prompted, and start QuizVerse from the Start menu.</li>
-                <li>If SmartScreen appears, confirm the publisher/source before choosing <b>More info → Run anyway</b>.</li>
+                <li>
+                  Run the installer, choose the install location if prompted, and start QuizVerse from the Start menu.
+                </li>
+                <li>
+                  If SmartScreen cannot verify the expected Intelliverse X publisher, do not run the installer; request
+                  a verified build from your administrator.
+                </li>
               </ol>
             </article>
             <article class="guide-card">
               <h3>Ubuntu / Linux</h3>
               <ol>
-                <li>For the simplest portable install, download the AppImage and run <code>chmod +x QuizVerse-*.AppImage</code>.</li>
-                <li>Launch the AppImage, or install the <code>.deb</code> on Ubuntu/Debian. An RPM is also provided for compatible distributions.</li>
+                <li>
+                  For the simplest portable install, download the AppImage and run
+                  <code>chmod +x QuizVerse-*.AppImage</code>.
+                </li>
+                <li>
+                  Launch the AppImage, or install the <code>.deb</code> on Ubuntu/Debian. An RPM is also provided for
+                  compatible distributions.
+                </li>
                 <li>Desktop integration and microphone prompts vary by distribution and desktop environment.</li>
               </ol>
             </article>
             <article class="guide-card">
               <h3>Updates</h3>
               <p>
-                QuizVerse checks its own release feed at launch and every four hours. Windows EXE and Linux AppImage installs
-                can download and restart in place. macOS in-place updates require a signed build; package installs such as MSI,
-                deb, and RPM may open this page so you can install the new package manually.
+                QuizVerse checks its own release feed at launch and every four hours. Windows EXE and Linux AppImage
+                installs can download and restart in place. macOS in-place updates require a signed build; package
+                installs such as MSI, deb, and RPM may open this page so you can install the new package manually.
               </p>
             </article>
           </div>
@@ -384,16 +698,33 @@
         <section class="guide" aria-labelledby="qv-first-run-heading">
           <h2 id="qv-first-run-heading">First launch and setup</h2>
           <ol>
-            <li><b>Let the local agent finish starting.</b> The status strip shows the agent, TutorX, player tools, and available updates. A first launch can take longer while the local runtime is prepared.</li>
-            <li><b>Open Setup.</b> Choose hosted TutorX for the managed service, or Local to run TutorX on your computer.</li>
-            <li><b>For local TutorX,</b> Python 3.11 or newer and a LiteLLM-compatible API key are required. Use <b>Install TutorX</b>, save the LiteLLM URL/key, run <b>Test LiteLLM</b>, then start TutorX. You can instead select an existing TutorX workspace.</li>
-            <li><b>For hosted TutorX,</b> use the service URL supplied by your organization. Some deployments also require a TutorX API key.</li>
-            <li><b>Connect your QuizVerse account</b> when your administrator has supplied the Cognito domain, public app client ID, and issuer. The app opens secure browser sign-in and stores resulting tokens in the operating-system keychain. Guest play remains available on surfaces marked for guests; account-only features stay locked until sign-in.</li>
+            <li>
+              <b>Let the local agent finish starting.</b> The status strip shows the agent, TutorX, player tools, and
+              available updates. A first launch can take longer while the local runtime is prepared.
+            </li>
+            <li>
+              <b>Open Setup.</b> Choose hosted TutorX for the managed service, or Local to run TutorX on your computer.
+            </li>
+            <li>
+              <b>For local TutorX,</b> Python 3.11 or newer and a LiteLLM-compatible API key are required. Use
+              <b>Install TutorX</b>, save the LiteLLM URL/key, run <b>Test LiteLLM</b>, then start TutorX. You can
+              instead select an existing TutorX workspace.
+            </li>
+            <li>
+              <b>For hosted TutorX,</b> use the service URL supplied by your organization. Some deployments also require
+              a TutorX API key.
+            </li>
+            <li>
+              <b>Connect your QuizVerse account</b> when your administrator has supplied the Cognito domain, public app
+              client ID, and issuer. The app opens secure browser sign-in and stores resulting tokens in the
+              operating-system keychain. Guest play remains available on surfaces marked for guests; account-only
+              features stay locked until sign-in.
+            </li>
           </ol>
           <div class="note">
-            <b>Service prerequisites:</b> internet access is required for sign-in, hosted TutorX, account data, competitions,
-            generated content, realtime matches, and AI requests. Organization-provided Cognito and model-service credentials
-            are not bundled into the installer. Do not paste credentials into chat.
+            <b>Service prerequisites:</b> internet access is required for sign-in, hosted TutorX, account data,
+            competitions, generated content, realtime matches, and AI requests. Organization-provided Cognito and
+            model-service credentials are not bundled into the installer. Do not paste credentials into chat.
           </div>
         </section>
 
@@ -402,27 +733,50 @@
           <div class="guide-grid">
             <article class="guide-card">
               <h3>TutorX</h3>
-              <p>Use Tutor, Knowledge, Memory, and Learning Space for guided study, knowledge work, review, and progress. Local mode keeps the TutorX workspace on this computer; hosted mode uses your configured service.</p>
+              <p>
+                Use Tutor, Knowledge, Memory, and Learning Space for guided study, knowledge work, review, and progress.
+                Local mode keeps the TutorX workspace on this computer; hosted mode uses your configured service.
+              </p>
             </article>
             <article class="guide-card">
               <h3>Native Play</h3>
-              <p>Open Play for native player experiences. Words includes daily word, groups, spell, crossword, imposter, and vocabulary duel modes. Voyage is a six-planet daily workout with progress, hints, cooldowns, and entitlement-aware premium activities.</p>
+              <p>
+                Open Play for native player experiences. Words includes daily word, groups, spell, crossword, imposter,
+                and vocabulary duel modes. Voyage is a six-planet daily workout with progress, hints, cooldowns, and
+                entitlement-aware premium activities.
+              </p>
             </article>
             <article class="guide-card">
               <h3>Tournaments</h3>
-              <p>Browse eligible competitions, inspect rules, enter through supported paths, play server-issued packs, follow brackets and leaderboards, and claim available certificates. Account, age, eligibility, KYC, balance, and regional rules can limit actions.</p>
+              <p>
+                Browse eligible competitions, inspect rules, enter through supported paths, play server-issued packs,
+                follow brackets and leaderboards, and claim available certificates. Account, age, eligibility, KYC,
+                balance, and regional rules can limit actions.
+              </p>
             </article>
             <article class="guide-card">
               <h3>Link &amp; Play</h3>
-              <p>Create learning notes from supported URLs, text, documents, images, or audio; then use generated quizzes, flashcards, grounded note chat, spaced repetition, debates, mind maps, speed reading, audio, and other enabled generation tools.</p>
+              <p>
+                Create learning notes from supported URLs, text, documents, images, or audio; then use generated
+                quizzes, flashcards, grounded note chat, spaced repetition, debates, mind maps, speed reading, audio,
+                and other enabled generation tools.
+              </p>
             </article>
             <article class="guide-card">
               <h3>Chat and player tools</h3>
-              <p>Chat can read player-scoped QuizVerse and TutorX information through the bundled player-tool connection. It cannot use agency or administrator access. The Setup lamp reports whether these tools are ready and whether they are operating as a guest or connected account.</p>
+              <p>
+                Chat can read player-scoped QuizVerse and TutorX information through the bundled player-tool connection.
+                It cannot use agency or administrator access. The Setup lamp reports whether these tools are ready and
+                whether they are operating as a guest or connected account.
+              </p>
             </article>
             <article class="guide-card">
               <h3>Permissions and confirmations</h3>
-              <p>The app asks for microphone access only for voice features. Product writes, tournament changes, game actions, and value-bearing actions show a confirmation dialog. Review the action and payload; cancel anything you did not request. Read-only activity does not require the same confirmation.</p>
+              <p>
+                The app asks for microphone access only for voice features. Product writes, tournament changes, game
+                actions, and value-bearing actions show a confirmation dialog. Review the action and payload; cancel
+                anything you did not request. Read-only activity does not require the same confirmation.
+              </p>
             </article>
           </div>
         </section>
@@ -430,10 +784,24 @@
         <section class="guide" aria-labelledby="qv-offline-heading">
           <h2 id="qv-offline-heading">Offline use and content cache</h2>
           <ul>
-            <li>Some native Words and Voyage routes have deterministic local fallback content and can continue without a connection.</li>
-            <li>Published Words datasets are integrity-checked and kept in an encrypted, expiring cache. A fresh cached copy may be used when the service is temporarily unreachable; the UI identifies offline or fallback provenance.</li>
-            <li>Account synchronization, new content generation, TutorX remote mode, realtime play, entitlements, purchases, leaderboards, and competitions require their services. Work that has not synchronized can remain local until connectivity returns.</li>
-            <li>Local TutorX can keep its workspace on-device, but model calls still require the configured model endpoint unless your organization provides a fully local compatible service.</li>
+            <li>
+              Some native Words and Voyage routes have deterministic local fallback content and can continue without a
+              connection.
+            </li>
+            <li>
+              Published Words datasets are integrity-checked and kept in an encrypted, expiring cache. A fresh cached
+              copy may be used when the service is temporarily unreachable; the UI identifies offline or fallback
+              provenance.
+            </li>
+            <li>
+              Account synchronization, new content generation, TutorX remote mode, realtime play, entitlements,
+              purchases, leaderboards, and competitions require their services. Work that has not synchronized can
+              remain local until connectivity returns.
+            </li>
+            <li>
+              Local TutorX can keep its workspace on-device, but model calls still require the configured model endpoint
+              unless your organization provides a fully local compatible service.
+            </li>
           </ul>
         </section>
 
@@ -444,39 +812,69 @@
               <h3>Status lights</h3>
               <ul>
                 <li><b>Agent not connected:</b> restart the app and allow first-run setup to finish.</li>
-                <li><b>TutorX off/error:</b> open Setup, verify Local/Remote mode, test the model endpoint, inspect the visible TutorX log tail, and use Restart.</li>
-                <li><b>Player tools offline:</b> click Check in Setup, then reconnect the QuizVerse account if account-only tools fail.</li>
+                <li>
+                  <b>TutorX off/error:</b> open Setup, verify Local/Remote mode, test the model endpoint, inspect the
+                  visible TutorX log tail, and use Restart.
+                </li>
+                <li>
+                  <b>Player tools offline:</b> click Check in Setup, then reconnect the QuizVerse account if
+                  account-only tools fail.
+                </li>
               </ul>
             </article>
             <article class="guide-card">
               <h3>Common fixes</h3>
               <ul>
                 <li>Confirm the computer clock is correct before troubleshooting sign-in or expired sessions.</li>
-                <li>Allow QuizVerse through firewalls/proxies for the configured TutorX, Cognito, model, QuizVerse API, and realtime service endpoints.</li>
-                <li>For microphone failures, grant QuizVerse access in the operating system's privacy settings, then restart the app.</li>
-                <li>If an update cannot install in place, download the current installer from this tab and install over the existing copy.</li>
+                <li>
+                  Allow QuizVerse through firewalls/proxies for the configured TutorX, Cognito, model, QuizVerse API,
+                  and realtime service endpoints.
+                </li>
+                <li>
+                  For microphone failures, grant QuizVerse access in the operating system's privacy settings, then
+                  restart the app.
+                </li>
+                <li>
+                  If an update cannot install in place, download the current installer from this tab and install over
+                  the existing copy.
+                </li>
               </ul>
             </article>
           </div>
           <h3>Logs and support</h3>
           <p>
             Use the app's <b>Open logs</b> action when available. The main diagnostic file is
-            <code>desktop.log</code> in the isolated local profile's <code>logs</code> directory under the QuizVerse app-data
-            folder; player-tool audit events are in <code>quizverse-mcp-audit.jsonl</code> there. Remove access tokens, personal data, local paths,
-            and uploaded content before sharing logs. Contact
-            <a href="mailto:support@intelli-verse-x.ai">support@intelli-verse-x.ai</a> with the OS, app version, failing tab,
-            time of failure, and a redacted excerpt.
+            <code>desktop.log</code> in the isolated local profile's <code>logs</code> directory under the QuizVerse
+            app-data folder; player-tool audit events are in <code>quizverse-mcp-audit.jsonl</code> there. Remove access
+            tokens, personal data, local paths, and uploaded content before sharing logs. Contact
+            <a href="mailto:support@intelli-verse-x.ai">support@intelli-verse-x.ai</a> with the OS, app version, failing
+            tab, time of failure, and a redacted excerpt.
           </p>
         </section>
 
         <section class="guide" aria-labelledby="qv-security-heading">
           <h2 id="qv-security-heading">Privacy and security</h2>
           <ul>
-            <li>QuizVerse uses an app-specific data directory and isolated local agent profile; it does not import IVX Admin Desktop credentials or settings.</li>
-            <li>Account and model-service secrets are encrypted with the operating system's secure storage and are not returned to the settings screen after saving.</li>
-            <li>Player tools are restricted to the current player's allowed QuizVerse operations. Writes use explicit confirmation, short-lived approval challenges, and idempotency protection; audit records stay local.</li>
-            <li>Files submitted to Link &amp; Play or other online generation features are sent to the configured QuizVerse service. Review your organization's privacy and retention policy before uploading sensitive material.</li>
-            <li>Install only artifacts exposed by this page and verify checksums shown beneath a download when required.</li>
+            <li>
+              QuizVerse uses an app-specific data directory and isolated local agent profile; it does not import IVX
+              Admin Desktop credentials or settings.
+            </li>
+            <li>
+              Account and model-service secrets are encrypted with the operating system's secure storage and are not
+              returned to the settings screen after saving.
+            </li>
+            <li>
+              Player tools are restricted to the current player's allowed QuizVerse operations. Writes use explicit
+              confirmation, short-lived approval challenges, and idempotency protection; audit records stay local.
+            </li>
+            <li>
+              Files submitted to Link &amp; Play or other online generation features are sent to the configured
+              QuizVerse service. Review your organization's privacy and retention policy before uploading sensitive
+              material.
+            </li>
+            <li>
+              Install only artifacts exposed by this page and verify checksums shown beneath a download when required.
+            </li>
           </ul>
         </section>
 
@@ -489,11 +887,12 @@
             <li><b>Linux:</b> <code>~/.config/QuizVerse</code></li>
           </ul>
           <p>
-            The folder contains settings, the isolated local agent profile, logs, cached Words content, local TutorX workspace
-            and managed environment (if installed), and browser/session storage. Uninstall QuizVerse through Applications,
-            Windows Settings, or your package manager. Standard OS uninstall may leave app data so a reinstall can recover it.
-            To remove everything, sign out, quit QuizVerse, back up any local TutorX work you need, uninstall the app, and then
-            delete only the QuizVerse app-data folder listed above. Never delete the IVX Admin Desktop data folder.
+            The folder contains settings, the isolated local agent profile, logs, cached Words content, local TutorX
+            workspace and managed environment (if installed), and browser/session storage. Uninstall QuizVerse through
+            Applications, Windows Settings, or your package manager. Standard OS uninstall may leave app data so a
+            reinstall can recover it. To remove everything, sign out, quit QuizVerse, back up any local TutorX work you
+            need, uninstall the app, and then delete only the QuizVerse app-data folder listed above. Never delete the
+            IVX Agency data folder.
           </p>
         </section>
 
@@ -506,289 +905,629 @@
     </div>
 
     <script>
-      const tabs = Array.from(document.querySelectorAll('[role="tab"]'));
+      const tabs = Array.from(document.querySelectorAll('[role="tab"]'))
 
       function activateTab(tab, { focus = false, updateHash = true } = {}) {
         for (const item of tabs) {
-          const selected = item === tab;
-          item.setAttribute("aria-selected", String(selected));
-          item.tabIndex = selected ? 0 : -1;
-          document.getElementById(item.getAttribute("aria-controls")).hidden = !selected;
+          const selected = item === tab
+          item.setAttribute('aria-selected', String(selected))
+          item.tabIndex = selected ? 0 : -1
+          document.getElementById(item.getAttribute('aria-controls')).hidden = !selected
         }
-        if (focus) tab.focus();
+        if (focus) tab.focus()
         if (updateHash) {
-          history.replaceState(null, "", tab.id === "tab-quizverse" ? "#quizverse" : "#ivx-admin");
+          history.replaceState(null, '', tab.id === 'tab-quizverse' ? '#quizverse' : '#ivx-agency')
         }
       }
 
       for (const [index, tab] of tabs.entries()) {
-        tab.addEventListener("click", () => activateTab(tab));
-        tab.addEventListener("keydown", (event) => {
-          let next = null;
-          if (event.key === "ArrowRight") next = tabs[(index + 1) % tabs.length];
-          if (event.key === "ArrowLeft") next = tabs[(index - 1 + tabs.length) % tabs.length];
-          if (event.key === "Home") next = tabs[0];
-          if (event.key === "End") next = tabs[tabs.length - 1];
+        tab.addEventListener('click', () => activateTab(tab))
+        tab.addEventListener('keydown', event => {
+          let next = null
+          if (event.key === 'ArrowRight') next = tabs[(index + 1) % tabs.length]
+          if (event.key === 'ArrowLeft') next = tabs[(index - 1 + tabs.length) % tabs.length]
+          if (event.key === 'Home') next = tabs[0]
+          if (event.key === 'End') next = tabs[tabs.length - 1]
           if (next) {
-            event.preventDefault();
-            activateTab(next, { focus: true });
+            event.preventDefault()
+            activateTab(next, { focus: true })
           }
-        });
+        })
       }
 
-      if (location.hash.toLowerCase() === "#quizverse") {
-        activateTab(document.getElementById("tab-quizverse"), { updateHash: false });
+      if (location.hash.toLowerCase() === '#quizverse') {
+        activateTab(document.getElementById('tab-quizverse'), { updateHash: false })
       }
+
+      const ATTRIBUTION_STORAGE_KEY = 'ivx-desktop-download-first-touch-v1'
+      const ATTRIBUTION_MAX_AGE_MS = 90 * 24 * 60 * 60 * 1000
+      const ATTRIBUTION_JOURNEY_FIELDS = [
+        'utm_source',
+        'utm_medium',
+        'utm_campaign',
+        'utm_content',
+        'intent',
+        'role',
+        'engine'
+      ]
+      const ATTRIBUTION_CLICK_ID_FIELDS = [
+        'gclid',
+        'wbraid',
+        'gbraid',
+        'fbclid',
+        'msclkid',
+        'ttclid',
+        'li_fat_id',
+        'twclid'
+      ]
+      const ATTRIBUTION_FIELDS = [...ATTRIBUTION_JOURNEY_FIELDS, ...ATTRIBUTION_CLICK_ID_FIELDS]
+
+      function cleanAttributionValue(value) {
+        return String(value || '')
+          .trim()
+          .slice(0, 160)
+      }
+
+      function readFirstTouchAttribution() {
+        try {
+          const stored = JSON.parse(localStorage.getItem(ATTRIBUTION_STORAGE_KEY) || 'null')
+
+          if (!stored || stored.expiresAt <= Date.now() || typeof stored.values !== 'object') {
+            localStorage.removeItem(ATTRIBUTION_STORAGE_KEY)
+            return null
+          }
+
+          return stored
+        } catch {
+          return null
+        }
+      }
+
+      function captureFirstTouchAttribution() {
+        const existing = readFirstTouchAttribution()
+        if (existing) return existing
+
+        const inbound = new URLSearchParams(location.search)
+        const values = Object.fromEntries(
+          ATTRIBUTION_FIELDS.map(field => [
+            field,
+            cleanAttributionValue(inbound.get(`first_${field}`)) || cleanAttributionValue(inbound.get(field))
+          ]).filter(([, value]) => Boolean(value))
+        )
+
+        if (Object.keys(values).length === 0) return null
+
+        const capturedAt = Date.now()
+        const inboundAttributionId = cleanAttributionValue(inbound.get('attribution_id'))
+        const attributionId =
+          inboundAttributionId ||
+          (typeof crypto.randomUUID === 'function'
+            ? crypto.randomUUID()
+            : `desktop-${capturedAt}-${Math.random().toString(36).slice(2, 14)}`)
+        const firstTouch = {
+          attributionId,
+          capturedAt,
+          expiresAt: capturedAt + ATTRIBUTION_MAX_AGE_MS,
+          values
+        }
+
+        try {
+          localStorage.setItem(ATTRIBUTION_STORAGE_KEY, JSON.stringify(firstTouch))
+        } catch {
+          // Storage can be unavailable in private/restricted browser contexts.
+        }
+
+        return firstTouch
+      }
+
+      function outboundContent(link, target) {
+        if (link.dataset.attributionContent) return link.dataset.attributionContent
+        if (target.hostname === 'admin.intelli-verse-x.ai' && target.pathname.includes('/team')) return 'team_access'
+        if (target.hostname === 'admin.intelli-verse-x.ai') return 'admin_portal'
+        if (target.hostname === 'quizverse.world') return 'quizverse_footer'
+        return (
+          target.pathname
+            .replace(/^\/|\/$/g, '')
+            .replace(/[^a-z0-9]+/gi, '_')
+            .toLowerCase() || 'outbound'
+        )
+      }
+
+      function applyHopContext(target) {
+        if (target.hostname === 'admin.intelli-verse-x.ai') {
+          target.searchParams.set(
+            'intent',
+            target.pathname.includes('/team') ? 'request-agency-access' : 'agency-portal'
+          )
+          target.searchParams.set('role', 'agency-operator')
+          target.searchParams.set('engine', 'all')
+        } else if (target.hostname === 'quizverse.world') {
+          target.searchParams.set('intent', 'quizverse-desktop-discovery')
+          target.searchParams.set('role', 'learner-player')
+          target.searchParams.set('engine', 'questx')
+        }
+      }
+
+      function decorateOutboundAttribution(firstTouch) {
+        for (const link of document.querySelectorAll('a[href^="https://"]')) {
+          const target = new URL(link.href)
+          const content = outboundContent(link, target)
+          const hopDefaults = {
+            utm_campaign: 'native_engines',
+            utm_content: content,
+            utm_medium: 'referral',
+            utm_source: 'ivx-agency-download'
+          }
+
+          if (firstTouch?.attributionId) target.searchParams.set('attribution_id', firstTouch.attributionId)
+
+          for (const [field, value] of Object.entries(firstTouch?.values || {})) {
+            target.searchParams.set(`first_${field}`, value)
+            if (ATTRIBUTION_CLICK_ID_FIELDS.includes(field) && !target.searchParams.has(field)) {
+              target.searchParams.set(field, value)
+            }
+          }
+
+          for (const [field, fallback] of Object.entries(hopDefaults)) {
+            const value = target.searchParams.get(field) || fallback
+            target.searchParams.set(field, value)
+          }
+
+          applyHopContext(target)
+
+          for (const field of ATTRIBUTION_JOURNEY_FIELDS) {
+            const value = target.searchParams.get(field)
+            if (value) target.searchParams.set(`hop_${field}`, value)
+          }
+
+          link.href = target.toString()
+        }
+      }
+
+      const firstTouchAttribution = captureFirstTouchAttribution()
+      decorateOutboundAttribution(firstTouchAttribution)
 
       // The artifacts + electron-updater channel manifests live under ix-agency/
       // in this same bucket. We read the manifests at runtime so this page never
       // goes stale: every new release CI publishes is picked up automatically.
-      const FEED = "ix-agency/";
-      const MANIFESTS = { mac: "latest-mac.yml", win: "latest.yml", linux: "latest-linux.yml" };
+      const FEED = 'ix-agency/'
+      const MANIFESTS = { mac: 'latest-mac.yml', win: 'latest.yml', linux: 'latest-linux.yml' }
+      const PLATFORMS = Object.freeze(Object.keys(MANIFESTS))
 
       const EXT_LABEL = {
-        dmg: "Disk image (.dmg)",
-        zip: "Zip (.zip)",
-        exe: "Installer (.exe)",
-        msi: "MSI (.msi)",
-        AppImage: "AppImage",
-        deb: "Debian (.deb)",
-        rpm: "RPM (.rpm)"
-      };
+        dmg: 'Disk image (.dmg)',
+        zip: 'Zip (.zip)',
+        exe: 'Installer (.exe)',
+        msi: 'MSI (.msi)',
+        AppImage: 'AppImage',
+        deb: 'Debian (.deb)',
+        rpm: 'RPM (.rpm)'
+      }
       // Preferred artifact per OS for the big primary button.
-      const PRIMARY_EXT = { mac: "dmg", win: "exe", linux: "AppImage" };
+      const PRIMARY_EXT = { mac: 'dmg', win: 'exe', linux: 'AppImage' }
       const OS_META = {
-        mac: { ico: "🍎", title: "Download for macOS", desc: "Apple Silicon · .dmg" },
-        win: { ico: "🪟", title: "Download for Windows", desc: "x64 · .exe installer" },
-        linux: { ico: "🐧", title: "Download for Linux", desc: "x86_64 · AppImage" }
-      };
+        mac: { ico: '🍎', title: 'Download for macOS', desc: 'Apple Silicon · .dmg' },
+        win: { ico: '🪟', title: 'Download for Windows', desc: 'x64 · .exe installer' },
+        linux: { ico: '🐧', title: 'Download for Linux', desc: 'x86_64 · AppImage' }
+      }
 
       function humanSize(bytes) {
-        if (!bytes) return "";
-        const mb = bytes / (1024 * 1024);
-        return mb >= 1 ? mb.toFixed(0) + " MB" : (bytes / 1024).toFixed(0) + " KB";
+        if (!bytes) return ''
+        const mb = bytes / (1024 * 1024)
+        return mb >= 1 ? mb.toFixed(0) + ' MB' : (bytes / 1024).toFixed(0) + ' KB'
       }
       function extOf(url) {
-        const m = url.match(/\.([A-Za-z0-9]+)$/);
-        return m ? m[1] : "";
+        const m = url.match(/\.([A-Za-z0-9]+)$/)
+        return m ? m[1] : ''
       }
       // Minimal YAML read for the electron-updater manifest shape: a top-level
       // `version:` and a `files:` list of `- url: / sha512: / size:` entries.
       function parseManifest(text) {
-        const version = (text.match(/^version:\s*(.+)$/m) || [])[1]?.trim() || "";
-        const releaseDate = (text.match(/^releaseDate:\s*'?([^'\n]+)'?/m) || [])[1]?.trim() || "";
-        const files = [];
+        const version = (text.match(/^version:\s*(.+)$/m) || [])[1]?.trim() || ''
+        const releaseDate = (text.match(/^releaseDate:\s*'?([^'\n]+)'?/m) || [])[1]?.trim() || ''
+        const files = []
         // Line-based pass (robust against optional fields/order):
-        let cur = null;
-        for (const raw of text.split("\n")) {
-          const u = raw.match(/^\s*-\s*url:\s*(\S+)/);
-          if (u) { cur = { url: u[1], sha512: "", size: 0 }; files.push(cur); continue; }
+        let cur = null
+        for (const raw of text.split('\n')) {
+          const u = raw.match(/^\s*-\s*url:\s*(\S+)/)
+          if (u) {
+            cur = { url: u[1], sha512: '', size: 0 }
+            files.push(cur)
+            continue
+          }
           // A top-level key (no indentation) ends the files list — otherwise the
           // trailing top-level sha512 would overwrite the last file's checksum.
-          if (/^\S/.test(raw)) { cur = null; }
-          if (!cur) continue;
-          const s = raw.match(/^\s*sha512:\s*(\S+)/);
-          if (s) cur.sha512 = s[1];
-          const z = raw.match(/^\s*size:\s*(\d+)/);
-          if (z) cur.size = parseInt(z[1], 10);
+          if (/^\S/.test(raw)) {
+            cur = null
+          }
+          if (!cur) continue
+          const s = raw.match(/^\s*sha512:\s*(\S+)/)
+          if (s) cur.sha512 = s[1]
+          const z = raw.match(/^\s*size:\s*(\d+)/)
+          if (z) cur.size = parseInt(z[1], 10)
         }
-        return { version, releaseDate, files };
+        return { version, releaseDate, files }
+      }
+
+      const TRUST_POLICIES = {
+        linux: { method: 'sha512-channel-manifest', signerRequired: false },
+        mac: { method: 'apple-developer-id', signerRequired: true },
+        win: { method: 'windows-authenticode', signerRequired: true }
+      }
+      // Source-controlled expectations are deliberately independent of the
+      // trust documents. Empty values keep downloads disabled until a code
+      // owner pins identities established out of band.
+      const EXPECTED_RELEASE_SIGNERS = Object.freeze({
+        'ix-agency': Object.freeze({ appleTeamId: '', windowsSignerSha256: '', trustMetadataPublicKeySpki: '', provenanceRepository: 'intelli-verse-x/hermes-agent', provenanceWorkflow: '.github/workflows/desktop-release.yml' }),
+        quizverse: Object.freeze({ appleTeamId: '', windowsSignerSha256: '', trustMetadataPublicKeySpki: '', provenanceRepository: 'intelli-verse-x/hermes-agent', provenanceWorkflow: '.github/workflows/desktop-release.yml' })
+      })
+
+      function releasePolicyIssue(brandId) {
+        const expected = EXPECTED_RELEASE_SIGNERS[brandId]
+        const missing = []
+        if (!/^[A-Z0-9]{10}$/.test(String(expected?.appleTeamId || '').toUpperCase())) missing.push('Apple signer approval')
+        if (!/^[A-F0-9]{64}$/.test(String(expected?.windowsSignerSha256 || '').replace(/\s/g, '').toUpperCase()))
+          missing.push('Windows signer approval')
+        if (!expected?.trustMetadataPublicKeySpki) missing.push('provenance signing-key config')
+        if (expected?.provenanceRepository !== 'intelli-verse-x/hermes-agent' || expected?.provenanceWorkflow !== '.github/workflows/desktop-release.yml')
+          missing.push('provenance policy config')
+        return missing.length ? `Downloads disabled: missing ${missing.join(', ')}.` : ''
+      }
+
+      function expectedSignerValid(os, brandId, signer) {
+        const expected = EXPECTED_RELEASE_SIGNERS[brandId]
+        const teamId = String(expected?.appleTeamId || '').toUpperCase()
+        const certificateSha256 = String(expected?.windowsSignerSha256 || '')
+          .replace(/\s/g, '')
+          .toUpperCase()
+        const actualId = String(signer?.id || '')
+          .replace(/\s/g, '')
+          .toUpperCase()
+
+        // A brand is releasable only after both publisher identities are
+        // independently pinned. This also prevents a partial Linux-only feed.
+        if (!/^[A-Z0-9]{10}$/.test(teamId) || !/^[A-F0-9]{64}$/.test(certificateSha256)) return false
+        if (os === 'linux') return signer === null
+        if (!signer?.subject) return false
+        if (os === 'mac') {
+          return actualId === teamId
+        }
+        if (os === 'win') {
+          return actualId === certificateSha256
+        }
+
+        return false
+      }
+
+      function base64Bytes(value) {
+        const binary = atob(String(value || '').replace(/\s/g, ''))
+        return Uint8Array.from(binary, character => character.charCodeAt(0))
+      }
+
+      async function verifyTrustMetadataSignature(trustText, signature, publicKeySpki) {
+        try {
+          const key = await crypto.subtle.importKey(
+            'spki',
+            base64Bytes(publicKeySpki),
+            { hash: 'SHA-256', name: 'RSASSA-PKCS1-v1_5' },
+            false,
+            ['verify']
+          )
+          return crypto.subtle.verify(
+            'RSASSA-PKCS1-v1_5',
+            key,
+            base64Bytes(signature),
+            new TextEncoder().encode(trustText)
+          )
+        } catch {
+          return false
+        }
+      }
+
+      async function sha256HexBase64(value) {
+        const digest = await crypto.subtle.digest('SHA-256', base64Bytes(value))
+        return [...new Uint8Array(digest)].map(byte => byte.toString(16).padStart(2, '0')).join('')
+      }
+
+      async function sha512Base64(text) {
+        const digest = await crypto.subtle.digest('SHA-512', new TextEncoder().encode(text))
+        const bytes = new Uint8Array(digest)
+        let binary = ''
+
+        for (const byte of bytes) binary += String.fromCharCode(byte)
+
+        return btoa(binary)
+      }
+
+      async function loadTrust(feed, os, brand, manifestFile, manifestText, manifest) {
+        if (!manifest.version || !manifest.files.length) return { reason: 'No published installer', trusted: false }
+        const releasePolicy = EXPECTED_RELEASE_SIGNERS[brand.id]
+        const policyIssue = releasePolicyIssue(brand.id)
+        if (policyIssue) return { reason: policyIssue, trusted: false }
+        try {
+          const [response, signatureResponse] = await Promise.all([
+            fetch(feed + 'trust-' + os + '.json', { cache: 'no-store' }),
+            fetch(feed + 'trust-' + os + '.json.sig', { cache: 'no-store' })
+          ])
+          if (!response.ok || !signatureResponse.ok)
+            return { reason: 'Release trust proof is not published', trusted: false }
+          const trustText = await response.text()
+          const signature = await signatureResponse.text()
+          if (!await verifyTrustMetadataSignature(trustText, signature, releasePolicy.trustMetadataPublicKeySpki))
+            return { reason: 'Release trust proof did not independently verify', trusted: false }
+          const trust = JSON.parse(trustText)
+          const policy = TRUST_POLICIES[os]
+          const signingKeySha256 = await sha256HexBase64(releasePolicy.trustMetadataPublicKeySpki)
+          const signerValid = expectedSignerValid(os, brand.id, trust.verification?.signer)
+          const artifactsValid =
+            Array.isArray(trust.artifacts) &&
+            trust.artifacts.length === manifest.files.length &&
+            manifest.files.every((file, index) => {
+              const artifact = trust.artifacts[index]
+
+              return artifact?.url === file.url && artifact?.size === file.size && artifact?.sha512 === file.sha512
+            })
+
+          const trusted =
+            trust.schemaVersion === 2 &&
+            trust.brand?.id === brand.id &&
+            trust.brand?.productName === brand.productName &&
+            trust.brand?.appId === brand.appId &&
+            trust.platform === os &&
+            trust.version === manifest.version &&
+            trust.publisher === 'Intelliverse X' &&
+            trust.verification?.status === 'verified' &&
+            trust.verification?.method === policy.method &&
+            signerValid &&
+            trust.channel?.file === manifestFile &&
+            trust.channel?.sha512 === (await sha512Base64(manifestText)) &&
+            trust.provenance?.repository === releasePolicy.provenanceRepository &&
+            trust.provenance?.workflow === releasePolicy.provenanceWorkflow &&
+            trust.provenance?.signingKeySha256 === signingKeySha256 &&
+            String(trust.provenance?.workflowRef || '').startsWith(
+              `${releasePolicy.provenanceRepository}/${releasePolicy.provenanceWorkflow}@refs/`
+            ) &&
+            /^[0-9a-f]{40}$/i.test(trust.provenance?.releaseCommit || '') &&
+            /^\d+$/.test(String(trust.provenance?.workflowRunId || '')) &&
+            artifactsValid
+
+          return {
+            reason: trusted ? '' : 'Release trust proof did not match the pinned signer and provenance policy',
+            trusted
+          }
+        } catch {
+          return { reason: 'Release trust proof could not be verified', trusted: false }
+        }
+      }
+
+      function brandReleaseReady(results, version) {
+        return Boolean(version) && PLATFORMS.every(os => results[os]?.version === version && results[os]?.trusted)
       }
 
       function fileRow(f, feed = FEED) {
-        const ext = extOf(f.url);
-        const label = EXT_LABEL[ext] || ext;
-        const a = document.createElement("a");
-        a.className = "file";
-        a.href = feed + f.url;
-        a.setAttribute("download", "");
-        const left = document.createElement("span");
-        left.className = "ext";
-        left.textContent = label;
-        const right = document.createElement("span");
-        right.className = "sz";
-        right.textContent = humanSize(f.size);
-        a.append(left, right);
+        const ext = extOf(f.url)
+        const label = EXT_LABEL[ext] || ext
+        const a = document.createElement('a')
+        a.className = 'file'
+        a.href = feed + f.url
+        a.setAttribute('download', '')
+        const left = document.createElement('span')
+        left.className = 'ext'
+        left.textContent = label
+        const right = document.createElement('span')
+        right.className = 'sz'
+        right.textContent = humanSize(f.size)
+        a.append(left, right)
         if (f.sha512) {
-          const d = document.createElement("details");
-          d.className = "verify";
-          const sum = document.createElement("summary");
-          sum.textContent = "verify checksum";
-          const code = document.createElement("code");
+          const d = document.createElement('details')
+          d.className = 'verify'
+          const sum = document.createElement('summary')
+          sum.textContent = 'verify checksum'
+          const code = document.createElement('code')
           code.textContent =
-            "# SHA-512 (base64), from the release manifest:\n" +
+            '# SHA-512 (base64), from the release manifest:\n' +
             f.sha512 +
-            "\n\n# macOS/Linux — compare after download:\nshasum -a 512 " +
+            '\n\n# macOS/Linux — compare after download:\nshasum -a 512 ' +
             f.url +
-            " | xxd -r -p | base64";
-          d.append(sum, code);
-          const wrap = document.createElement("div");
-          wrap.append(a, d);
-          return wrap;
+            ' | xxd -r -p | base64'
+          d.append(sum, code)
+          const wrap = document.createElement('div')
+          wrap.append(a, d)
+          return wrap
         }
-        return a;
+        return a
       }
 
       function detectOS() {
-        const p = (navigator.userAgentData?.platform || navigator.platform || navigator.userAgent).toLowerCase();
-        if (p.includes("mac")) return "mac";
-        if (p.includes("win")) return "win";
-        if (p.includes("linux") || p.includes("x11")) return "linux";
-        return null;
+        const p = (navigator.userAgentData?.platform || navigator.platform || navigator.userAgent).toLowerCase()
+        if (p.includes('mac')) return 'mac'
+        if (p.includes('win')) return 'win'
+        if (p.includes('linux') || p.includes('x11')) return 'linux'
+        return null
       }
 
       async function load() {
-        const results = {};
+        const results = {}
         await Promise.all(
           Object.entries(MANIFESTS).map(async ([os, file]) => {
             try {
-              const res = await fetch(FEED + file, { cache: "no-store" });
-              if (!res.ok) throw new Error("HTTP " + res.status);
-              results[os] = parseManifest(await res.text());
+              const res = await fetch(FEED + file, { cache: 'no-store' })
+              if (!res.ok) throw new Error('HTTP ' + res.status)
+              const manifestText = await res.text()
+              results[os] = parseManifest(manifestText)
+              const trustResult = await loadTrust(
+                FEED,
+                os,
+                { appId: 'ai.intelli-verse-x.ix-agency', id: 'ix-agency', productName: 'IVX Agency' },
+                file,
+                manifestText,
+                results[os]
+              )
+              results[os].trusted = trustResult.trusted
+              results[os].trustReason = trustResult.reason
             } catch (e) {
-              results[os] = { version: "", releaseDate: "", files: [], error: String(e) };
+              results[os] = { version: '', releaseDate: '', files: [], error: String(e) }
             }
           })
-        );
+        )
 
         // Version pill (any manifest carries it; they publish together).
-        const ver = results.mac.version || results.win.version || results.linux.version || "unavailable";
-        document.getElementById("version").textContent = ver;
-        document.getElementById("foot-ver").textContent = "v" + ver;
-        const rd = results.mac.releaseDate || results.win.releaseDate || results.linux.releaseDate;
+        const ver = results.mac.version || results.win.version || results.linux.version || 'unavailable'
+        document.getElementById('version').textContent = ver
+        document.getElementById('foot-ver').textContent = 'v' + ver
+        const rd = results.mac.releaseDate || results.win.releaseDate || results.linux.releaseDate
         if (rd) {
-          const d = new Date(rd);
-          if (!isNaN(d)) document.getElementById("reldate").textContent = "· " + d.toLocaleDateString();
+          const d = new Date(rd)
+          if (!isNaN(d)) document.getElementById('reldate').textContent = '· ' + d.toLocaleDateString()
         }
+        const releaseReady = brandReleaseReady(results, ver)
 
         // Per-OS cards.
-        const cards = { mac: "card-mac", win: "card-win", linux: "card-linux" };
+        const cards = { mac: 'card-mac', win: 'card-win', linux: 'card-linux' }
         for (const [os, id] of Object.entries(cards)) {
-          const holder = document.querySelector("#" + id + " [data-files]");
-          holder.textContent = "";
-          const r = results[os];
-          if (r.error || !r.files.length) {
-            const e = document.createElement("div");
-            e.className = "err";
-            e.textContent = "Temporarily unavailable";
-            holder.append(e);
-            continue;
+          const holder = document.querySelector('#' + id + ' [data-files]')
+          holder.textContent = ''
+          const r = results[os]
+          if (r.error || !r.files.length || !r.trusted || !releaseReady) {
+            const e = document.createElement('div')
+            e.className = 'err'
+            e.textContent = r.files.length
+              ? r.trustReason || 'Downloads disabled until every platform release independently verifies.'
+              : 'Temporarily unavailable'
+            holder.append(e)
+            continue
           }
           // Primary ext first, then the rest.
           const order = [...r.files].sort((a, b) => {
-            const pa = extOf(a.url) === PRIMARY_EXT[os] ? -1 : 0;
-            const pb = extOf(b.url) === PRIMARY_EXT[os] ? -1 : 0;
-            return pa - pb;
-          });
-          for (const f of order) holder.append(fileRow(f));
+            const pa = extOf(a.url) === PRIMARY_EXT[os] ? -1 : 0
+            const pb = extOf(b.url) === PRIMARY_EXT[os] ? -1 : 0
+            return pa - pb
+          })
+          for (const f of order) holder.append(fileRow(f))
         }
 
         // Primary hero button for the detected OS.
-        const os = detectOS();
-        const meta = OS_META[os];
-        const btn = document.getElementById("primary-btn");
-        if (os && meta && results[os] && results[os].files.length) {
-          const pick =
-            results[os].files.find((f) => extOf(f.url) === PRIMARY_EXT[os]) || results[os].files[0];
-          document.getElementById("primary-ico").textContent = meta.ico;
-          document.getElementById("primary-title").textContent = meta.title;
-          document.getElementById("primary-desc").textContent = meta.desc + " · " + humanSize(pick.size);
-          btn.href = FEED + pick.url;
-          btn.setAttribute("download", "");
-          btn.textContent = "Download " + ver;
-          btn.style.visibility = "visible";
+        const os = detectOS()
+        const meta = OS_META[os]
+        const btn = document.getElementById('primary-btn')
+        if (releaseReady && os && meta && results[os] && results[os].files.length && results[os].trusted) {
+          const pick = results[os].files.find(f => extOf(f.url) === PRIMARY_EXT[os]) || results[os].files[0]
+          document.getElementById('primary-ico').textContent = meta.ico
+          document.getElementById('primary-title').textContent = meta.title
+          document.getElementById('primary-desc').textContent = meta.desc + ' · ' + humanSize(pick.size)
+          btn.href = FEED + pick.url
+          btn.setAttribute('download', '')
+          btn.textContent = 'Download ' + ver
+          btn.style.visibility = 'visible'
         } else {
-          document.getElementById("primary-title").textContent = "Choose your platform";
-          document.getElementById("primary-desc").textContent = "Pick the right download for your OS below.";
+          document.getElementById('primary-title').textContent = 'Choose your platform'
+          document.getElementById('primary-desc').textContent = 'Pick the right download for your OS below.'
         }
       }
 
       async function loadQuizverse() {
-        const feed = "quizverse/";
-        const results = {};
+        const feed = 'quizverse/'
+        const results = {}
         await Promise.all(
           Object.entries(MANIFESTS).map(async ([os, file]) => {
             try {
-              const res = await fetch(feed + file, { cache: "no-store" });
-              if (!res.ok) throw new Error("HTTP " + res.status);
-              results[os] = parseManifest(await res.text());
+              const res = await fetch(feed + file, { cache: 'no-store' })
+              if (!res.ok) throw new Error('HTTP ' + res.status)
+              const manifestText = await res.text()
+              results[os] = parseManifest(manifestText)
+              const trustResult = await loadTrust(
+                feed,
+                os,
+                { appId: 'ai.intelli-verse-x.quizverse', id: 'quizverse', productName: 'QuizVerse' },
+                file,
+                manifestText,
+                results[os]
+              )
+              results[os].trusted = trustResult.trusted
+              results[os].trustReason = trustResult.reason
             } catch (e) {
-              results[os] = { version: "", releaseDate: "", files: [], error: String(e) };
+              results[os] = { version: '', releaseDate: '', files: [], error: String(e) }
             }
           })
-        );
+        )
 
-        const ver = results.mac.version || results.win.version || results.linux.version || "";
-        const availability = document.getElementById("qv-availability");
-        const version = document.getElementById("qv-version");
-        const dot = document.getElementById("qv-version-dot");
+        const ver = results.mac.version || results.win.version || results.linux.version || ''
+        const availability = document.getElementById('qv-availability')
+        const version = document.getElementById('qv-version')
+        const dot = document.getElementById('qv-version-dot')
 
-        if (ver) {
-          version.textContent = ver;
-          document.getElementById("qv-foot-ver").textContent = "v" + ver;
-          availability.dataset.state = "ready";
+        const trustedRelease =
+          Boolean(ver) && PLATFORMS.every(os => results[os]?.version === ver && results[os]?.trusted)
+        if (ver && trustedRelease) {
+          version.textContent = ver
+          document.getElementById('qv-foot-ver').textContent = 'v' + ver
+          availability.dataset.state = 'ready'
           availability.textContent =
-            "Official QuizVerse installers are available below. Choose the artifact for your operating system.";
+            'Verified QuizVerse installers are available below. Choose an artifact whose release trust check passed.'
         } else {
-          version.textContent = "not yet published";
-          document.getElementById("qv-foot-ver").textContent = "release pending";
-          dot.style.background = "var(--warn)";
-          availability.dataset.state = "waiting";
-          availability.textContent =
-            "QuizVerse Desktop has not been published to the official release feed yet. No download link is available. Return to this page after the release is announced.";
+          version.textContent = ver ? 'pending trust verification' : 'not yet published'
+          document.getElementById('qv-foot-ver').textContent = 'release pending'
+          dot.style.background = 'var(--warn)'
+          availability.dataset.state = 'waiting'
+          availability.textContent = ver
+            ? releasePolicyIssue('quizverse') ||
+              'QuizVerse artifacts exist, but downloads stay disabled until every platform release independently verifies.'
+            : 'QuizVerse Desktop has not been published to the official release feed yet. No download link is available. Return to this page after the release is announced.'
         }
 
-        const rd = results.mac.releaseDate || results.win.releaseDate || results.linux.releaseDate;
+        const rd = results.mac.releaseDate || results.win.releaseDate || results.linux.releaseDate
         if (rd) {
-          const d = new Date(rd);
-          if (!isNaN(d)) document.getElementById("qv-reldate").textContent = "· " + d.toLocaleDateString();
+          const d = new Date(rd)
+          if (!isNaN(d)) document.getElementById('qv-reldate').textContent = '· ' + d.toLocaleDateString()
         }
 
-        const cards = { mac: "qv-card-mac", win: "qv-card-win", linux: "qv-card-linux" };
+        const cards = { mac: 'qv-card-mac', win: 'qv-card-win', linux: 'qv-card-linux' }
         for (const [os, id] of Object.entries(cards)) {
-          const holder = document.querySelector("#" + id + " [data-files]");
-          holder.textContent = "";
-          const result = results[os];
-          if (result.error || !result.files.length) {
-            const message = document.createElement("div");
-            message.className = "err";
-            message.textContent = "No published installer";
-            holder.append(message);
-            continue;
+          const holder = document.querySelector('#' + id + ' [data-files]')
+          holder.textContent = ''
+          const result = results[os]
+          if (result.error || !result.files.length || !result.trusted || !trustedRelease) {
+            const message = document.createElement('div')
+            message.className = 'err'
+            message.textContent = result.files.length
+              ? result.trustReason || 'Downloads disabled until every platform release independently verifies.'
+              : 'No published installer'
+            holder.append(message)
+            continue
           }
           const order = [...result.files].sort((a, b) => {
-            const pa = extOf(a.url) === PRIMARY_EXT[os] ? -1 : 0;
-            const pb = extOf(b.url) === PRIMARY_EXT[os] ? -1 : 0;
-            return pa - pb;
-          });
-          for (const artifact of order) holder.append(fileRow(artifact, feed));
+            const pa = extOf(a.url) === PRIMARY_EXT[os] ? -1 : 0
+            const pb = extOf(b.url) === PRIMARY_EXT[os] ? -1 : 0
+            return pa - pb
+          })
+          for (const artifact of order) holder.append(fileRow(artifact, feed))
         }
 
-        const os = detectOS();
-        const meta = OS_META[os];
-        const btn = document.getElementById("qv-primary-btn");
-        if (os && meta && results[os] && results[os].files.length) {
+        const os = detectOS()
+        const meta = OS_META[os]
+        const btn = document.getElementById('qv-primary-btn')
+        if (trustedRelease && os && meta && results[os] && results[os].files.length && results[os].trusted) {
           const pick =
-            results[os].files.find((artifact) => extOf(artifact.url) === PRIMARY_EXT[os]) ||
-            results[os].files[0];
-          document.getElementById("qv-primary-ico").textContent = meta.ico;
-          document.getElementById("qv-primary-title").textContent = meta.title.replace("Download", "Download QuizVerse");
-          document.getElementById("qv-primary-desc").textContent =
-            meta.desc + " · " + humanSize(pick.size);
-          btn.href = feed + pick.url;
-          btn.setAttribute("download", "");
-          btn.textContent = "Download " + ver;
-          btn.style.visibility = "visible";
+            results[os].files.find(artifact => extOf(artifact.url) === PRIMARY_EXT[os]) || results[os].files[0]
+          document.getElementById('qv-primary-ico').textContent = meta.ico
+          document.getElementById('qv-primary-title').textContent = meta.title.replace('Download', 'Download QuizVerse')
+          document.getElementById('qv-primary-desc').textContent = meta.desc + ' · ' + humanSize(pick.size)
+          btn.href = feed + pick.url
+          btn.setAttribute('download', '')
+          btn.textContent = 'Download ' + ver
+          btn.style.visibility = 'visible'
         } else {
-          document.getElementById("qv-primary-title").textContent =
-            ver ? "Choose your platform" : "QuizVerse release pending";
-          document.getElementById("qv-primary-desc").textContent =
-            ver ? "Pick the right download for your OS below." : "Installers will appear here after the official release.";
+          document.getElementById('qv-primary-title').textContent = ver
+            ? 'Choose your platform'
+            : 'QuizVerse release pending'
+          document.getElementById('qv-primary-desc').textContent = ver
+            ? 'Pick the right download for your OS below.'
+            : 'Installers will appear here after the official release.'
         }
       }
 
-      load();
-      loadQuizverse();
+      load()
+      loadQuizverse()
     </script>
   </body>
 </html>

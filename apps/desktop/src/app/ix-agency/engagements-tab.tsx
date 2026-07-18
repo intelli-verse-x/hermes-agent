@@ -190,7 +190,9 @@ export function EngagementsTab({ query }: { query: string }) {
         ))}
         <PanelAddButton label="Add engagement" onClick={() => setSelectedId(addEngagement().id)} />
       </ListColumn>
-      <DetailColumn footer={selected ? 'Changes save automatically.' : undefined}>
+      <DetailColumn
+        footer={selected ? 'Saved locally on this device · not synced · no backup/export in early access.' : undefined}
+      >
         {selected ? (
           <EngagementDetail engagement={selected} />
         ) : (

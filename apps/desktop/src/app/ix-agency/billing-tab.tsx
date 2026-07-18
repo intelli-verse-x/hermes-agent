@@ -212,7 +212,13 @@ export function BillingTab({ query }: { query: string }) {
             })}
             <PanelAddButton label="Add invoice" onClick={() => setSelectedId(addInvoice().id)} />
           </ListColumn>
-          <DetailColumn footer={selected ? 'Changes save automatically.' : undefined}>
+          <DetailColumn
+            footer={
+              selected
+                ? 'Local planning record only · not synced · does not send invoices or process payments.'
+                : undefined
+            }
+          >
             {selected ? (
               <InvoiceDetail invoice={selected} />
             ) : (

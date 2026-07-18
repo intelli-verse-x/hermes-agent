@@ -10,6 +10,7 @@
   "homepage": "https://quizverse.world",
   "protocolScheme": "quizverse",
   "icon": "assets/brands/quizverse/icon",
+  "iconSha256": "117cc4435a8ed1b21577dff84dd949975c41694799ece7d94f906e3144e566e6",
   "iconIco": "assets/brands/quizverse/icon.ico",
   "markSvg": "quizverse/mark-512.png",
   "touchIcon": "quizverse/mark-512.png",

@@ -19,9 +19,7 @@ function ClientDetail({ client, engagementCount }: { client: AgencyClient; engag
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-2">
-        <h3 className="min-w-0 flex-1 truncate text-sm font-semibold text-foreground">
-          {client.name || 'New client'}
-        </h3>
+        <h3 className="min-w-0 flex-1 truncate text-sm font-semibold text-foreground">{client.name || 'New client'}</h3>
         <PanelPill tone={STATUS_PILL_TONE[client.status]}>{client.status}</PanelPill>
       </div>
       <FieldRow>
@@ -34,11 +32,7 @@ function ClientDetail({ client, engagementCount }: { client: AgencyClient; engag
       </FieldRow>
       <FieldRow>
         <Field label="Email">
-          <Input
-            onChange={e => updateClient(client.id, { email: e.target.value })}
-            type="email"
-            value={client.email}
-          />
+          <Input onChange={e => updateClient(client.id, { email: e.target.value })} type="email" value={client.email} />
         </Field>
         <Field label="Status">
           <Select
@@ -123,7 +117,9 @@ export function ClientsTab({ query }: { query: string }) {
         ))}
         <PanelAddButton label="Add client" onClick={() => setSelectedId(addClient().id)} />
       </ListColumn>
-      <DetailColumn footer={selected ? 'Changes save automatically.' : undefined}>
+      <DetailColumn
+        footer={selected ? 'Saved locally on this device · not synced · no backup/export in early access.' : undefined}
+      >
         {selected ? (
           <ClientDetail client={selected} engagementCount={engagementCount(selected.id)} />
         ) : (

@@ -31,6 +31,7 @@ export interface DesktopBrand {
   homepage: string
   protocolScheme: string
   icon: string
+  iconSha256: string
   iconIco: string
   markSvg: string
   /** Favicon / tray / onboarding tile (under public/). */

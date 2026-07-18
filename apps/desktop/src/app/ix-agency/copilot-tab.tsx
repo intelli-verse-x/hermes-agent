@@ -344,7 +344,7 @@ export function CopilotTab() {
           }
         ])
       } else if (event.type === 'error') {
-        notifyError(new Error(event.message ?? 'Chat failed'), 'IX Agency chat')
+        notifyError(new Error(event.message ?? 'Chat failed'), 'IVX Agency chat')
       }
     })
   }, [bridge])
@@ -423,7 +423,7 @@ export function CopilotTab() {
         setStreamingText('')
         void refreshConversations()
       } catch (error) {
-        notifyError(error, 'IX Agency chat')
+        notifyError(error, 'IVX Agency chat')
       } finally {
         setBusy(false)
       }
@@ -459,7 +459,7 @@ export function CopilotTab() {
   if (!bridge) {
     return (
       <div className="mx-auto max-w-2xl px-5 py-6 text-xs text-muted-foreground">
-        The IX Agency bridge is unavailable in this build.
+        The IVX Agency bridge is unavailable in this build.
       </div>
     )
   }
@@ -571,9 +571,11 @@ export function CopilotTab() {
             {!items.length && !streamingText && (
               <div className="py-10 text-center text-xs text-muted-foreground">
                 <Codicon className="mb-2 text-muted-foreground/50" name="sparkle" size="1.5rem" />
-                <p className="font-medium">IX Agency copilot — native</p>
+                <p className="font-medium">IVX Agency copilot — native</p>
                 <p className="mt-1">
-                  LiteLLM streaming with the full admin-mcp tool estate. Writes always stop for your confirmation.
+                  LiteLLM streaming with the tools enabled for your portal account. Tool operations classified as writes
+                  require an unexpired confirmation challenge; read-only calls do not. Server-side authorization still
+                  applies, and a connector can define stricter controls.
                 </p>
               </div>
             )}
