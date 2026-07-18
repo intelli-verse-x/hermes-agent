@@ -29,6 +29,16 @@
 # opening the .dmg URL):
 #   CSC_LINK / CSC_KEY_PASSWORD — Developer ID cert (base64 .p12 / password)
 #   APPLE_ID / APPLE_APP_SPECIFIC_PASSWORD / APPLE_TEAM_ID — notarytool
+# Optional (Windows signing via Azure Trusted Signing; skipped when unset —
+# electron-builder invokes Invoke-TrustedSigning for the exe + installers,
+# no cert file or hardware token, SmartScreen trust is immediate):
+#   AZURE_SIGNING_ENDPOINT — regional endpoint, e.g. https://eus.codesigning.azure.net/
+#   AZURE_SIGNING_ACCOUNT — Trusted Signing account name (gates the whole feature)
+#   AZURE_SIGNING_PROFILE — certificate profile name (type: Public Trust)
+#   AZURE_PUBLISHER_NAME — the identity-validated legal name (certificate CN)
+#   AZURE_TENANT_ID / AZURE_CLIENT_ID / AZURE_CLIENT_SECRET — Entra app
+#     registration whose service principal has the role
+#     "Trusted Signing Certificate Profile Signer" on the account
 name: desktop-release
 
 on:
@@ -105,13 +115,36 @@ jobs:
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           CSC_IDENTITY_AUTO_DISCOVERY: ${{ secrets.CSC_LINK != '' }}
+          # Windows / Azure Trusted Signing (consumed by electron-builder's
+          # azureSignOptions path; all skipped when AZURE_SIGNING_ACCOUNT unset)
+          AZURE_SIGNING_ENDPOINT: ${{ secrets.AZURE_SIGNING_ENDPOINT }}
+          AZURE_SIGNING_ACCOUNT: ${{ secrets.AZURE_SIGNING_ACCOUNT }}
+          AZURE_SIGNING_PROFILE: ${{ secrets.AZURE_SIGNING_PROFILE }}
+          AZURE_PUBLISHER_NAME: ${{ secrets.AZURE_PUBLISHER_NAME }}
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
         # Unset EMPTY signing vars: electron-builder treats an empty CSC_LINK
         # as a certificate *path* and dies with "<cwd> not a file".
         run: |
           for v in CSC_LINK CSC_KEY_PASSWORD APPLE_ID APPLE_APP_SPECIFIC_PASSWORD APPLE_TEAM_ID; do
             if [ -z "${!v:-}" ]; then unset "$v"; fi
           done
-          npm run builder -- --publish always
+          # Azure Trusted Signing: injected as CLI config overrides so the
+          # checked-in package.json stays free of account-specific values and
+          # builds stay unsigned until the secrets exist. signAndEditExecutable
+          # is re-enabled here because signing requires editing the exe.
+          EXTRA_ARGS=()
+          if [ "$RUNNER_OS" = "Windows" ] && [ -n "${AZURE_SIGNING_ACCOUNT:-}" ]; then
+            EXTRA_ARGS+=(
+              "--config.win.signAndEditExecutable=true"
+              "--config.win.azureSignOptions.endpoint=${AZURE_SIGNING_ENDPOINT}"
+              "--config.win.azureSignOptions.codeSigningAccountName=${AZURE_SIGNING_ACCOUNT}"
+              "--config.win.azureSignOptions.certificateProfileName=${AZURE_SIGNING_PROFILE}"
+              "--config.win.azureSignOptions.publisherName=${AZURE_PUBLISHER_NAME}"
+            )
+          fi
+          npm run builder -- --publish always ${EXTRA_ARGS[@]+"${EXTRA_ARGS[@]}"}
 
       - name: Upload installers as workflow artifacts (debug/QA convenience)
         uses: actions/upload-artifact@v4

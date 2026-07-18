@@ -82,6 +82,36 @@ EXPECT_VERSION=0.17.1 node apps/desktop/scripts/verify-update-feed.mjs
 - **macOS**: in-place update requires a **signed** build (Squirrel.Mac).
   Until `CSC_LINK`/notarization secrets are set, unsigned mac builds fall
   back to opening the download page for a drag-install.
+
+## Code signing (optional secrets — builds stay unsigned until set)
+
+Both platforms are wired in `desktop-release.yml`; each is skipped entirely
+when its gating secret is absent, so releases never block on signing.
+
+**Windows — Azure Trusted Signing** (no cert file, no hardware token;
+SmartScreen trust is immediate). electron-builder ≥26 invokes
+`Invoke-TrustedSigning` for the exe and both installers when
+`win.azureSignOptions` is present — the workflow injects it via
+`--config` overrides from these secrets (gate: `AZURE_SIGNING_ACCOUNT`):
+
+| Secret | Value |
+|---|---|
+| `AZURE_SIGNING_ENDPOINT` | Regional endpoint, e.g. `https://eus.codesigning.azure.net/` |
+| `AZURE_SIGNING_ACCOUNT` | Trusted Signing **account** name (not the app registration) |
+| `AZURE_SIGNING_PROFILE` | Certificate profile name (type: Public Trust) |
+| `AZURE_PUBLISHER_NAME` | Identity-validated legal name (certificate CN) |
+| `AZURE_TENANT_ID` / `AZURE_CLIENT_ID` / `AZURE_CLIENT_SECRET` | Entra app registration; its service principal needs the role **Trusted Signing Certificate Profile Signer** on the account |
+
+One-time Azure setup (~1 h clicking + 1–5 business days Identity
+Validation): create a Trusted Signing account (region determines the
+endpoint) → complete Identity Validation (the validated name becomes the
+publisher users see) → create a Public Trust certificate profile → create
+an Entra app registration + client secret and assign the signer role.
+
+**macOS — Developer ID + notarytool**: `CSC_LINK` / `CSC_KEY_PASSWORD` /
+`APPLE_ID` / `APPLE_APP_SPECIFIC_PASSWORD` / `APPLE_TEAM_ID`. Once set,
+mac in-place auto-update starts working and the `xattr -cr` note on the
+download page can be removed.
 - **Windows MSI / Linux deb/rpm**: no in-place path — the app still checks
   the feed and the update button opens the download page
   (`https://intelliverse-x-desktop.s3.amazonaws.com/index.html`, republished
