@@ -519,8 +519,14 @@ export function minimalHermesConfigYaml(litellmUrl: string, gatewayUrl: string):
 # config run hermes-deployment/scripts/install-local.sh
 model:
   default: "anthropic/claude-opus-4.6"
-  provider: "custom"
+  provider: "custom:litellm"
   base_url: "${/\/v1$/.test(base) ? base : `${base}/v1`}"
+  key_env: "LITELLM_API_KEY"
+
+custom_providers:
+  - name: litellm
+    base_url: "${/\/v1$/.test(base) ? base : `${base}/v1`}"
+    key_env: "LITELLM_API_KEY"
 
 mcp_servers:
   admin-mcp:

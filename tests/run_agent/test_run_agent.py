@@ -4390,9 +4390,13 @@ class TestRunConversation:
         # status emissions during retries are unchanged.
         assert result["final_response"] != "(empty)"
         assert "No reply:" in result["final_response"]
-        # Should have emitted retry statuses (3 retries) + final failure
-        retry_msgs = [m for m in status_messages if "retrying" in m.lower()]
-        assert len(retry_msgs) == 3, f"Expected 3 retry status messages, got {len(retry_msgs)}: {status_messages}"
+        # Stream self-heal may emit one "Empty stream — retrying…" then 3 empty
+        # completion retries + final failure.
+        empty_retries = [m for m in status_messages if "Empty response from model — retrying" in m]
+        assert len(empty_retries) == 3, (
+            f"Expected 3 empty-response retries, got {len(empty_retries)}: {status_messages}"
+        )
+        assert any("retrying" in m.lower() for m in status_messages)
         failure_msgs = [m for m in status_messages if "no content" in m.lower() or "no fallback" in m.lower()]
         assert len(failure_msgs) >= 1, f"Expected at least 1 failure status, got: {status_messages}"
 

@@ -1,3 +1,4 @@
+import { useStore } from '@nanostores/react'
 import { type FC, useCallback, useMemo, useState } from 'react'
 
 import { AssistantMessage } from '@/components/assistant-ui/thread/assistant-message'
@@ -13,9 +14,11 @@ import { type RestoreMessageTarget } from '@/components/assistant-ui/thread/type
 import { UserEditComposer } from '@/components/assistant-ui/thread/user-edit-composer'
 import { UserMessage } from '@/components/assistant-ui/thread/user-message'
 import { Intro, type IntroProps } from '@/components/chat/intro'
+import { Button } from '@/components/ui/button'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import type { HermesGateway } from '@/hermes'
 import { useI18n } from '@/i18n'
+import { $desktopOnboarding, requestDesktopOnboarding } from '@/store/onboarding'
 import { notifyError } from '@/store/notifications'
 
 type ThreadLoadingState = 'response' | 'session'
@@ -47,6 +50,9 @@ export const Thread: FC<{
 }) => {
   const { t } = useI18n()
   const copy = t.assistant.thread
+  const onboarding = useStore($desktopOnboarding)
+  const showProviderBanner =
+    onboarding.firstRunSkipped && onboarding.configured !== true && !onboarding.manual && !onboarding.requested
 
   const [restoreConfirmTarget, setRestoreConfirmTarget] = useState<
     (RestoreMessageTarget & { messageId: string }) | null
@@ -89,8 +95,26 @@ export const Thread: FC<{
   )
 
   const emptyPlaceholder = intro ? (
-    <div className="flex min-h-0 w-full flex-col items-center justify-center pt-[var(--composer-measured-height)]">
+    <div className="flex min-h-0 w-full flex-col items-center justify-center gap-3 pt-[var(--composer-measured-height)]">
       <Intro {...intro} />
+      {showProviderBanner && (
+        <div
+          className="pointer-events-auto mx-auto max-w-md rounded-lg border border-amber-500/40 bg-amber-950/40 px-4 py-3 text-center"
+          role="status"
+        >
+          <p className="text-xs text-amber-100">
+            Chat needs a model provider before messages will work. Connect one now — takes under a minute.
+          </p>
+          <Button
+            className="mt-2"
+            onClick={() => requestDesktopOnboarding('Connect a provider to start chatting.')}
+            size="sm"
+            type="button"
+          >
+            Connect provider
+          </Button>
+        </div>
+      )}
     </div>
   ) : undefined
 

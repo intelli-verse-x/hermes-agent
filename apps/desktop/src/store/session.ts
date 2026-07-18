@@ -3,6 +3,7 @@ import { atom, computed } from 'nanostores'
 import { lastVisibleMessageIsUser } from '@/app/chat/thread-loading'
 import type { ContextSuggestion } from '@/app/types'
 import type { HermesConnection } from '@/global'
+import { sanitizeDesktopProvider } from '@/lib/brand'
 import type { ChatMessage } from '@/lib/chat-messages'
 import { persistBoolean, persistString, storedBoolean, storedString } from '@/lib/storage'
 import type { SessionInfo, UsageStats } from '@/types/hermes'
@@ -315,7 +316,11 @@ export const setCurrentModel = (next: Updater<string>) => {
 }
 
 export const setCurrentProvider = (next: Updater<string>) => {
-  updateAtom($currentProvider, next)
+  updateAtom($currentProvider, current => {
+    const resolved = typeof next === 'function' ? next(current) : next
+
+    return sanitizeDesktopProvider(resolved)
+  })
   persistString(COMPOSER_PROVIDER_KEY, $currentProvider.get() || null)
 }
 

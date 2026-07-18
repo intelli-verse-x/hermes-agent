@@ -425,6 +425,7 @@ function TutorChat() {
   const mode = useStore($tutorMode)
   const streaming = useStore($tutorStreaming)
   const connection = useStore($tutorConnection)
+  const sessionId = useStore($tutorSessionId)
   const capabilities = useStore($tutorCapabilities)
   const [draft, setDraft] = useState('')
   const [reply, setReply] = useState('')
@@ -523,7 +524,14 @@ function TutorChat() {
               )}
               key={message.id}
             >
-              <div className="whitespace-pre-wrap leading-relaxed">{message.content || (streaming ? '…' : '')}</div>
+              <div className="whitespace-pre-wrap leading-relaxed">
+                {message.content ||
+                  (streaming
+                    ? '…'
+                    : message.role === 'assistant'
+                      ? 'No reply came back. Try sending again or start a new Tutor session.'
+                      : '')}
+              </div>
               {message.traces.length > 0 && (
                 <details className="mt-2 text-xs text-muted-foreground">
                   <summary>Tool trace ({message.traces.length})</summary>
@@ -571,6 +579,7 @@ function TutorChat() {
           }}
         >
           <textarea
+            aria-label="Tutor message"
             className="min-h-10 flex-1 resize-none rounded-lg border border-(--ui-border-primary) bg-black/10 px-3 py-2 text-sm outline-none focus:border-violet-400/50"
             disabled={streaming}
             onChange={event => setDraft(event.target.value)}
@@ -582,7 +591,14 @@ function TutorChat() {
           ) : (
             <Button disabled={!draft.trim()} type="submit">Send</Button>
           )}
-          <Button onClick={regenerateTutorTurn} type="button" variant="ghost">
+          <Button
+            aria-label="Regenerate last reply"
+            disabled={streaming || connection !== 'online' || !sessionId}
+            onClick={regenerateTutorTurn}
+            title={connection !== 'online' ? 'Connect TutorX first' : 'Regenerate'}
+            type="button"
+            variant="ghost"
+          >
             <Codicon name="refresh" />
           </Button>
         </form>

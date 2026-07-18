@@ -1,6 +1,6 @@
 import { type CSSProperties, useState } from 'react'
 
-import { BRAND_NAME } from '@/lib/brand'
+import { BRAND_NAME, IS_QUIZVERSE_BRAND } from '@/lib/brand'
 import { capitalize, normalize } from '@/lib/text'
 
 import introCopyJsonl from './intro-copy.jsonl?raw'
@@ -21,7 +21,7 @@ export type IntroProps = {
 
 const NEUTRAL_PERSONALITIES = new Set(['', 'default', 'none', 'neutral'])
 
-const FALLBACK_COPY: IntroCopy[] = [
+const FALLBACK_COPY_CODING: IntroCopy[] = [
   {
     headline: 'What are we moving today?',
     body: "Send a bug, branch, plan, or rough idea. I'll inspect the repo and turn it into the next concrete step."
@@ -43,6 +43,31 @@ const FALLBACK_COPY: IntroCopy[] = [
     body: "Send the context you have. I'll help sort it into a plan or a fix."
   }
 ]
+
+const FALLBACK_COPY_QUIZVERSE: IntroCopy[] = [
+  {
+    headline: 'What do you want to learn?',
+    body: 'Ask about an exam topic, practice question, or concept. I’ll explain clearly and keep the next step simple.'
+  },
+  {
+    headline: 'Ready to study?',
+    body: 'Tell me the subject, exam, or stuck concept. I’ll help you understand it without jargon.'
+  },
+  {
+    headline: `What should ${BRAND_NAME} cover?`,
+    body: 'Drop a topic, past paper question, or weak area. I’ll turn it into a focused study turn.'
+  },
+  {
+    headline: 'Where should we start?',
+    body: 'Share the exam goal or the chapter you’re on. I’ll keep answers short and useful.'
+  },
+  {
+    headline: 'What needs practice?',
+    body: 'Send a question or concept. I’ll walk through it and check you understand.'
+  }
+]
+
+const FALLBACK_COPY = IS_QUIZVERSE_BRAND ? FALLBACK_COPY_QUIZVERSE : FALLBACK_COPY_CODING
 
 function normalizeKey(value?: string): string {
   return normalize(value)
@@ -107,6 +132,12 @@ function parseIntroCopy(raw: string): Record<string, IntroCopy[]> {
 const INTRO_COPY_BY_PERSONALITY = parseIntroCopy(introCopyJsonl)
 
 function neutralCopy(): IntroCopy[] {
+  // QuizVerse must never surface coding/Hermes intro-copy.jsonl rows
+  // ("point me at a repo…") — brand study copy wins for empty chat.
+  if (IS_QUIZVERSE_BRAND) {
+    return FALLBACK_COPY_QUIZVERSE
+  }
+
   return INTRO_COPY_BY_PERSONALITY.none || INTRO_COPY_BY_PERSONALITY.default || FALLBACK_COPY
 }
 
@@ -116,6 +147,31 @@ function fallbackCopyForPersonality(personalityKey: string): IntroCopy[] {
   }
 
   const label = titleize(personalityKey)
+
+  if (IS_QUIZVERSE_BRAND) {
+    return [
+      {
+        headline: `${label} mode is on. What should we study?`,
+        body: "Ask about a topic, practice question, or weak area. I'll keep the explanation clear and exam-focused."
+      },
+      {
+        headline: `What does ${label} ${BRAND_NAME} need to cover?`,
+        body: "Bring the concept or stuck part. I'll adapt to your configured study voice."
+      },
+      {
+        headline: `${label} mode is ready.`,
+        body: "Send the question or chapter. I'll follow the personality you've configured."
+      },
+      {
+        headline: `What should ${label} ${BRAND_NAME} teach next?`,
+        body: "Drop the topic here. I'll keep the next step simple and useful."
+      },
+      {
+        headline: 'Where should we begin?',
+        body: `Give me the exam goal and I'll answer in ${label} mode.`
+      }
+    ]
+  }
 
   return [
     {
@@ -152,9 +208,15 @@ const WORDMARK = BRAND_NAME.toUpperCase()
 function resolveCopy(personality?: string, seed?: number): IntroCopy {
   const personalityKey = normalizeKey(personality)
 
+  if (IS_QUIZVERSE_BRAND && NEUTRAL_PERSONALITIES.has(personalityKey)) {
+    return pickCopy(FALLBACK_COPY_QUIZVERSE, seed)
+  }
+
   const copies = NEUTRAL_PERSONALITIES.has(personalityKey)
     ? INTRO_COPY_BY_PERSONALITY[personalityKey] || neutralCopy()
-    : INTRO_COPY_BY_PERSONALITY[personalityKey] || fallbackCopyForPersonality(personalityKey)
+    : IS_QUIZVERSE_BRAND
+      ? fallbackCopyForPersonality(personalityKey)
+      : INTRO_COPY_BY_PERSONALITY[personalityKey] || fallbackCopyForPersonality(personalityKey)
 
   return pickCopy(copies, seed)
 }

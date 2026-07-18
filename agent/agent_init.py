@@ -2098,6 +2098,23 @@ def init_agent(
             "is_anthropic_oauth": agent._is_anthropic_oauth,
         })
 
+    # API streaming policy (desktop + CLI). LiteLLM and some proxies flake
+    # empty streams after tool turns; force non-stream when configured/auto.
+    try:
+        from agent.api_streaming import apply_api_streaming_policy
+        _model_cfg = _agent_cfg.get("model") if isinstance(_agent_cfg, dict) else None
+        _stream_reason = apply_api_streaming_policy(agent, model_cfg=_model_cfg)
+        if getattr(agent, "_disable_streaming", False):
+            logger.info(
+                "API streaming disabled (%s) provider=%s base_url=%s",
+                _stream_reason,
+                getattr(agent, "provider", ""),
+                getattr(agent, "base_url", ""),
+            )
+    except Exception as _stream_pol_err:
+        logger.debug("API streaming policy skipped: %s", _stream_pol_err)
+        if not hasattr(agent, "_disable_streaming"):
+            agent._disable_streaming = False
 
 
 __all__ = ["init_agent"]

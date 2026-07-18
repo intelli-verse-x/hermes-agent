@@ -2,6 +2,7 @@ import { getSession } from '@/hermes'
 import { type ChatMessage, chatMessageText } from '@/lib/chat-messages'
 import { normalizePersonalityValue } from '@/lib/chat-runtime'
 import { embeddedImageUrls, textWithoutEmbeddedImages } from '@/lib/embedded-images'
+import { sanitizeDesktopProvider } from '@/lib/brand'
 import { requestDesktopOnboarding } from '@/store/onboarding'
 import { $activeGatewayProfile, $profiles, normalizeProfileKey } from '@/store/profile'
 import {
@@ -278,8 +279,9 @@ export function applyRuntimeInfo(info: SessionRuntimeInfo | undefined): SessionR
   }
 
   if (typeof info.provider === 'string') {
-    setCurrentProvider(info.provider)
-    sessionState.provider = info.provider
+    const provider = sanitizeDesktopProvider(info.provider)
+    setCurrentProvider(provider)
+    sessionState.provider = provider
   }
 
   if (info.cwd) {

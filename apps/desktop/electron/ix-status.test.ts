@@ -219,6 +219,9 @@ test('minimalHermesConfigYaml wires the LiteLLM gateway as model provider', () =
   const yaml = minimalHermesConfigYaml('https://litellm.intelli-verse-x.ai', 'https://admin-mcp.intelli-verse-x.ai/')
 
   assert.match(yaml, /base_url: "https:\/\/litellm\.intelli-verse-x\.ai\/v1"/)
+  assert.match(yaml, /provider: "custom:litellm"/)
+  assert.match(yaml, /key_env: "LITELLM_API_KEY"/)
+  assert.match(yaml, /name: litellm/)
   assert.match(yaml, /admin-mcp/)
   // trailing-slash / pre-versioned URLs don't double up
   assert.match(minimalHermesConfigYaml('https://x.ai/v1', 'g'), /base_url: "https:\/\/x\.ai\/v1"/)

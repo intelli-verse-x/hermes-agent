@@ -12,6 +12,21 @@ import { Field } from './bits'
  * the portal session partition). No webview: this form IS the login.
  */
 
+/** Strip Electron IPC wrappers so users see the portal message, not plumbing. */
+function friendlyAuthError(err: unknown): string {
+  const raw = err instanceof Error ? err.message : String(err ?? '')
+  const cleaned = raw
+    .replace(/^Error invoking remote method '[^']+':\s*/i, '')
+    .replace(/^Error:\s*/i, '')
+    .trim()
+
+  if (/could not send the verification email/i.test(cleaned)) {
+    return 'We could not email your sign-in code. Check the address and try again in a moment. If it keeps failing, contact support.'
+  }
+
+  return cleaned || 'Something went wrong. Try again.'
+}
+
 export function LoginPane({ detail, onSignedIn }: { detail?: string; onSignedIn: () => void }) {
   const bridge = window.hermesDesktop?.ixAgency
 
@@ -54,7 +69,7 @@ export function LoginPane({ detail, onSignedIn }: { detail?: string; onSignedIn:
       setResendAt(Date.now() + 30_000)
       setTimeout(() => codeRef.current?.focus(), 50)
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err))
+      setError(friendlyAuthError(err))
     } finally {
       setBusy(false)
     }
@@ -77,7 +92,7 @@ export function LoginPane({ detail, onSignedIn }: { detail?: string; onSignedIn:
         setError(result.detail || 'Signed in, but the session probe still reports signed out.')
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err))
+      setError(friendlyAuthError(err))
     } finally {
       setBusy(false)
     }
@@ -171,7 +186,10 @@ export function LoginPane({ detail, onSignedIn }: { detail?: string; onSignedIn:
         )}
 
         {error && (
-          <p className="rounded-md border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs text-red-600 dark:text-red-400">
+          <p
+            className="rounded-md border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs text-red-600 dark:text-red-400"
+            role="alert"
+          >
             {error}
           </p>
         )}

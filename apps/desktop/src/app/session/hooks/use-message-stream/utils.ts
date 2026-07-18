@@ -72,13 +72,32 @@ export const STREAM_DELTA_FLUSH_MS = 33
 const COMPLETION_ERROR_PATTERNS = [
   /^API call failed after \d+ retries:/i,
   /^HTTP\s+\d{3}\b/i,
-  /^(Provider|Gateway)\s+error:/i
+  /^(Provider|Gateway)\s+error:/i,
+  /^⚠️\s*No reply:/i,
+  /^\(empty\)$/i
 ]
+
+/** Shown when a turn completes with no assistant text and no typed error. */
+export const EMPTY_ASSISTANT_REPLY =
+  'No reply came back from the model. Try sending again, start a New session, or pick a different model.'
 
 export function completionErrorText(finalText: string): string | null {
   const text = finalText.trim()
 
-  return text && COMPLETION_ERROR_PATTERNS.some(re => re.test(text)) ? text : null
+  if (!text) {
+    return null
+  }
+
+  if (COMPLETION_ERROR_PATTERNS.some(re => re.test(text))) {
+    return text === '(empty)' ? EMPTY_ASSISTANT_REPLY : text
+  }
+
+  return null
+}
+
+/** Resolve inline error for a completed turn, including blank completions. */
+export function resolveCompletionError(finalText: string): string | null {
+  return completionErrorText(finalText) ?? (finalText.trim() ? null : EMPTY_ASSISTANT_REPLY)
 }
 
 export const SUBAGENT_EVENT_TYPES = new Set([

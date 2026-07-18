@@ -1130,9 +1130,21 @@ def _resolve_openrouter_runtime(
         # OPENROUTER_API_KEY to an unrelated custom endpoint (DeepSeek, Groq,
         # Mistral, …) leaks credentials and causes 401s (issue #28660).
         # Mirrors the OLLAMA_API_KEY host-gate added in GHSA-76xc-57q6-vm5m.
+        # Honor model.key_env / model.api_key_env for bare custom endpoints
+        # (LiteLLM / desktop App-ID gBrain). Without this, LITELLM_API_KEY is
+        # never selected for hosts like litellm.intelli-verse-x.ai.
+        cfg_key_env = ""
+        for hint_key in ("key_env", "api_key_env"):
+            env_var = str(model_cfg.get(hint_key) or "").strip()
+            if env_var:
+                cfg_key_env = _getenv(env_var, "").strip()
+                if cfg_key_env:
+                    break
+
         api_key_candidates = [
             explicit_api_key,
             (cfg_api_key if use_config_base_url else ""),
+            (cfg_key_env if use_config_base_url else ""),
             (_getenv("OLLAMA_API_KEY")     if _is_ollama_url                       else ""),
             (_getenv("OPENAI_API_KEY")     if (_is_openai_url or _is_openai_azure) else ""),
             (_getenv("OPENROUTER_API_KEY") if _is_openrouter_url                   else ""),

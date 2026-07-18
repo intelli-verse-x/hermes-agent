@@ -146,6 +146,15 @@ export function brandedBuilderConfig(brand, pkg) {
     entry && entry.to === 'icon.ico' ? { ...entry, from: icoSource } : entry
   )
 
+  // App-ID gBrain pack (AGENTS.md + ivx-gbrain skill) — both brands.
+  build.extraResources = [
+    ...(build.extraResources || []),
+    {
+      from: `brands/${brand.id}-brain`,
+      to: `${brand.id}-brain`
+    }
+  ]
+
   if (brand.id === 'quizverse') {
     build.extraResources = [
       ...(build.extraResources || []),

@@ -387,7 +387,13 @@ async function refreshProviders() {
 }
 
 export function requestDesktopOnboarding(reason = DEFAULT_ONBOARDING_REASON) {
-  patch({ reason: reason.trim() || DEFAULT_ONBOARDING_REASON, requested: true })
+  // Always re-surface the picker when chat/runtime asks — even after
+  // "I'll choose a provider later", so users aren't stuck with silent failures.
+  patch({
+    reason: reason.trim() || DEFAULT_ONBOARDING_REASON,
+    requested: true,
+    flow: { status: 'idle' }
+  })
 }
 
 // Open the onboarding provider selector on demand from an already-configured

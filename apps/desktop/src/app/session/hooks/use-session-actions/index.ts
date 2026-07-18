@@ -4,6 +4,7 @@ import type { NavigateFunction } from 'react-router-dom'
 
 import { deleteSession, getSessionMessages, setSessionArchived } from '@/hermes'
 import { useI18n } from '@/i18n'
+import { sanitizeDesktopProvider } from '@/lib/brand'
 import { preserveLocalAssistantErrors, toChatMessages } from '@/lib/chat-messages'
 import { setSessionYolo } from '@/lib/yolo-session'
 import { clearQueuedPrompts } from '@/store/composer-queue'
@@ -170,7 +171,7 @@ export function useSessionActions({
         // shows — applied as per-session overrides, never written to the profile
         // default (that lives in Settings → Model).
         const uiModel = $currentModel.get().trim()
-        const uiProvider = $currentProvider.get().trim()
+        const uiProvider = sanitizeDesktopProvider($currentProvider.get())
         const uiEffort = $currentReasoningEffort.get().trim()
         const uiFast = $currentFastMode.get()
 

@@ -213,8 +213,14 @@ export function fullHermesConfigYaml(
 # admin_call_mcp. Bearer placeholders resolve from ~/.hermes/.env.
 model:
   default: "anthropic/claude-opus-4.6"
-  provider: "custom"
+  provider: "custom:litellm"
   base_url: "${baseUrl}"
+  key_env: "LITELLM_API_KEY"
+
+custom_providers:
+  - name: litellm
+    base_url: "${baseUrl}"
+    key_env: "LITELLM_API_KEY"
 
 mcp_servers:
   # Admin gateway meta-tools (admin_list_tools, admin_call_mcp, …) — the

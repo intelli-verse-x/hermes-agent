@@ -41,6 +41,13 @@ type Draft = { content: string; description: string; id: null | string; title: s
 
 const EMPTY_DRAFT: Draft = { content: '', description: '', id: null, title: '' }
 
+const BLANK_SKILL_TEMPLATE: IxAgencySkillTemplate = {
+  content: '# Skill title\n\nDescribe when to use this skill and which tools to call.\n',
+  description: 'Empty SKILL.md — write your own playbook',
+  id: 'blank',
+  title: 'Blank skill'
+}
+
 function ixApi() {
   return window.hermesDesktop?.ixAgency ?? null
 }
@@ -138,6 +145,7 @@ export function SkillsTab({ onRunNatively, query }: { onRunNatively?: () => void
   const [draft, setDraft] = useState<Draft>(EMPTY_DRAFT)
   const [busy, setBusy] = useState(false)
   const [grouping, setGrouping] = useState<'flat' | 'pod' | 'tool'>('flat')
+  const [skillsError, setSkillsError] = useState<null | string>(null)
 
   const refresh = useCallback(async () => {
     const api = ixApi()
@@ -150,9 +158,11 @@ export function SkillsTab({ onRunNatively, query }: { onRunNatively?: () => void
       const result = await api.skillsList()
 
       setUserSkills(result.skills)
-      setTemplates(result.templates)
-    } catch {
-      // Skills live on disk; a failed read just leaves the list empty.
+      setTemplates(result.templates.length ? result.templates : [BLANK_SKILL_TEMPLATE])
+      setSkillsError(null)
+    } catch (error) {
+      setTemplates([BLANK_SKILL_TEMPLATE])
+      setSkillsError(error instanceof Error ? error.message : 'Could not load skill templates.')
     }
   }, [])
 
@@ -507,8 +517,13 @@ export function SkillsTab({ onRunNatively, query }: { onRunNatively?: () => void
               A skill is a SKILL.md playbook: what it does, when to use it, which MCP tools to call, and the output
               shape. Pick a starting point — you can rewrite everything.
             </p>
+            {skillsError && (
+              <p className="rounded-md border border-amber-500/40 bg-amber-950/30 px-3 py-2 text-xs text-amber-100" role="alert">
+                {skillsError} — you can still start from a blank skill below.
+              </p>
+            )}
             <div className="space-y-2">
-              {templates.map(template => (
+              {(templates.length ? templates : [BLANK_SKILL_TEMPLATE]).map(template => (
                 <button
                   className="w-full rounded-md border border-(--ui-border) px-3 py-2 text-left hover:bg-(--ui-row-active-background)"
                   key={template.id}

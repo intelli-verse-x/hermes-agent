@@ -1892,6 +1892,49 @@ def _load_agents_md(cwd_path: Path, context_length: Optional[int] = None) -> str
     return ""
 
 
+def _load_hermes_home_agents_md(
+    cwd_path: Path, context_length: Optional[int] = None
+) -> str:
+    """AGENTS.md from HERMES_HOME — desktop App-ID gBrain operating map.
+
+    Desktop brand provision seeds ``$HERMES_HOME/AGENTS.md`` per App-ID.
+    Always append when present and not the same file as the cwd project
+    AGENTS.md (so project context and desktop gBrain can coexist).
+    """
+    try:
+        home_agents = get_hermes_home() / "AGENTS.md"
+    except Exception as e:
+        logger.debug("Could not resolve HERMES_HOME for AGENTS.md: %s", e)
+        return ""
+
+    if not home_agents.exists():
+        return ""
+
+    try:
+        if home_agents.resolve() == (cwd_path / "AGENTS.md").resolve():
+            return ""
+        if home_agents.resolve() == (cwd_path / "agents.md").resolve():
+            return ""
+    except Exception:
+        pass
+
+    try:
+        content = home_agents.read_text(encoding="utf-8").strip()
+        if not content:
+            return ""
+        content = _scan_context_content(content, "HERMES_HOME/AGENTS.md")
+        result = f"## HERMES_HOME/AGENTS.md (App-ID gBrain)\n\n{content}"
+        return _truncate_content(
+            result,
+            "HERMES_HOME/AGENTS.md",
+            context_length=context_length,
+            read_path=str(home_agents),
+        )
+    except Exception as e:
+        logger.debug("Could not read HERMES_HOME AGENTS.md: %s", e)
+        return ""
+
+
 def _load_claude_md(cwd_path: Path, context_length: Optional[int] = None) -> str:
     """CLAUDE.md / claude.md — cwd only."""
     for name in ["CLAUDE.md", "claude.md"]:
@@ -1982,6 +2025,11 @@ def build_context_files_prompt(
     )
     if project_context:
         sections.append(project_context)
+
+    # Desktop App-ID gBrain (seeded into HERMES_HOME by brand provision)
+    home_agents = _load_hermes_home_agents_md(cwd_path, context_length)
+    if home_agents:
+        sections.append(home_agents)
 
     # SOUL.md from HERMES_HOME only — skip when already loaded as identity
     if not skip_soul:

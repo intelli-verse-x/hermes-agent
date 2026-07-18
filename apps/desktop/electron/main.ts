@@ -506,6 +506,14 @@ function quizverseMcpServerSocketPath(): string {
   return IS_WINDOWS ? `${base}-${QV_MCP_SERVER_PIPE_NONCE}` : base
 }
 
+function desktopBrainSourcePath(): string {
+  const packName = `${BRAND.id}-brain`
+
+  return IS_PACKAGED
+    ? path.join(process.resourcesPath, packName)
+    : path.join(APP_ROOT, 'brands', packName)
+}
+
 function ensureDesktopBrandProvision(targetHermesHome = effectiveDesktopHermesHome()) {
   const effectiveHermesHome = targetHermesHome
 
@@ -513,11 +521,15 @@ function ensureDesktopBrandProvision(targetHermesHome = effectiveDesktopHermesHo
     const result = provisionDesktopBrand({
       hermesHome: effectiveHermesHome,
       brandId: BRAND.id,
-      productName: BRAND.productName
+      productName: BRAND.productName,
+      appId: BRAND.appId,
+      brainSource: desktopBrainSourcePath()
     })
 
     rememberLog(
-      `[brand] provisioned skin at ${result.skinPath}${result.configTouched ? ' (config updated)' : ''}`
+      `[brand] provisioned skin at ${result.skinPath}` +
+        `${result.configTouched ? ' (config updated)' : ''}` +
+        `${result.brainSeeded ? ` (gBrain App-ID ${BRAND.appId})` : ''}`
     )
   } catch (error) {
     rememberLog(`[brand] provision failed: ${error instanceof Error ? error.message : String(error)}`)
@@ -692,10 +704,12 @@ function readPersistedThemeSource() {
       return parsed.themeSource
     }
   } catch {
-    // Missing / malformed → follow the OS like a fresh install.
+    // Missing / malformed → brand default below.
   }
 
-  return 'system'
+  // IX Agency ships dark-first so cold-launch vibrancy/titlebar match the app
+  // before the renderer syncs. QuizVerse keeps OS-tracking (`system`).
+  return IS_IX_AGENCY_BRAND ? 'dark' : 'system'
 }
 
 function writePersistedThemeSource(mode) {

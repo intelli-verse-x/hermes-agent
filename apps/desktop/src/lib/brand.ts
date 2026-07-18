@@ -47,3 +47,31 @@ export const BRAND_NAME = BRAND.productName
 
 export const IS_IX_AGENCY_BRAND = DESKTOP_BRAND_ID !== 'quizverse'
 export const IS_QUIZVERSE_BRAND = DESKTOP_BRAND_ID === 'quizverse'
+
+/** QuizVerse ships LiteLLM only — remap sticky/stale Bedrock session providers. */
+const QUIZVERSE_STALE_PROVIDERS = new Set([
+  'bedrock',
+  'aws',
+  'aws-bedrock',
+  'amazon-bedrock',
+  'amazon'
+])
+
+/**
+ * Normalize a composer/session provider for the active desktop brand.
+ * QuizVerse sessions that still say `bedrock` (from older installs / bad
+ * resolves) must not keep sending turns to an unavailable Converse path.
+ */
+export function sanitizeDesktopProvider(provider: string | null | undefined): string {
+  const value = (provider || '').trim()
+
+  if (!value) {
+    return ''
+  }
+
+  if (IS_QUIZVERSE_BRAND && QUIZVERSE_STALE_PROVIDERS.has(value.toLowerCase())) {
+    return 'custom:litellm'
+  }
+
+  return value
+}

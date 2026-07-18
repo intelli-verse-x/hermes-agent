@@ -471,12 +471,20 @@ function OnboardingRoute({ route }: { route: string }) {
             openNativeSurface('onboarding', next)
           } else {
             localStorage.setItem('quizverse_onboarding_complete_v1', 'true')
+            // Land somewhere useful — Complete setup used to only write a flag
+            // that nothing read, so the CTA felt dead.
+            openNativeSurface('words', 'daily')
           }
         }}
         size="sm"
       >
         {index === stages.length - 1 ? 'Complete setup' : 'Continue'}
       </Button>
+      {index === stages.length - 1 && choice && (
+        <p className="mt-2 text-xs text-muted-foreground" role="status">
+          Finishes setup and opens Words → Daily.
+        </p>
+      )}
     </section>
   )
 }

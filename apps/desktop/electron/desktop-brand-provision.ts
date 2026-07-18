@@ -3,8 +3,12 @@
  * apps without touching Python core defaults.
  *
  * Writes a per-brand skin (branding.agent_name) + SOUL.md identity override
- * so chat replies and /status stop self-identifying as "Hermes Agent". CLI /
- * gateway consumers that don't use this skin keep the default Hermes identity.
+ * so chat replies and /status stop self-identifying as "Hermes Agent". Also
+ * seeds App-ID gBrain packs (AGENTS.md + ivx-gbrain skill) so each desktop
+ * flavor loads its child-brain operating map.
+ *
+ * CLI / gateway consumers that don't use this skin keep the default Hermes
+ * identity.
  */
 import fs from 'node:fs'
 import path from 'node:path'
@@ -13,7 +17,14 @@ export interface DesktopBrandProvisionInput {
   hermesHome: string
   brandId: string
   productName: string
+  appId: string
+  /** Directory containing AGENTS.md and optional skills/ (brand brain pack). */
+  brainSource?: string
 }
+
+const GBRAIN_START = '<!-- ivx-gbrain:start -->'
+const GBRAIN_END = '<!-- ivx-gbrain:end -->'
+const AGENTS_MANAGED_HEADER = '<!-- ivx-desktop-gbrain:managed -->\n'
 
 function yamlQuote(value: string): string {
   return `"${value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`
@@ -35,7 +46,7 @@ branding:
 `
 }
 
-function soulMd(productName: string): string {
+function soulIdentity(productName: string): string {
   return `# ${productName} identity
 
 You are ${productName}, an intelligent AI assistant. You help the user learn, build, and get things done with clarity and care.
@@ -45,25 +56,95 @@ You are ${productName}, an intelligent AI assistant. You help the user learn, bu
 `
 }
 
-/** Ensure the active brand skin + SOUL identity exist under HERMES_HOME. Idempotent. */
-export function provisionDesktopBrand({ hermesHome, brandId, productName }: DesktopBrandProvisionInput): {
+function gbrainSoulBlock(input: DesktopBrandProvisionInput): string {
+  return `${GBRAIN_START}
+## App-ID gBrain (desktop)
+
+- **Product:** ${input.productName}
+- **App-ID:** \`${input.appId}\`
+- **Slug:** \`${input.brandId}\`
+- **Operating map:** \`$HERMES_HOME/AGENTS.md\` (seeded from this brand's gBrain pack)
+- **Skill:** \`ivx-gbrain\` under \`$HERMES_HOME/skills/ivx-gbrain/\`
+
+Stay scoped to this App-ID. Do not mix IX Agency admin surfaces with QuizVerse player surfaces. Company brain lives at monorepo \`_brain/\`; this app's child brain is \`_brain/apps/${input.brandId}/\`.
+${GBRAIN_END}
+`
+}
+
+function upsertGbrainSoulBlock(existing: string, block: string): string {
+  const start = existing.indexOf(GBRAIN_START)
+  const end = existing.indexOf(GBRAIN_END)
+
+  if (start !== -1 && end !== -1 && end > start) {
+    return `${existing.slice(0, start)}${block}${existing.slice(end + GBRAIN_END.length)}`.replace(/\n{3,}/g, '\n\n')
+  }
+
+  const trimmed = existing.trimEnd()
+
+  return `${trimmed}\n\n${block}\n`
+}
+
+function copyDirectory(source: string, destination: string): void {
+  fs.mkdirSync(destination, { recursive: true })
+
+  for (const entry of fs.readdirSync(source, { withFileTypes: true })) {
+    const from = path.join(source, entry.name)
+    const to = path.join(destination, entry.name)
+
+    if (entry.isDirectory()) {copyDirectory(from, to)}
+    else if (entry.isFile()) {fs.copyFileSync(from, to)}
+  }
+}
+
+function atomicWrite(filePath: string, contents: string): void {
+  fs.mkdirSync(path.dirname(filePath), { recursive: true })
+  const temporary = `${filePath}.${process.pid}.tmp`
+  fs.writeFileSync(temporary, contents, 'utf8')
+  fs.renameSync(temporary, filePath)
+}
+
+export interface DesktopBrandProvisionResult {
   skinPath: string
   soulPath: string
+  agentsPath: string | null
+  gbrainSkillPath: string | null
   configTouched: boolean
-} {
+  brainSeeded: boolean
+}
+
+/** Ensure the active brand skin + SOUL identity + App-ID gBrain exist under HERMES_HOME. Idempotent. */
+export function provisionDesktopBrand({
+  hermesHome,
+  brandId,
+  productName,
+  appId,
+  brainSource
+}: DesktopBrandProvisionInput): DesktopBrandProvisionResult {
   const home = path.resolve(hermesHome)
   const skinName = `${brandId}-desktop`
   const skinsDir = path.join(home, 'skins')
   const skinPath = path.join(skinsDir, `${skinName}.yaml`)
   const soulPath = path.join(home, 'SOUL.md')
+  const agentsPath = path.join(home, 'AGENTS.md')
   const configPath = path.join(home, 'config.yaml')
 
   fs.mkdirSync(skinsDir, { recursive: true })
   fs.writeFileSync(skinPath, skinYaml(productName), 'utf8')
 
-  if (!fs.existsSync(soulPath) || fs.statSync(soulPath).size === 0) {
-    fs.writeFileSync(soulPath, soulMd(productName), 'utf8')
+  const gbrainBlock = gbrainSoulBlock({ hermesHome: home, brandId, productName, appId })
+  let soulText = ''
+
+  try {
+    soulText = fs.readFileSync(soulPath, 'utf8')
+  } catch {
+    soulText = ''
   }
+
+  if (!soulText.trim()) {
+    soulText = soulIdentity(productName)
+  }
+
+  atomicWrite(soulPath, upsertGbrainSoulBlock(soulText, gbrainBlock))
 
   let configTouched = false
   let configText = ''
@@ -90,5 +171,45 @@ export function provisionDesktopBrand({ hermesHome, brandId, productName }: Desk
     configTouched = true
   }
 
-  return { skinPath, soulPath, configTouched }
+  let brainSeeded = false
+  let seededAgentsPath: string | null = null
+  let gbrainSkillPath: string | null = null
+
+  if (brainSource && fs.existsSync(brainSource)) {
+    const packAgents = path.join(brainSource, 'AGENTS.md')
+
+    if (fs.existsSync(packAgents)) {
+      const body = fs.readFileSync(packAgents, 'utf8')
+      atomicWrite(agentsPath, body.startsWith('<!--') ? body : `${AGENTS_MANAGED_HEADER}${body}`)
+      seededAgentsPath = agentsPath
+      brainSeeded = true
+    }
+
+    const packSkills = path.join(brainSource, 'skills')
+
+    if (fs.existsSync(packSkills)) {
+      const destination = path.join(home, 'skills')
+      const gbrainDest = path.join(destination, 'ivx-gbrain')
+      const packGbrain = path.join(packSkills, 'ivx-gbrain')
+
+      if (fs.existsSync(packGbrain)) {
+        const temporary = path.join(destination, `.ivx-gbrain.${process.pid}.tmp`)
+        fs.rmSync(temporary, { force: true, recursive: true })
+        copyDirectory(packGbrain, temporary)
+        fs.rmSync(gbrainDest, { force: true, recursive: true })
+        fs.renameSync(temporary, gbrainDest)
+        gbrainSkillPath = gbrainDest
+        brainSeeded = true
+      }
+    }
+  }
+
+  return {
+    skinPath,
+    soulPath,
+    agentsPath: seededAgentsPath,
+    gbrainSkillPath,
+    configTouched,
+    brainSeeded
+  }
 }

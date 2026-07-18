@@ -23,7 +23,7 @@ export function useAgentTerminal({ active, id, procId }: { active: boolean; id: 
 
   const surfaceTheme = () => {
     const ansi = renderedMode === 'dark' ? (theme.darkTerminal ?? theme.terminal) : theme.terminal
-    const surface = resolveSurfaceColor('#ffffff')
+    const surface = resolveSurfaceColor(theme.colors.background)
 
     return { ...terminalTheme(renderedMode, ansi), background: surface, cursorAccent: surface }
   }
