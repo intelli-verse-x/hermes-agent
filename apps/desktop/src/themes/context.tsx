@@ -13,6 +13,7 @@ import { useStore } from '@nanostores/react'
 import { createContext, type ReactNode, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 
 import { matchesQuery, useMediaQuery } from '@/hooks/use-media-query'
+import { IS_IX_AGENCY_BRAND } from '@/lib/brand'
 import { persistString, persistStringRecord, storedString, storedStringRecord } from '@/lib/storage'
 import { $activeGatewayProfile, normalizeProfileKey } from '@/store/profile'
 
@@ -45,8 +46,11 @@ const resolveMode = (mode: ThemeMode, systemDark = matchesQuery('(prefers-color-
 const normalizeSkin = (name: string | null): string =>
   name && resolveTheme(name) && !RETIRED_SKINS.has(name) ? name : DEFAULT_SKIN_NAME
 
-const normalizeMode = (value: string | null): ThemeMode =>
-  value === 'light' || value === 'dark' || value === 'system' ? value : 'light'
+/** Unset / junk mode → brand default. IX Agency ships dark-first; QuizVerse stays light. */
+export const DEFAULT_THEME_MODE: ThemeMode = IS_IX_AGENCY_BRAND ? 'dark' : 'light'
+
+export const normalizeMode = (value: string | null): ThemeMode =>
+  value === 'light' || value === 'dark' || value === 'system' ? value : DEFAULT_THEME_MODE
 
 // ─── Per-profile appearance persistence ─────────────────────────────────────
 // Skin and mode are each stored per profile. "default" isn't a real profile —
@@ -171,7 +175,8 @@ const mixesFor = (isDark: boolean): Record<string, string> => ({
   '--theme-mix-bubble': isDark ? '46%' : '0%'
 })
 
-function applyTheme(theme: DesktopTheme, mode: 'light' | 'dark') {
+/** Exported for unit tests (D3/D4: `.dark` class + CSS vars round-trip). */
+export function applyTheme(theme: DesktopTheme, mode: 'light' | 'dark') {
   if (typeof document === 'undefined') {
     return
   }
@@ -300,9 +305,9 @@ const SKIN_LIST = BUILTIN_THEME_LIST.map(({ name, label, description }) => ({ na
 const ThemeContext = createContext<ThemeContextValue>({
   theme: nousTheme,
   themeName: DEFAULT_SKIN_NAME,
-  mode: 'light',
-  resolvedMode: 'light',
-  renderedMode: 'light',
+  mode: DEFAULT_THEME_MODE,
+  resolvedMode: DEFAULT_THEME_MODE === 'system' ? 'light' : DEFAULT_THEME_MODE,
+  renderedMode: DEFAULT_THEME_MODE === 'dark' ? 'dark' : 'light',
   availableThemes: SKIN_LIST,
   setTheme: () => {},
   setMode: () => {}
@@ -333,7 +338,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   )
 
   const [mode, setModeState] = useState<ThemeMode>(() =>
-    typeof window === 'undefined' ? 'light' : modePref.resolve(readBootProfileKey())
+    typeof window === 'undefined' ? DEFAULT_THEME_MODE : modePref.resolve(readBootProfileKey())
   )
 
   // Follow profile switches: paint the profile's assigned skin + mode and

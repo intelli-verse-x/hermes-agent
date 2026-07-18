@@ -44,7 +44,9 @@ export default defineConfig({
       name: 'brand-index-html',
       transformIndexHtml(html: string) {
         const touchIcon = loadBrand().touchIcon || loadBrand().markSvg
-        const withTitle = html.replace(/<title>[^<]*<\/title>/, `<title>${loadBrand().productName}</title>`)
+        const preferDark = brandId !== 'quizverse'
+        const withBoot = html.replace(/__BRAND_PREFER_DARK__/g, preferDark ? 'true' : 'false')
+        const withTitle = withBoot.replace(/<title>[^<]*<\/title>/, `<title>${loadBrand().productName}</title>`)
         const withFavicon = withTitle
           .replace(/href="(\.\/)?\/apple-touch-icon\.png"/g, `href="/${touchIcon}"`)
           .replace(/href="(\.\/)?\/quizverse\/mark-512\.png"/g, `href="/${touchIcon}"`)

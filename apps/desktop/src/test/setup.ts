@@ -1,3 +1,49 @@
+// Node 22+ may inject an experimental `localStorage` (via `--localstorage-file`)
+// that lacks `clear()` / breaks jsdom's Storage. Theme + persistence tests need
+// a full Storage shim — replace whenever clear/removeItem is missing.
+const needsStorageShim =
+  typeof globalThis.localStorage === 'undefined' ||
+  typeof globalThis.localStorage.clear !== 'function' ||
+  typeof globalThis.localStorage.removeItem !== 'function'
+
+if (needsStorageShim) {
+  const store = new Map<string, string>()
+  const storage: Storage = {
+    get length() {
+      return store.size
+    },
+    clear() {
+      store.clear()
+    },
+    getItem(key: string) {
+      return store.has(key) ? store.get(key)! : null
+    },
+    key(index: number) {
+      return [...store.keys()][index] ?? null
+    },
+    removeItem(key: string) {
+      store.delete(key)
+    },
+    setItem(key: string, value: string) {
+      store.set(String(key), String(value))
+    }
+  }
+
+  Object.defineProperty(globalThis, 'localStorage', {
+    configurable: true,
+    value: storage,
+    writable: true
+  })
+
+  if (typeof window !== 'undefined') {
+    Object.defineProperty(window, 'localStorage', {
+      configurable: true,
+      value: storage,
+      writable: true
+    })
+  }
+}
+
 // jsdom (v29) does not implement the CSSOM `CSS` namespace, but Electron and
 // every target browser do. Timeline/cron code calls CSS.escape() to build
 // attribute selectors, so give the test environment the spec-compliant
