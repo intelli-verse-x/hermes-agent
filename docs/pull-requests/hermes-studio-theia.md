@@ -54,14 +54,32 @@ broker integration.
 
 ## Tests
 
-- protocol authentication, replay, expiry, secret rejection;
-- workspace trust, canonical paths, session/window linkage;
-- route/local-only and voice approval policy;
-- crash budget, signed manifest, artifact hash, archive traversal;
-- first-run consent and fixed IPC allowlist;
-- fork extension command, source pin, and brand isolation contracts;
-- macOS/Windows/Linux fixtures and source resource budget;
-- Desktop typecheck/lint/build and existing brand separation checks.
+Locally run on macOS:
+
+- Studio contracts: 9/9 passed; typecheck and resource check passed;
+- Desktop manager/source pin/IPC: 5/5 passed, including a real mode-0600
+  Unix-socket handshake with exact session/window/workspace identity;
+- Adaptive Local AI: 67/67 passed;
+- governed voice: 29/29 backend and 17/17 UI tests passed;
+- Desktop typecheck and changed-file lint passed;
+- IX Agency and QuizVerse production builds and brand-separation checks passed;
+- fork bridge dependency graph compiled; bridge lint and 1/1 unit test passed;
+- fork Hermes Studio Electron development build passed after the documented
+  native ffmpeg rebuild;
+- Docusaurus English/Chinese production build passed with pre-existing,
+  unrelated broken-link warnings.
+
+CI enforces non-publishing macOS, Windows, and Linux contract/product checks.
+Windows and Linux application execution was not locally available.
+
+## Documentation
+
+Hermes docs use Docusaurus and `.github/workflows/deploy-site.yml` to publish
+GitHub Pages at `https://hermes-agent.nousresearch.com/docs/`. The Theia fork's
+documented process is also GitHub Pages for API docs. Neither repository
+defines an S3 documentation bucket/prefix or CloudFront invalidation. The only
+discovered S3 path is the unrelated Desktop binary feed
+`s3://intelliverse-x-desktop/`; no S3 or CloudFront write was performed.
 
 ## Rollout/rollback
 
