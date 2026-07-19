@@ -192,16 +192,26 @@ import {
   sanitizeQuizverseSettingsInput,
   writeQuizverseSettings
 } from './qv-deeptutor'
-import { quizverseMcpSocketPath, startQuizverseMcpBroker, stopQuizverseMcpBroker } from './qv-mcp-broker'
+import {
+  quizverseMcpSocketPath,
+  startQuizverseMcpBroker,
+  stopQuizverseMcpBroker
+} from './qv-mcp-broker'
 import {
   isQuizverseMcpChildRunning,
   probeQuizverseMcp,
   startQuizverseMcpChild,
   stopQuizverseMcpChild
 } from './qv-mcp-child'
-import { assertQuizverseIsolatedHome, resolveQuizverseEffectiveHermesHome } from './qv-mcp-profile'
+import {
+  assertQuizverseIsolatedHome,
+  resolveQuizverseEffectiveHermesHome
+} from './qv-mcp-profile'
 import { provisionQuizverseMcp } from './qv-mcp-provision'
-import { inspectQuizverseProvision, validateQuizverseProbe } from './qv-mcp-readiness'
+import {
+  inspectQuizverseProvision,
+  validateQuizverseProbe
+} from './qv-mcp-readiness'
 import {
   canonicalizeQuizverseProductRequest,
   isQuizverseWordsCacheFresh,
@@ -428,10 +438,9 @@ function resolveHermesHome() {
     const explicit = normalizeHermesHomeRoot(process.env.HERMES_HOME)
 
     if (process.env.HERMES_DESKTOP_BRAND === 'quizverse') {
-      const ixDefault =
-        IS_WINDOWS && process.env.LOCALAPPDATA
-          ? path.join(process.env.LOCALAPPDATA, 'hermes')
-          : path.join(app.getPath('home'), '.hermes')
+      const ixDefault = IS_WINDOWS && process.env.LOCALAPPDATA
+        ? path.join(process.env.LOCALAPPDATA, 'hermes')
+        : path.join(app.getPath('home'), '.hermes')
 
       return assertQuizverseIsolatedHome(explicit, ixDefault)
     }
@@ -519,7 +528,7 @@ function ensureDesktopBrandProvision(targetHermesHome = effectiveDesktopHermesHo
 
     rememberLog(
       `[brand] provisioned skin at ${result.skinPath}${result.configTouched ? ' (config updated)' : ''}; ` +
-        `${result.sharedSkillCount} shared skills`
+      `${result.sharedSkillCount} shared skills`
     )
   } catch (error) {
     rememberLog(`[brand] provision failed: ${error instanceof Error ? error.message : String(error)}`)
@@ -548,7 +557,9 @@ function ensureDesktopBrandProvision(targetHermesHome = effectiveDesktopHermesHo
         socketPath: quizverseMcpServerSocketPath()
       })
 
-      rememberLog(`[qv-mcp] provisioned ${result.skillCount} skills${result.configChanged ? ' and MCP config' : ''}`)
+      rememberLog(
+        `[qv-mcp] provisioned ${result.skillCount} skills${result.configChanged ? ' and MCP config' : ''}`
+      )
     } catch (error) {
       rememberLog(`[qv-mcp] provision failed: ${error instanceof Error ? error.message : String(error)}`)
     }
@@ -2798,7 +2809,8 @@ async function applyUpdates(opts = {}) {
 
     emitUpdateProgress({
       stage: 'restart',
-      message: `Updating ${APP_NAME} — this window will close and the updater will open. Don’t reopen ${APP_NAME} yourself; it restarts automatically when the update finishes.`,
+      message:
+        `Updating ${APP_NAME} — this window will close and the updater will open. Don’t reopen ${APP_NAME} yourself; it restarts automatically when the update finishes.`,
       percent: 100
     })
     repairMacUpdaterHelper(updater)
@@ -3918,8 +3930,7 @@ async function ensureRuntime(backend) {
     // install.ps1 succeeds. If we hit this, the user (or a deleted venv)
     // broke the invariant; tell them to re-run the install.
     throw new Error(
-      `${APP_NAME} venv missing at ${VENV_ROOT}. Re-run the desktop installer or ` +
-        '`scripts/install.ps1` to rebuild it.'
+      `${APP_NAME} venv missing at ${VENV_ROOT}. Re-run the desktop installer or ` + '`scripts/install.ps1` to rebuild it.'
     )
   }
 
@@ -5279,7 +5290,8 @@ function isApprovedMicrophoneRequest(webContents, permission, details, origin = 
   const approvedWindow = BrowserWindow.fromWebContents(webContents)
 
   const trustedPreload =
-    typeof preferences?.preload === 'string' && path.resolve(preferences.preload) === path.resolve(PRELOAD_PATH)
+    typeof preferences?.preload === 'string' &&
+    path.resolve(preferences.preload) === path.resolve(PRELOAD_PATH)
 
   const source = details?.requestingUrl || details?.securityOrigin || origin || webContents?.getURL?.()
 
@@ -6479,10 +6491,9 @@ async function spawnPoolBackend(profile, entry) {
   // --profile wins over the inherited HERMES_HOME env (see _apply_profile_override
   // step 3 in hermes_cli/main.py), so the child re-homes to this profile.
   // --port 0: the OS assigns an ephemeral port; the child announces it on stdout.
-  const backendArgs =
-    process.env.HERMES_DESKTOP_BRAND === 'quizverse'
-      ? ['serve', '--host', '127.0.0.1', '--port', '0']
-      : ['--profile', profile, 'serve', '--host', '127.0.0.1', '--port', '0']
+  const backendArgs = process.env.HERMES_DESKTOP_BRAND === 'quizverse'
+    ? ['serve', '--host', '127.0.0.1', '--port', '0']
+    : ['--profile', profile, 'serve', '--host', '127.0.0.1', '--port', '0']
 
   if (process.env.HERMES_DESKTOP_BRAND === 'quizverse') {
     ensureDesktopBrandProvision(resolveQuizverseEffectiveHermesHome(HERMES_HOME, profile))
@@ -6504,10 +6515,9 @@ async function spawnPoolBackend(profile, entry) {
       cwd: hermesCwd,
       env: {
         ...process.env,
-        HERMES_HOME:
-          process.env.HERMES_DESKTOP_BRAND === 'quizverse'
-            ? resolveQuizverseEffectiveHermesHome(HERMES_HOME, profile)
-            : HERMES_HOME,
+        HERMES_HOME: process.env.HERMES_DESKTOP_BRAND === 'quizverse'
+          ? resolveQuizverseEffectiveHermesHome(HERMES_HOME, profile)
+          : HERMES_HOME,
         ...backend.env,
         // Pin the gateway's tool/terminal cwd to the same directory we chose for
         // the child process. Inherited TERMINAL_CWD (or a stale config bridge)
@@ -8436,1219 +8446,1203 @@ void app.whenReady().then(() => {
 //    folded block alive. Inside a function body they stay function-scoped.
 if (process.env.HERMES_DESKTOP_BRAND !== 'quizverse') {
   ;(() => {
-    const execFileAsync = promisify(execFile)
+const execFileAsync = promisify(execFile)
 
-    // Brand separation: the whole `hermes:ix-agency:*` IPC surface only exists in
-    // the IX Agency build. Other brands (QuizVerse) never register these handlers,
-    // so a stray renderer invoke rejects instead of touching IX portal/VPN state.
-    function ixIpcHandle(channel: string, handler: Parameters<typeof ipcMain.handle>[1]) {
-      if (IS_IX_AGENCY_BRAND) {
-        ipcMain.handle(channel, handler)
-      }
-    }
+// Brand separation: the whole `hermes:ix-agency:*` IPC surface only exists in
+// the IX Agency build. Other brands (QuizVerse) never register these handlers,
+// so a stray renderer invoke rejects instead of touching IX portal/VPN state.
+function ixIpcHandle(channel: string, handler: Parameters<typeof ipcMain.handle>[1]) {
+  if (IS_IX_AGENCY_BRAND) {
+    ipcMain.handle(channel, handler)
+  }
+}
 
-    const IX_AGENCY_SETTINGS_PATH = path.join(app.getPath('userData'), 'ix-agency.json')
+const IX_AGENCY_SETTINGS_PATH = path.join(app.getPath('userData'), 'ix-agency.json')
 
-    function currentIxAgencySettings() {
-      return readIxAgencySettings(IX_AGENCY_SETTINGS_PATH, decryptDesktopSecret)
-    }
+function currentIxAgencySettings() {
+  return readIxAgencySettings(IX_AGENCY_SETTINGS_PATH, decryptDesktopSecret)
+}
 
-    ixIpcHandle('hermes:ix-agency:settings:get', async () => ixAgencySettingsForRenderer(currentIxAgencySettings()))
+ixIpcHandle('hermes:ix-agency:settings:get', async () => ixAgencySettingsForRenderer(currentIxAgencySettings()))
 
-    ixIpcHandle('hermes:ix-agency:settings:save', async (_event, input) => {
-      const next = sanitizeIxAgencySettingsInput(input, currentIxAgencySettings())
+ixIpcHandle('hermes:ix-agency:settings:save', async (_event, input) => {
+  const next = sanitizeIxAgencySettingsInput(input, currentIxAgencySettings())
 
-      writeIxAgencySettings(IX_AGENCY_SETTINGS_PATH, next, encryptDesktopSecret)
+  writeIxAgencySettings(IX_AGENCY_SETTINGS_PATH, next, encryptDesktopSecret)
 
-      return ixAgencySettingsForRenderer(next)
-    })
+  return ixAgencySettingsForRenderer(next)
+})
 
-    ixIpcHandle('hermes:ix-agency:vpn:pick-conf', async () => {
-      const current = currentIxAgencySettings()
+ixIpcHandle('hermes:ix-agency:vpn:pick-conf', async () => {
+  const current = currentIxAgencySettings()
 
-      const result = await dialog.showOpenDialog({
-        title: 'Choose WireGuard profile (.conf)',
-        properties: ['openFile'],
-        filters: [{ name: 'WireGuard profile', extensions: ['conf'] }],
-        defaultPath: current.vpnConfPath ? path.dirname(current.vpnConfPath) : app.getPath('home')
-      })
+  const result = await dialog.showOpenDialog({
+    title: 'Choose WireGuard profile (.conf)',
+    properties: ['openFile'],
+    filters: [{ name: 'WireGuard profile', extensions: ['conf'] }],
+    defaultPath: current.vpnConfPath ? path.dirname(current.vpnConfPath) : app.getPath('home')
+  })
 
-      if (result.canceled || result.filePaths.length === 0) {
-        return { canceled: true, path: null }
-      }
+  if (result.canceled || result.filePaths.length === 0) {
+    return { canceled: true, path: null }
+  }
 
-      return { canceled: false, path: result.filePaths[0] }
-    })
+  return { canceled: false, path: result.filePaths[0] }
+})
 
-    // Keychain-mode VPN: the imported usa-vpn.conf lives ONLY in safeStorage
-    // (Keychain-backed on macOS). It is materialized to a private 0600 scratch
-    // file for the duration of each wg-quick invocation, then removed.
-    const IX_VPN_SCRATCH_DIR = path.join(app.getPath('userData'), 'wg')
+// Keychain-mode VPN: the imported usa-vpn.conf lives ONLY in safeStorage
+// (Keychain-backed on macOS). It is materialized to a private 0600 scratch
+// file for the duration of each wg-quick invocation, then removed.
+const IX_VPN_SCRATCH_DIR = path.join(app.getPath('userData'), 'wg')
 
-    function ixVpnBaseStatus() {
-      const settings = currentIxAgencySettings()
+function ixVpnBaseStatus() {
+  const settings = currentIxAgencySettings()
 
-      if (settings.vpnConfSecret) {
-        return ixVpnStatus(`${IX_VPN_TUNNEL}.conf`, true)
-      }
+  if (settings.vpnConfSecret) {
+    return ixVpnStatus(`${IX_VPN_TUNNEL}.conf`, true)
+  }
 
-      return ixVpnStatus(settings.vpnConfPath)
-    }
+  return ixVpnStatus(settings.vpnConfPath)
+}
 
-    async function withIxVpnConf<T>(fn: (confPath: string) => Promise<T>): Promise<T> {
-      const settings = currentIxAgencySettings()
+async function withIxVpnConf<T>(fn: (confPath: string) => Promise<T>): Promise<T> {
+  const settings = currentIxAgencySettings()
 
-      if (settings.vpnConfSecret) {
-        const confPath = materializeVpnConf(IX_VPN_SCRATCH_DIR, settings.vpnConfSecret)
+  if (settings.vpnConfSecret) {
+    const confPath = materializeVpnConf(IX_VPN_SCRATCH_DIR, settings.vpnConfSecret)
 
-        try {
-          return await fn(confPath)
-        } finally {
-          try {
-            fs.rmSync(confPath, { force: true })
-          } catch {
-            // best effort — the scratch dir is 0700 either way
-          }
-        }
-      }
-
-      return fn(settings.vpnConfPath)
-    }
-
-    ixIpcHandle('hermes:ix-agency:vpn:status', async () => ixVpnBaseStatus())
-
-    ixIpcHandle('hermes:ix-agency:vpn:connect', async () => {
-      await withIxVpnConf(confPath => ixVpnConnect(confPath))
-      void refreshIxVpnLamp()
-
-      return ixVpnBaseStatus()
-    })
-
-    ixIpcHandle('hermes:ix-agency:vpn:disconnect', async () => {
-      await withIxVpnConf(confPath => ixVpnDisconnect(confPath))
-      void refreshIxVpnLamp()
-
-      return ixVpnBaseStatus()
-    })
-
-    // One-time import: file picker → validate → store the CONTENTS via
-    // safeStorage (Keychain-backed on macOS). The .conf never persists on disk.
-    ixIpcHandle('hermes:ix-agency:vpn:import-conf', async () => {
-      const result = await dialog.showOpenDialog({
-        title: 'Import usa-vpn.conf into the keychain',
-        properties: ['openFile'],
-        filters: [{ name: 'WireGuard profile', extensions: ['conf'] }],
-        defaultPath: app.getPath('home')
-      })
-
-      if (result.canceled || result.filePaths.length === 0) {
-        return { imported: false, detail: 'Cancelled' }
-      }
-
-      const contents = fs.readFileSync(result.filePaths[0], 'utf8')
-
-      if (!looksLikeWireGuardConf(contents)) {
-        throw new Error('That file does not look like a WireGuard config (need [Interface]/[Peer]/PrivateKey).')
-      }
-
-      const next = { ...currentIxAgencySettings(), vpnConfSecret: contents }
-
-      writeIxAgencySettings(IX_AGENCY_SETTINGS_PATH, next, encryptDesktopSecret)
-
-      return { imported: true, detail: `Imported ${path.basename(result.filePaths[0])} into the keychain` }
-    })
-
-    // ── IX Agency login enforcement ─────────────────────────────────────────────
-    // The native chat / MCP directory are admin surfaces: they only unlock after
-    // the user completes the admin portal's OTP login via the NATIVE sign-in
-    // form (the send/verify handlers below drive /api/auth/otp/* through the
-    // persist:ix-agency-portal session — no webview). We probe an OTP-gated
-    // portal endpoint FROM THE MAIN PROCESS with that session's cookies —
-    // 401/403 means signed out. LiteLLM/gateway credentials alone never unlock
-    // these surfaces; the gate is enforced here in main, not just hidden in the
-    // renderer.
-    const IX_PORTAL_PARTITION = 'persist:ix-agency-portal'
-
-    const IX_AUTH_PROBE_PATH = '/api/portal/insights/notifications'
-
-    const IX_AUTH_CACHE_MS = 15_000
-
-    let ixAuthCache: { authenticated: boolean; detail: string; at: number } | null = null
-
-    async function probeIxPortalAuth(force = false) {
-      if (!force && ixAuthCache && Date.now() - ixAuthCache.at < IX_AUTH_CACHE_MS) {
-        return ixAuthCache
-      }
-
-      const settings = currentIxAgencySettings()
-      let authenticated = false
-      let detail = ''
-
+    try {
+      return await fn(confPath)
+    } finally {
       try {
-        const probeUrl = new URL(IX_AUTH_PROBE_PATH, settings.portalUrl).toString()
-        const portalSession = session.fromPartition(IX_PORTAL_PARTITION)
-
-        const res = await portalSession.fetch(probeUrl, {
-          method: 'GET',
-          credentials: 'include',
-          signal: AbortSignal.timeout(10_000)
-        })
-
-        authenticated = res.status !== 401 && res.status !== 403
-        detail = authenticated ? `Signed in (${settings.portalUrl})` : 'Signed out — complete the OTP login'
-      } catch (error) {
-        authenticated = false
-        detail = `Portal unreachable: ${error instanceof Error ? error.message : String(error)}`
+        fs.rmSync(confPath, { force: true })
+      } catch {
+        // best effort — the scratch dir is 0700 either way
       }
+    }
+  }
 
-      ixAuthCache = { authenticated, detail, at: Date.now() }
+  return fn(settings.vpnConfPath)
+}
 
-      return ixAuthCache
+ixIpcHandle('hermes:ix-agency:vpn:status', async () => ixVpnBaseStatus())
+
+ixIpcHandle('hermes:ix-agency:vpn:connect', async () => {
+  await withIxVpnConf(confPath => ixVpnConnect(confPath))
+  void refreshIxVpnLamp()
+
+  return ixVpnBaseStatus()
+})
+
+ixIpcHandle('hermes:ix-agency:vpn:disconnect', async () => {
+  await withIxVpnConf(confPath => ixVpnDisconnect(confPath))
+  void refreshIxVpnLamp()
+
+  return ixVpnBaseStatus()
+})
+
+// One-time import: file picker → validate → store the CONTENTS via
+// safeStorage (Keychain-backed on macOS). The .conf never persists on disk.
+ixIpcHandle('hermes:ix-agency:vpn:import-conf', async () => {
+  const result = await dialog.showOpenDialog({
+    title: 'Import usa-vpn.conf into the keychain',
+    properties: ['openFile'],
+    filters: [{ name: 'WireGuard profile', extensions: ['conf'] }],
+    defaultPath: app.getPath('home')
+  })
+
+  if (result.canceled || result.filePaths.length === 0) {
+    return { imported: false, detail: 'Cancelled' }
+  }
+
+  const contents = fs.readFileSync(result.filePaths[0], 'utf8')
+
+  if (!looksLikeWireGuardConf(contents)) {
+    throw new Error('That file does not look like a WireGuard config (need [Interface]/[Peer]/PrivateKey).')
+  }
+
+  const next = { ...currentIxAgencySettings(), vpnConfSecret: contents }
+
+  writeIxAgencySettings(IX_AGENCY_SETTINGS_PATH, next, encryptDesktopSecret)
+
+  return { imported: true, detail: `Imported ${path.basename(result.filePaths[0])} into the keychain` }
+})
+
+// ── IX Agency login enforcement ─────────────────────────────────────────────
+// The native chat / MCP directory are admin surfaces: they only unlock after
+// the user completes the admin portal's OTP login via the NATIVE sign-in
+// form (the send/verify handlers below drive /api/auth/otp/* through the
+// persist:ix-agency-portal session — no webview). We probe an OTP-gated
+// portal endpoint FROM THE MAIN PROCESS with that session's cookies —
+// 401/403 means signed out. LiteLLM/gateway credentials alone never unlock
+// these surfaces; the gate is enforced here in main, not just hidden in the
+// renderer.
+const IX_PORTAL_PARTITION = 'persist:ix-agency-portal'
+
+const IX_AUTH_PROBE_PATH = '/api/portal/insights/notifications'
+
+const IX_AUTH_CACHE_MS = 15_000
+
+let ixAuthCache: { authenticated: boolean; detail: string; at: number } | null = null
+
+async function probeIxPortalAuth(force = false) {
+  if (!force && ixAuthCache && Date.now() - ixAuthCache.at < IX_AUTH_CACHE_MS) {
+    return ixAuthCache
+  }
+
+  const settings = currentIxAgencySettings()
+  let authenticated = false
+  let detail = ''
+
+  try {
+    const probeUrl = new URL(IX_AUTH_PROBE_PATH, settings.portalUrl).toString()
+    const portalSession = session.fromPartition(IX_PORTAL_PARTITION)
+
+    const res = await portalSession.fetch(probeUrl, {
+      method: 'GET',
+      credentials: 'include',
+      signal: AbortSignal.timeout(10_000)
+    })
+
+    authenticated = res.status !== 401 && res.status !== 403
+    detail = authenticated ? `Signed in (${settings.portalUrl})` : 'Signed out — complete the OTP login'
+  } catch (error) {
+    authenticated = false
+    detail = `Portal unreachable: ${error instanceof Error ? error.message : String(error)}`
+  }
+
+  ixAuthCache = { authenticated, detail, at: Date.now() }
+
+  return ixAuthCache
+}
+
+async function requireIxPortalAuth() {
+  const status = await probeIxPortalAuth()
+
+  if (!status.authenticated) {
+    throw new Error(`Sign in to ${APP_NAME} first — the admin portal OTP session is not active.`)
+  }
+}
+
+ixIpcHandle('hermes:ix-agency:auth:status', async (_event, input) => {
+  const status = await probeIxPortalAuth(Boolean(input?.force))
+
+  return { authenticated: status.authenticated, detail: status.detail, portalUrl: currentIxAgencySettings().portalUrl }
+})
+
+// ── Native OTP login (no webview) ───────────────────────────────────────────
+// Drives the portal's own /api/auth/otp endpoints through the SAME
+// persist:ix-agency-portal session, so the httpOnly session cookie the
+// verify step sets lands in the cookie jar probeIxPortalAuth checks.
+function ixPortalSessionFetch(): typeof fetch {
+  const portalSession = session.fromPartition(IX_PORTAL_PARTITION)
+
+  return ((input, init) => portalSession.fetch(input, init)) as typeof fetch
+}
+
+ixIpcHandle('hermes:ix-agency:auth:send-otp', async (_event, input) => {
+  const settings = currentIxAgencySettings()
+
+  return ixLoginSendOtp(settings.portalUrl, String(input?.email ?? ''), ixPortalSessionFetch())
+})
+
+ixIpcHandle('hermes:ix-agency:auth:verify-otp', async (_event, input) => {
+  const settings = currentIxAgencySettings()
+
+  await ixLoginVerifyOtp(
+    settings.portalUrl,
+    {
+      email: String(input?.email ?? ''),
+      code: String(input?.code ?? ''),
+      challenge: String(input?.challenge ?? '')
+    },
+    ixPortalSessionFetch()
+  )
+
+  // The session cookie just changed — drop the cache and re-probe so the
+  // renderer's next authStatus reflects the fresh login immediately.
+  ixAuthCache = null
+
+  const status = await probeIxPortalAuth(true)
+
+  // Auto-attach: fresh login pulls the MCP directory, dynamic connectors and
+  // org skills without any manual refresh (fire-and-forget; the renderer gets
+  // the result via the sync:event push). Zero-touch provisioning rides the
+  // same trigger: the portal hands over the gateway token / LiteLLM key /
+  // Cognito secret / WireGuard conf for every slot still empty.
+  if (status.authenticated) {
+    void runIxAutoProvision().catch(() => {})
+    void runIxAgencySync().catch(() => {})
+  }
+
+  return status
+})
+
+ixIpcHandle('hermes:ix-agency:mcp:list', async () => {
+  await requireIxPortalAuth()
+
+  return fetchIxMcpDirectory(currentIxAgencySettings())
+})
+
+// ── IX Agency auto-attach sync ──────────────────────────────────────────────
+// On every successful OTP login (and on boot when a valid session already
+// exists) the whole estate is wired up automatically: the gateway MCP
+// directory, the portal's dynamic connectors, and the live Skills.md catalog.
+// The result is pushed to the renderer (sync:event) and queryable (sync:get)
+// so no tab depends on a manual refresh.
+interface IxAgencySyncState {
+  syncedAt: null | number
+  tiles: Awaited<ReturnType<typeof fetchIxMcpDirectory>>['tiles']
+  tilesDetail: string
+  connectors: IxDynamicConnector[]
+  /** null = not fetched (e.g. not super admin); [] = fetched, none exist. */
+  connectorsError: null | string
+  orgSkills: IxPortalCatalogSkill[]
+  orgSkillsError: null | string
+}
+
+let ixSyncState: IxAgencySyncState = {
+  syncedAt: null,
+  tiles: [],
+  tilesDetail: '',
+  connectors: [],
+  connectorsError: null,
+  orgSkills: [],
+  orgSkillsError: null
+}
+
+let ixSyncInFlight: null | Promise<IxAgencySyncState> = null
+
+function broadcastIxSync() {
+  for (const win of BrowserWindow.getAllWindows()) {
+    if (!win.isDestroyed()) {
+      win.webContents.send('hermes:ix-agency:sync:event', ixSyncState)
+    }
+  }
+}
+
+async function runIxAgencySync(): Promise<IxAgencySyncState> {
+  if (ixSyncInFlight) {
+    return ixSyncInFlight
+  }
+
+  ixSyncInFlight = (async () => {
+    const settings = currentIxAgencySettings()
+    const portalFetch = ixPortalSessionFetch()
+    const next: IxAgencySyncState = { ...ixSyncState }
+
+    // Gateway MCP directory — failures keep the previous tiles (the renderer
+    // falls back to its bundled snapshot when the list is empty).
+    try {
+      const directory = await fetchIxMcpDirectory(settings)
+
+      next.tiles = directory.tiles
+      next.tilesDetail = directory.detail
+    } catch (error) {
+      next.tilesDetail = `Gateway directory unavailable: ${error instanceof Error ? error.message : String(error)}`
     }
 
-    async function requireIxPortalAuth() {
+    // Dynamic connectors — 403 just means the login isn't super admin.
+    try {
+      next.connectors = await listIxConnectors(settings.portalUrl, portalFetch)
+      next.connectorsError = null
+    } catch (error) {
+      next.connectors = []
+      next.connectorsError = error instanceof Error ? error.message : String(error)
+    }
+
+    // Live Skills.md catalog (built-in + team skills).
+    try {
+      next.orgSkills = await fetchPortalSkills(settings.portalUrl, portalFetch)
+      next.orgSkillsError = null
+    } catch (error) {
+      next.orgSkillsError = error instanceof Error ? error.message : String(error)
+    }
+
+    next.syncedAt = Date.now()
+    ixSyncState = next
+    broadcastIxSync()
+
+    return ixSyncState
+  })().finally(() => {
+    ixSyncInFlight = null
+  })
+
+  return ixSyncInFlight
+}
+
+ixIpcHandle('hermes:ix-agency:sync:get', async () => ixSyncState)
+
+ixIpcHandle('hermes:ix-agency:sync:run', async () => {
+  await requireIxPortalAuth()
+
+  return runIxAgencySync()
+})
+
+// Boot-time auto-attach: when a valid portal session already exists, wire
+// everything up without any user action (including zero-touch provisioning
+// for any credential slot still empty — e.g. after a settings wipe).
+if (IS_IX_AGENCY_BRAND) {
+  void app.whenReady().then(async () => {
+    try {
       const status = await probeIxPortalAuth()
 
-      if (!status.authenticated) {
-        throw new Error(`Sign in to ${APP_NAME} first — the admin portal OTP session is not active.`)
-      }
-    }
-
-    ixIpcHandle('hermes:ix-agency:auth:status', async (_event, input) => {
-      const status = await probeIxPortalAuth(Boolean(input?.force))
-
-      return {
-        authenticated: status.authenticated,
-        detail: status.detail,
-        portalUrl: currentIxAgencySettings().portalUrl
-      }
-    })
-
-    // ── Native OTP login (no webview) ───────────────────────────────────────────
-    // Drives the portal's own /api/auth/otp endpoints through the SAME
-    // persist:ix-agency-portal session, so the httpOnly session cookie the
-    // verify step sets lands in the cookie jar probeIxPortalAuth checks.
-    function ixPortalSessionFetch(): typeof fetch {
-      const portalSession = session.fromPartition(IX_PORTAL_PARTITION)
-
-      return ((input, init) => portalSession.fetch(input, init)) as typeof fetch
-    }
-
-    ixIpcHandle('hermes:ix-agency:auth:send-otp', async (_event, input) => {
-      const settings = currentIxAgencySettings()
-
-      return ixLoginSendOtp(settings.portalUrl, String(input?.email ?? ''), ixPortalSessionFetch())
-    })
-
-    ixIpcHandle('hermes:ix-agency:auth:verify-otp', async (_event, input) => {
-      const settings = currentIxAgencySettings()
-
-      await ixLoginVerifyOtp(
-        settings.portalUrl,
-        {
-          email: String(input?.email ?? ''),
-          code: String(input?.code ?? ''),
-          challenge: String(input?.challenge ?? '')
-        },
-        ixPortalSessionFetch()
-      )
-
-      // The session cookie just changed — drop the cache and re-probe so the
-      // renderer's next authStatus reflects the fresh login immediately.
-      ixAuthCache = null
-
-      const status = await probeIxPortalAuth(true)
-
-      // Auto-attach: fresh login pulls the MCP directory, dynamic connectors and
-      // org skills without any manual refresh (fire-and-forget; the renderer gets
-      // the result via the sync:event push). Zero-touch provisioning rides the
-      // same trigger: the portal hands over the gateway token / LiteLLM key /
-      // Cognito secret / WireGuard conf for every slot still empty.
       if (status.authenticated) {
         void runIxAutoProvision().catch(() => {})
-        void runIxAgencySync().catch(() => {})
+        await runIxAgencySync()
       }
-
-      return status
-    })
-
-    ixIpcHandle('hermes:ix-agency:mcp:list', async () => {
-      await requireIxPortalAuth()
-
-      return fetchIxMcpDirectory(currentIxAgencySettings())
-    })
-
-    // ── IX Agency auto-attach sync ──────────────────────────────────────────────
-    // On every successful OTP login (and on boot when a valid session already
-    // exists) the whole estate is wired up automatically: the gateway MCP
-    // directory, the portal's dynamic connectors, and the live Skills.md catalog.
-    // The result is pushed to the renderer (sync:event) and queryable (sync:get)
-    // so no tab depends on a manual refresh.
-    interface IxAgencySyncState {
-      syncedAt: null | number
-      tiles: Awaited<ReturnType<typeof fetchIxMcpDirectory>>['tiles']
-      tilesDetail: string
-      connectors: IxDynamicConnector[]
-      /** null = not fetched (e.g. not super admin); [] = fetched, none exist. */
-      connectorsError: null | string
-      orgSkills: IxPortalCatalogSkill[]
-      orgSkillsError: null | string
+    } catch {
+      // No session yet — the login flow triggers the sync instead.
     }
+  })
+}
 
-    let ixSyncState: IxAgencySyncState = {
-      syncedAt: null,
-      tiles: [],
-      tilesDetail: '',
-      connectors: [],
-      connectorsError: null,
-      orgSkills: [],
-      orgSkillsError: null
+// ── IX Agency per-MCP health lamps ──────────────────────────────────────────
+// Probes every tile (gateway directory + dynamic connectors) concurrently
+// with a short timeout and caches the results; refresh=true re-probes.
+const IX_MCP_HEALTH_CACHE_MS = 30_000
+
+let ixMcpHealthCache: { at: number; results: IxMcpHealthResult[] } | null = null
+
+let ixMcpHealthInFlight: null | Promise<IxMcpHealthResult[]> = null
+
+function ixMcpHealthTargets(): IxMcpHealthTarget[] {
+  const tiles = ixSyncState.tiles.length ? ixSyncState.tiles : bundledIxMcpTiles()
+
+  return [
+    ...tiles.map(tile => ({ tileId: tile.id, mcpUrl: tile.mcpUrl, kind: 'gateway' as const })),
+    ...ixSyncState.connectors.map(connector => ({ tileId: connector.id, kind: 'dynamic' as const }))
+  ]
+}
+
+function bundledIxMcpTiles(): { id: string; mcpUrl: string }[] {
+  const items = (ixMcpTilesSnapshot as { items?: { id?: string; mcpUrl?: string }[] }).items ?? []
+
+  return items
+    .filter(item => typeof item?.id === 'string' && item.id)
+    .map(item => ({ id: String(item.id), mcpUrl: String(item.mcpUrl ?? '') }))
+}
+
+ixIpcHandle('hermes:ix-agency:mcp:health', async (_event, input) => {
+  const refresh = Boolean(input?.refresh)
+
+  if (!refresh && ixMcpHealthCache && Date.now() - ixMcpHealthCache.at < IX_MCP_HEALTH_CACHE_MS) {
+    return { probedAt: ixMcpHealthCache.at, results: ixMcpHealthCache.results }
+  }
+
+  ixMcpHealthInFlight ??= (async () => {
+    const settings = currentIxAgencySettings()
+
+    const results = await probeMcpHealth(ixMcpHealthTargets(), {
+      gatewayUrl: settings.gatewayUrl,
+      gatewayToken: settings.gatewayToken,
+      portalUrl: settings.portalUrl,
+      portalFetch: ixPortalSessionFetch()
+    })
+
+    ixMcpHealthCache = { at: Date.now(), results }
+
+    return results
+  })().finally(() => {
+    ixMcpHealthInFlight = null
+  })
+
+  const results = await ixMcpHealthInFlight
+
+  return { probedAt: ixMcpHealthCache?.at ?? Date.now(), results }
+})
+
+// ── IX Agency dynamic connectors (super admin) ──────────────────────────────
+// Thin IPC shims over the portal's /api/portal/connectors/dynamic routes.
+// Everything runs through the OTP session's cookie jar in this process; the
+// connector token passes straight through to the portal on save/test and is
+// never persisted or logged here.
+ixIpcHandle('hermes:ix-agency:connectors:list', async () => {
+  await requireIxPortalAuth()
+
+  const connectors = await listIxConnectors(currentIxAgencySettings().portalUrl, ixPortalSessionFetch())
+
+  ixSyncState = { ...ixSyncState, connectors, connectorsError: null }
+
+  return connectors
+})
+
+ixIpcHandle('hermes:ix-agency:connectors:save', async (_event, input) => {
+  await requireIxPortalAuth()
+
+  const saved = await saveIxConnector(
+    currentIxAgencySettings().portalUrl,
+    (input ?? {}) as IxConnectorDraft,
+    ixPortalSessionFetch()
+  )
+
+  ixSyncState = {
+    ...ixSyncState,
+    connectors: [...ixSyncState.connectors.filter(c => c.id !== saved.id), saved]
+  }
+  ixMcpHealthCache = null
+
+  return saved
+})
+
+ixIpcHandle('hermes:ix-agency:connectors:patch', async (_event, input) => {
+  await requireIxPortalAuth()
+
+  const updated = await setIxConnectorEnabled(
+    currentIxAgencySettings().portalUrl,
+    String(input?.id ?? ''),
+    Boolean(input?.enabled),
+    ixPortalSessionFetch()
+  )
+
+  ixSyncState = {
+    ...ixSyncState,
+    connectors: ixSyncState.connectors.map(c => (c.id === updated.id ? updated : c))
+  }
+
+  return updated
+})
+
+ixIpcHandle('hermes:ix-agency:connectors:delete', async (_event, input) => {
+  await requireIxPortalAuth()
+
+  const id = String(input?.id ?? '')
+
+  await deleteIxConnector(currentIxAgencySettings().portalUrl, id, ixPortalSessionFetch())
+  ixSyncState = { ...ixSyncState, connectors: ixSyncState.connectors.filter(c => c.id !== id) }
+  ixMcpHealthCache = null
+
+  return { deleted: true }
+})
+
+ixIpcHandle('hermes:ix-agency:connectors:test', async (_event, input) => {
+  await requireIxPortalAuth()
+
+  return testIxConnector(
+    currentIxAgencySettings().portalUrl,
+    {
+      ...(typeof input?.id === 'string' && input.id ? { id: input.id } : {}),
+      ...(typeof input?.url === 'string' ? { url: input.url } : {}),
+      ...(typeof input?.authHeader === 'string' ? { authHeader: input.authHeader } : {}),
+      ...(typeof input?.token === 'string' ? { token: input.token } : {})
+    },
+    ixPortalSessionFetch()
+  )
+})
+
+// Import/export live main-side so the parsing rules stay in one module.
+ixIpcHandle('hermes:ix-agency:connectors:parse-import', async (_event, input) =>
+  parseConnectorImport(String(input?.json ?? ''))
+)
+
+ixIpcHandle('hermes:ix-agency:connectors:export', async () => {
+  await requireIxPortalAuth()
+
+  const connectors = ixSyncState.connectors.length
+    ? ixSyncState.connectors
+    : await listIxConnectors(currentIxAgencySettings().portalUrl, ixPortalSessionFetch())
+
+  return { json: exportConnectorsJson(connectors), count: connectors.length }
+})
+
+// ── IX Agency user-level skills ─────────────────────────────────────────────
+// Draft SKILL.md playbooks live under ~/.hermes/skills/ix-user/ (user-level:
+// local Hermes + the native copilot see them immediately). Publishing POSTs
+// to the portal's /api/admin/skills through the signed-in OTP session, which
+// makes the skill global — it shows up on the web admin Skills.md page.
+function ixUserSkillsDir() {
+  return userSkillsDir(ixHermesHome())
+}
+
+ixIpcHandle('hermes:ix-agency:skills:list', async () => ({
+  skills: listUserSkills(ixUserSkillsDir()),
+  templates: IX_SKILL_TEMPLATES
+}))
+
+ixIpcHandle('hermes:ix-agency:skills:save', async (_event, input) =>
+  saveUserSkill(ixUserSkillsDir(), {
+    id: typeof input?.id === 'string' ? input.id : null,
+    title: String(input?.title ?? ''),
+    description: String(input?.description ?? ''),
+    content: String(input?.content ?? '')
+  })
+)
+
+ixIpcHandle('hermes:ix-agency:skills:delete', async (_event, input) => ({
+  deleted: deleteUserSkill(ixUserSkillsDir(), String(input?.id ?? ''))
+}))
+
+ixIpcHandle('hermes:ix-agency:skills:publish', async (_event, input) => {
+  await requireIxPortalAuth()
+
+  const settings = currentIxAgencySettings()
+
+  return publishUserSkill(ixUserSkillsDir(), String(input?.id ?? ''), settings.portalUrl, ixPortalSessionFetch())
+})
+
+// ── IX Agency native chat ───────────────────────────────────────────────────
+// LiteLLM streaming + admin-mcp tool loop runs HERE in the main process; the
+// renderer only sees display events. The write gate's nonces live in this
+// process and the ONLY approval channel is the chat:confirm IPC below — the
+// model has no path to it.
+const IX_CHAT_STORE_PATH = path.join(app.getPath('userData'), 'ix-agency-chats.json')
+
+const ixChatGate = createWriteGate()
+const ixEscalationGate = createEscalationGate()
+
+const ixChatRunning = new Set<string>()
+
+let ixChatToolSpecsCache: { specs: { name: string; description?: string; inputSchema?: Record<string, unknown> }[]; at: number } | null = null
+
+async function loadIxChatToolSpecs(settings: ReturnType<typeof currentIxAgencySettings>) {
+  if (ixChatToolSpecsCache && Date.now() - ixChatToolSpecsCache.at < 5 * 60_000) {
+    return ixChatToolSpecsCache.specs
+  }
+
+  const result = await ixGatewayRpc(settings.gatewayUrl, settings.gatewayToken, 'tools/list')
+  const specs = Array.isArray(result?.tools) ? result.tools : []
+
+  ixChatToolSpecsCache = { specs, at: Date.now() }
+
+  return specs
+}
+
+function ixChatModelList(settings: ReturnType<typeof currentIxAgencySettings>) {
+  const custom = settings.customChatModels
+    .split(',')
+    .map(id => id.trim())
+    .filter(Boolean)
+    .filter(id => !IX_CHAT_MODELS.some(m => m.id === id))
+    .map(id => ({ id, label: `${id} (custom)` }))
+
+  return { models: [...IX_CHAT_MODELS, ...custom], defaultModel: DEFAULT_IX_CHAT_MODEL }
+}
+
+ixIpcHandle('hermes:ix-agency:chat:models', async () => {
+  const settings = currentIxAgencySettings()
+  const fallback = ixChatModelList(settings)
+  // Live model list from the LiteLLM gateway — every model the key routes to,
+  // with curated labels kept for the ones we know. Falls back to the static
+  // allowlist when the gateway is unreachable.
+  const live = await fetchLiteLlmModels(settings.litellmUrl, settings.litellmKey)
+
+  if (!live?.length) {
+    return fallback
+  }
+
+  const curated = new Map(fallback.models.map(m => [m.id, m.label]))
+  const models = live.map(m => ({ id: m.id, label: curated.get(m.id) ?? m.label }))
+
+  for (const m of fallback.models) {
+    if (!models.some(entry => entry.id === m.id)) {
+      models.push(m)
     }
+  }
 
-    let ixSyncInFlight: null | Promise<IxAgencySyncState> = null
+  const defaultModel = models.some(m => m.id === fallback.defaultModel) ? fallback.defaultModel : models[0].id
 
-    function broadcastIxSync() {
-      for (const win of BrowserWindow.getAllWindows()) {
-        if (!win.isDestroyed()) {
-          win.webContents.send('hermes:ix-agency:sync:event', ixSyncState)
-        }
-      }
+  return { models, defaultModel }
+})
+
+ixIpcHandle('hermes:ix-agency:chat:list', async () => {
+  const store = readIxChatStore(IX_CHAT_STORE_PATH)
+
+  return store.conversations
+    .map(c => ({ id: c.id, title: c.title || 'New conversation', model: c.model, updatedAt: c.updatedAt }))
+    .sort((a, b) => b.updatedAt - a.updatedAt)
+})
+
+ixIpcHandle('hermes:ix-agency:chat:get', async (_event, conversationId) => {
+  const store = readIxChatStore(IX_CHAT_STORE_PATH)
+  const conversation = store.conversations.find(c => c.id === conversationId)
+
+  if (!conversation) {
+    return null
+  }
+
+  return {
+    id: conversation.id,
+    title: conversation.title,
+    model: conversation.model,
+    skills: conversation.skills.map(s => s.name),
+    display: conversation.display
+  }
+})
+
+ixIpcHandle('hermes:ix-agency:chat:send', async (event, input) => {
+  // Login gate first: credentials alone never unlock the native chat.
+  await requireIxPortalAuth()
+
+  const settings = currentIxAgencySettings()
+
+  if (!settings.litellmKey) {
+    throw new Error(`No LiteLLM API key configured — add one in ${APP_NAME} settings.`)
+  }
+
+  const text = typeof input?.text === 'string' ? input.text.trim() : ''
+  const inputModality = input?.inputModality === 'voice' ? 'voice' : 'text'
+
+  if (!text) {
+    throw new Error('Empty message.')
+  }
+
+  if (inputModality === 'voice') {
+    const supplied = typeof input?.voiceCaptureToken === 'string' ? input.voiceCaptureToken : ''
+
+    if (!verifyVoiceCaptureAttestation(supplied, event.sender.id)) {
+      throw new Error('Voice submission is missing a current approved microphone capture attestation.')
     }
+  }
 
-    async function runIxAgencySync(): Promise<IxAgencySyncState> {
-      if (ixSyncInFlight) {
-        return ixSyncInFlight
-      }
+  const { models, defaultModel } = ixChatModelList(settings)
+  const requestedModel = typeof input?.model === 'string' ? input.model : ''
+  const model = models.some(m => m.id === requestedModel) ? requestedModel : defaultModel
 
-      ixSyncInFlight = (async () => {
-        const settings = currentIxAgencySettings()
-        const portalFetch = ixPortalSessionFetch()
-        const next: IxAgencySyncState = { ...ixSyncState }
-
-        // Gateway MCP directory — failures keep the previous tiles (the renderer
-        // falls back to its bundled snapshot when the list is empty).
-        try {
-          const directory = await fetchIxMcpDirectory(settings)
-
-          next.tiles = directory.tiles
-          next.tilesDetail = directory.detail
-        } catch (error) {
-          next.tilesDetail = `Gateway directory unavailable: ${error instanceof Error ? error.message : String(error)}`
-        }
-
-        // Dynamic connectors — 403 just means the login isn't super admin.
-        try {
-          next.connectors = await listIxConnectors(settings.portalUrl, portalFetch)
-          next.connectorsError = null
-        } catch (error) {
-          next.connectors = []
-          next.connectorsError = error instanceof Error ? error.message : String(error)
-        }
-
-        // Live Skills.md catalog (built-in + team skills).
-        try {
-          next.orgSkills = await fetchPortalSkills(settings.portalUrl, portalFetch)
-          next.orgSkillsError = null
-        } catch (error) {
-          next.orgSkillsError = error instanceof Error ? error.message : String(error)
-        }
-
-        next.syncedAt = Date.now()
-        ixSyncState = next
-        broadcastIxSync()
-
-        return ixSyncState
-      })().finally(() => {
-        ixSyncInFlight = null
-      })
-
-      return ixSyncInFlight
-    }
-
-    ixIpcHandle('hermes:ix-agency:sync:get', async () => ixSyncState)
-
-    ixIpcHandle('hermes:ix-agency:sync:run', async () => {
-      await requireIxPortalAuth()
-
-      return runIxAgencySync()
-    })
-
-    // Boot-time auto-attach: when a valid portal session already exists, wire
-    // everything up without any user action (including zero-touch provisioning
-    // for any credential slot still empty — e.g. after a settings wipe).
-    if (IS_IX_AGENCY_BRAND) {
-      void app.whenReady().then(async () => {
-        try {
-          const status = await probeIxPortalAuth()
-
-          if (status.authenticated) {
-            void runIxAutoProvision().catch(() => {})
-            await runIxAgencySync()
-          }
-        } catch {
-          // No session yet — the login flow triggers the sync instead.
-        }
-      })
-    }
-
-    // ── IX Agency per-MCP health lamps ──────────────────────────────────────────
-    // Probes every tile (gateway directory + dynamic connectors) concurrently
-    // with a short timeout and caches the results; refresh=true re-probes.
-    const IX_MCP_HEALTH_CACHE_MS = 30_000
-
-    let ixMcpHealthCache: { at: number; results: IxMcpHealthResult[] } | null = null
-
-    let ixMcpHealthInFlight: null | Promise<IxMcpHealthResult[]> = null
-
-    function ixMcpHealthTargets(): IxMcpHealthTarget[] {
-      const tiles = ixSyncState.tiles.length ? ixSyncState.tiles : bundledIxMcpTiles()
-
-      return [
-        ...tiles.map(tile => ({ tileId: tile.id, mcpUrl: tile.mcpUrl, kind: 'gateway' as const })),
-        ...ixSyncState.connectors.map(connector => ({ tileId: connector.id, kind: 'dynamic' as const }))
-      ]
-    }
-
-    function bundledIxMcpTiles(): { id: string; mcpUrl: string }[] {
-      const items = (ixMcpTilesSnapshot as { items?: { id?: string; mcpUrl?: string }[] }).items ?? []
-
-      return items
-        .filter(item => typeof item?.id === 'string' && item.id)
-        .map(item => ({ id: String(item.id), mcpUrl: String(item.mcpUrl ?? '') }))
-    }
-
-    ixIpcHandle('hermes:ix-agency:mcp:health', async (_event, input) => {
-      const refresh = Boolean(input?.refresh)
-
-      if (!refresh && ixMcpHealthCache && Date.now() - ixMcpHealthCache.at < IX_MCP_HEALTH_CACHE_MS) {
-        return { probedAt: ixMcpHealthCache.at, results: ixMcpHealthCache.results }
-      }
-
-      ixMcpHealthInFlight ??= (async () => {
-        const settings = currentIxAgencySettings()
-
-        const results = await probeMcpHealth(ixMcpHealthTargets(), {
-          gatewayUrl: settings.gatewayUrl,
-          gatewayToken: settings.gatewayToken,
-          portalUrl: settings.portalUrl,
-          portalFetch: ixPortalSessionFetch()
-        })
-
-        ixMcpHealthCache = { at: Date.now(), results }
-
-        return results
-      })().finally(() => {
-        ixMcpHealthInFlight = null
-      })
-
-      const results = await ixMcpHealthInFlight
-
-      return { probedAt: ixMcpHealthCache?.at ?? Date.now(), results }
-    })
-
-    // ── IX Agency dynamic connectors (super admin) ──────────────────────────────
-    // Thin IPC shims over the portal's /api/portal/connectors/dynamic routes.
-    // Everything runs through the OTP session's cookie jar in this process; the
-    // connector token passes straight through to the portal on save/test and is
-    // never persisted or logged here.
-    ixIpcHandle('hermes:ix-agency:connectors:list', async () => {
-      await requireIxPortalAuth()
-
-      const connectors = await listIxConnectors(currentIxAgencySettings().portalUrl, ixPortalSessionFetch())
-
-      ixSyncState = { ...ixSyncState, connectors, connectorsError: null }
-
-      return connectors
-    })
-
-    ixIpcHandle('hermes:ix-agency:connectors:save', async (_event, input) => {
-      await requireIxPortalAuth()
-
-      const saved = await saveIxConnector(
-        currentIxAgencySettings().portalUrl,
-        (input ?? {}) as IxConnectorDraft,
-        ixPortalSessionFetch()
-      )
-
-      ixSyncState = {
-        ...ixSyncState,
-        connectors: [...ixSyncState.connectors.filter(c => c.id !== saved.id), saved]
-      }
-      ixMcpHealthCache = null
-
-      return saved
-    })
-
-    ixIpcHandle('hermes:ix-agency:connectors:patch', async (_event, input) => {
-      await requireIxPortalAuth()
-
-      const updated = await setIxConnectorEnabled(
-        currentIxAgencySettings().portalUrl,
-        String(input?.id ?? ''),
-        Boolean(input?.enabled),
-        ixPortalSessionFetch()
-      )
-
-      ixSyncState = {
-        ...ixSyncState,
-        connectors: ixSyncState.connectors.map(c => (c.id === updated.id ? updated : c))
-      }
-
-      return updated
-    })
-
-    ixIpcHandle('hermes:ix-agency:connectors:delete', async (_event, input) => {
-      await requireIxPortalAuth()
-
-      const id = String(input?.id ?? '')
-
-      await deleteIxConnector(currentIxAgencySettings().portalUrl, id, ixPortalSessionFetch())
-      ixSyncState = { ...ixSyncState, connectors: ixSyncState.connectors.filter(c => c.id !== id) }
-      ixMcpHealthCache = null
-
-      return { deleted: true }
-    })
-
-    ixIpcHandle('hermes:ix-agency:connectors:test', async (_event, input) => {
-      await requireIxPortalAuth()
-
-      return testIxConnector(
-        currentIxAgencySettings().portalUrl,
-        {
-          ...(typeof input?.id === 'string' && input.id ? { id: input.id } : {}),
-          ...(typeof input?.url === 'string' ? { url: input.url } : {}),
-          ...(typeof input?.authHeader === 'string' ? { authHeader: input.authHeader } : {}),
-          ...(typeof input?.token === 'string' ? { token: input.token } : {})
-        },
-        ixPortalSessionFetch()
-      )
-    })
-
-    // Import/export live main-side so the parsing rules stay in one module.
-    ixIpcHandle('hermes:ix-agency:connectors:parse-import', async (_event, input) =>
-      parseConnectorImport(String(input?.json ?? ''))
-    )
-
-    ixIpcHandle('hermes:ix-agency:connectors:export', async () => {
-      await requireIxPortalAuth()
-
-      const connectors = ixSyncState.connectors.length
-        ? ixSyncState.connectors
-        : await listIxConnectors(currentIxAgencySettings().portalUrl, ixPortalSessionFetch())
-
-      return { json: exportConnectorsJson(connectors), count: connectors.length }
-    })
-
-    // ── IX Agency user-level skills ─────────────────────────────────────────────
-    // Draft SKILL.md playbooks live under ~/.hermes/skills/ix-user/ (user-level:
-    // local Hermes + the native copilot see them immediately). Publishing POSTs
-    // to the portal's /api/admin/skills through the signed-in OTP session, which
-    // makes the skill global — it shows up on the web admin Skills.md page.
-    function ixUserSkillsDir() {
-      return userSkillsDir(ixHermesHome())
-    }
-
-    ixIpcHandle('hermes:ix-agency:skills:list', async () => ({
-      skills: listUserSkills(ixUserSkillsDir()),
-      templates: IX_SKILL_TEMPLATES
+  // Skill playbooks ride along at conversation creation only (same trust
+  // level as a user message — they steer the prompt, never the write gate).
+  const skills = (Array.isArray(input?.skills) ? input.skills : [])
+    .map((s: { content?: unknown; name?: unknown }) => ({
+      name: String(s?.name ?? '').slice(0, 80),
+      content: String(s?.content ?? '').slice(0, 12_000)
     }))
+    .filter((s: { content: string }) => s.content)
+    .slice(0, 3)
 
-    ixIpcHandle('hermes:ix-agency:skills:save', async (_event, input) =>
-      saveUserSkill(ixUserSkillsDir(), {
-        id: typeof input?.id === 'string' ? input.id : null,
-        title: String(input?.title ?? ''),
-        description: String(input?.description ?? ''),
-        content: String(input?.content ?? '')
-      })
-    )
+  const store = readIxChatStore(IX_CHAT_STORE_PATH)
+  const existing = store.conversations.find(c => c.id === input?.conversationId)
+  const conversation = existing ?? newIxChatConversation(model, skills)
 
-    ixIpcHandle('hermes:ix-agency:skills:delete', async (_event, input) => ({
-      deleted: deleteUserSkill(ixUserSkillsDir(), String(input?.id ?? ''))
-    }))
+  if (existing) {
+    existing.model = model
+  } else {
+    store.conversations.push(conversation)
+  }
 
-    ixIpcHandle('hermes:ix-agency:skills:publish', async (_event, input) => {
-      await requireIxPortalAuth()
+  if (ixChatRunning.has(conversation.id)) {
+    throw new Error('This conversation is already generating a reply.')
+  }
 
-      const settings = currentIxAgencySettings()
+  ixChatRunning.add(conversation.id)
 
-      return publishUserSkill(ixUserSkillsDir(), String(input?.id ?? ''), settings.portalUrl, ixPortalSessionFetch())
-    })
+  const sender = event.sender
 
-    // ── IX Agency native chat ───────────────────────────────────────────────────
-    // LiteLLM streaming + admin-mcp tool loop runs HERE in the main process; the
-    // renderer only sees display events. The write gate's nonces live in this
-    // process and the ONLY approval channel is the chat:confirm IPC below — the
-    // model has no path to it.
-    const IX_CHAT_STORE_PATH = path.join(app.getPath('userData'), 'ix-agency-chats.json')
-
-    const ixChatGate = createWriteGate()
-    const ixEscalationGate = createEscalationGate()
-
-    const ixChatRunning = new Set<string>()
-
-    let ixChatToolSpecsCache: {
-      specs: { name: string; description?: string; inputSchema?: Record<string, unknown> }[]
-      at: number
-    } | null = null
-
-    async function loadIxChatToolSpecs(settings: ReturnType<typeof currentIxAgencySettings>) {
-      if (ixChatToolSpecsCache && Date.now() - ixChatToolSpecsCache.at < 5 * 60_000) {
-        return ixChatToolSpecsCache.specs
-      }
-
-      const result = await ixGatewayRpc(settings.gatewayUrl, settings.gatewayToken, 'tools/list')
-      const specs = Array.isArray(result?.tools) ? result.tools : []
-
-      ixChatToolSpecsCache = { specs, at: Date.now() }
-
-      return specs
+  const emit = (chatEvent: Record<string, unknown>) => {
+    if (!sender.isDestroyed()) {
+      sender.send('hermes:ix-agency:chat:event', { conversationId: conversation.id, ...chatEvent })
     }
-
-    function ixChatModelList(settings: ReturnType<typeof currentIxAgencySettings>) {
-      const custom = settings.customChatModels
-        .split(',')
-        .map(id => id.trim())
-        .filter(Boolean)
-        .filter(id => !IX_CHAT_MODELS.some(m => m.id === id))
-        .map(id => ({ id, label: `${id} (custom)` }))
-
-      return { models: [...IX_CHAT_MODELS, ...custom], defaultModel: DEFAULT_IX_CHAT_MODEL }
-    }
-
-    ixIpcHandle('hermes:ix-agency:chat:models', async () => {
-      const settings = currentIxAgencySettings()
-      const fallback = ixChatModelList(settings)
-      // Live model list from the LiteLLM gateway — every model the key routes to,
-      // with curated labels kept for the ones we know. Falls back to the static
-      // allowlist when the gateway is unreachable.
-      const live = await fetchLiteLlmModels(settings.litellmUrl, settings.litellmKey)
-
-      if (!live?.length) {
-        return fallback
-      }
-
-      const curated = new Map(fallback.models.map(m => [m.id, m.label]))
-      const models = live.map(m => ({ id: m.id, label: curated.get(m.id) ?? m.label }))
-
-      for (const m of fallback.models) {
-        if (!models.some(entry => entry.id === m.id)) {
-          models.push(m)
-        }
-      }
-
-      const defaultModel = models.some(m => m.id === fallback.defaultModel) ? fallback.defaultModel : models[0].id
-
-      return { models, defaultModel }
-    })
-
-    ixIpcHandle('hermes:ix-agency:chat:list', async () => {
-      const store = readIxChatStore(IX_CHAT_STORE_PATH)
-
-      return store.conversations
-        .map(c => ({ id: c.id, title: c.title || 'New conversation', model: c.model, updatedAt: c.updatedAt }))
-        .sort((a, b) => b.updatedAt - a.updatedAt)
-    })
-
-    ixIpcHandle('hermes:ix-agency:chat:get', async (_event, conversationId) => {
-      const store = readIxChatStore(IX_CHAT_STORE_PATH)
-      const conversation = store.conversations.find(c => c.id === conversationId)
-
-      if (!conversation) {
-        return null
-      }
-
-      return {
-        id: conversation.id,
-        title: conversation.title,
-        model: conversation.model,
-        skills: conversation.skills.map(s => s.name),
-        display: conversation.display
-      }
-    })
-
-    ixIpcHandle('hermes:ix-agency:chat:send', async (event, input) => {
-      // Login gate first: credentials alone never unlock the native chat.
-      await requireIxPortalAuth()
-
-      const settings = currentIxAgencySettings()
-
-      if (!settings.litellmKey) {
-        throw new Error(`No LiteLLM API key configured — add one in ${APP_NAME} settings.`)
-      }
-
-      const text = typeof input?.text === 'string' ? input.text.trim() : ''
-      const inputModality = input?.inputModality === 'voice' ? 'voice' : 'text'
-
-      if (!text) {
-        throw new Error('Empty message.')
-      }
-
-      if (inputModality === 'voice') {
-        const supplied = typeof input?.voiceCaptureToken === 'string' ? input.voiceCaptureToken : ''
-
-        if (!verifyVoiceCaptureAttestation(supplied, event.sender.id)) {
-          throw new Error('Voice submission is missing a current approved microphone capture attestation.')
-        }
-      }
-
-      const { models, defaultModel } = ixChatModelList(settings)
-      const requestedModel = typeof input?.model === 'string' ? input.model : ''
-      const model = models.some(m => m.id === requestedModel) ? requestedModel : defaultModel
-
-      // Skill playbooks ride along at conversation creation only (same trust
-      // level as a user message — they steer the prompt, never the write gate).
-      const skills = (Array.isArray(input?.skills) ? input.skills : [])
-        .map((s: { content?: unknown; name?: unknown }) => ({
-          name: String(s?.name ?? '').slice(0, 80),
-          content: String(s?.content ?? '').slice(0, 12_000)
-        }))
-        .filter((s: { content: string }) => s.content)
-        .slice(0, 3)
-
-      const store = readIxChatStore(IX_CHAT_STORE_PATH)
-      const existing = store.conversations.find(c => c.id === input?.conversationId)
-      const conversation = existing ?? newIxChatConversation(model, skills)
-
-      if (existing) {
-        existing.model = model
-      } else {
-        store.conversations.push(conversation)
-      }
-
-      if (ixChatRunning.has(conversation.id)) {
-        throw new Error('This conversation is already generating a reply.')
-      }
-
-      ixChatRunning.add(conversation.id)
-
-      const sender = event.sender
-
-      const emit = (chatEvent: Record<string, unknown>) => {
-        if (!sender.isDestroyed()) {
-          sender.send('hermes:ix-agency:chat:event', { conversationId: conversation.id, ...chatEvent })
-        }
-      }
-
-      // Tool loop degrades to plain chat when the gateway is unreachable.
-      let toolSpecs: Awaited<ReturnType<typeof loadIxChatToolSpecs>> = []
-
-      try {
-        toolSpecs = await loadIxChatToolSpecs(settings)
-      } catch {
-        toolSpecs = []
-      }
-
-      // Same live directory the Tools tab renders — every tile the gateway
-      // serves is reachable via admin_call_mcp, so list them all for the model.
-      const extraSystemBlocks: string[] = []
-
-      try {
-        const directory = await fetchIxMcpDirectory(settings)
-
-        if (directory.tiles.length) {
-          extraSystemBlocks.push(
-            `\n\nLIVE MCP DIRECTORY (${directory.tiles.length} tiles, ALL reachable via admin_call_mcp tileId):\n` +
-              directory.tiles
-                .map(tile => `• ${tile.id} — ${tile.label}${tile.blurb ? ` (${tile.blurb})` : ''}`)
-                .join('\n')
-          )
-        }
-      } catch {
-        // Directory unavailable — the bundled prompt guidance still applies.
-      }
-
-      const callGatewayTool = async (name: string, args: Record<string, unknown>) => {
-        const result = await ixGatewayRpc(settings.gatewayUrl, settings.gatewayToken, 'tools/call', {
-          name,
-          arguments: args
-        })
-
-        const resultText = Array.isArray(result?.content)
-          ? result.content
-              .filter((chunk: { type?: string }) => chunk?.type === 'text')
-              .map((chunk: { text?: string }) => chunk.text ?? '')
-              .join('\n')
-          : ''
-
-        if (result?.isError) {
-          throw new Error(resultText || 'Gateway tool call failed')
-        }
-
-        return resultText
-      }
-
-      try {
-        await runIxChatTurn({
-          conversation,
-          inputModality,
-          userText: text,
-          litellm: { baseUrl: settings.litellmUrl, apiKey: settings.litellmKey },
-          localAi: {
-            ...(await getLocalAiController().getInferenceTarget()),
-            recordRoute: input => getLocalAiController().recordRoute(input)
-          },
-          toolSpecs,
-          callGatewayTool,
-          gate: ixChatGate,
-          escalationGate: ixEscalationGate,
-          emit,
-          extraSystemBlocks
-        })
-      } catch (error) {
-        emit({ type: 'error', message: error instanceof Error ? error.message : String(error) })
-      } finally {
-        ixChatRunning.delete(conversation.id)
-        writeIxChatStore(IX_CHAT_STORE_PATH, store)
-      }
-
-      return { conversationId: conversation.id }
-    })
-
-    ixIpcHandle('hermes:ix-agency:chat:confirm', async (_event, input) => {
-      await requireIxPortalAuth()
-
-      const nonce = typeof input?.nonce === 'string' ? input.nonce : ''
-      const approve = Boolean(input?.approve)
-      const conversationId = typeof input?.conversationId === 'string' ? input.conversationId : ''
-
-      const escalationResolved = ixEscalationGate.resolve(conversationId, nonce, approve)
-
-      const ok =
-        escalationResolved ||
-        (approve ? ixChatGate.confirm(nonce, conversationId) : ixChatGate.deny(nonce, conversationId))
-
-      // Reflect the decision in the persisted transcript so reloads render it.
-      const store = readIxChatStore(IX_CHAT_STORE_PATH)
-      const conversation = store.conversations.find(c => c.id === conversationId)
-      const card = conversation?.display.find(item => item.kind === 'confirm' && item.nonce === nonce)
-
-      if (card) {
-        card.state = ok && approve ? 'approved' : 'denied'
-        writeIxChatStore(IX_CHAT_STORE_PATH, store)
-      }
-
-      return { ok, state: ok && approve ? 'approved' : 'denied' }
-    })
-
-    // ── IX Agency status lamps + tray lamps ─────────────────────────────────────
-    // Main-process pollers keep the tray truthful even with no IX view open:
-    //  - VPN lamp: tunnel artifact + `wg show` handshake + exit-IP egress check
-    //    (green ONLY when egress goes through the company Lightsail exit).
-    //  - MCP lamp: /healthz + authenticated tools/list every 60s.
-    // The update poller itself is brand-neutral and lives above; IX layers its
-    // settings-driven feed override + lamp tray menu on via the hooks below.
-    let ixVpnLamp: null | VpnDeepStatus = null
-
-    let ixMcpLamp: McpLampStatus | null = null
-
-    // IX Agency supports a user-overridable update manifest URL from settings.
-    updateManifestUrlOverride = () => currentIxAgencySettings().updateManifestUrl
-
-    async function computeIxVpnDeepStatus(): Promise<VpnDeepStatus> {
-      const settings = currentIxAgencySettings()
-      const base = ixVpnBaseStatus()
-
-      if (base.state !== 'connected') {
-        return {
-          state:
-            base.state === 'unavailable' ? 'unavailable' : base.state === 'connecting' ? 'connecting' : 'disconnected',
-          tunnelUp: false,
-          handshakeAgeSecs: null,
-          egressIp: null,
-          expectedExitIp: settings.vpnExitIp,
-          detail: base.detail
-        }
-      }
-
-      const handshakeAgeSecs = wgHandshakeAgeSecs(base.interfaceName || IX_VPN_TUNNEL)
-
-      let egressIp: null | string = null
-      let egressError: string | undefined
-
-      try {
-        egressIp = await fetchEgressIp()
-      } catch (error) {
-        egressError = error instanceof Error ? error.message : String(error)
-      }
-
-      return combineVpnStatus({
-        tunnelUp: true,
-        handshakeAgeSecs,
-        egressIp,
-        egressError,
-        expectedExitIp: settings.vpnExitIp
-      })
-    }
-
-    async function refreshIxVpnLamp() {
-      try {
-        ixVpnLamp = await computeIxVpnDeepStatus()
-      } catch (error) {
-        ixVpnLamp = {
-          state: 'error',
-          tunnelUp: false,
-          handshakeAgeSecs: null,
-          egressIp: null,
-          expectedExitIp: currentIxAgencySettings().vpnExitIp,
-          detail: error instanceof Error ? error.message : String(error)
-        }
-      }
-
-      updateIxTray()
-    }
-
-    async function refreshIxMcpLamp() {
-      const settings = currentIxAgencySettings()
-
-      ixMcpLamp = await fetchMcpLampStatus(settings.gatewayUrl, settings.gatewayToken)
-      updateIxTray()
-    }
-
-    ixIpcHandle('hermes:ix-agency:status:summary', async (_event, input) => {
-      if (input?.refresh) {
-        await Promise.all([refreshIxVpnLamp(), refreshIxMcpLamp()])
-      } else {
-        if (!ixVpnLamp) {
-          await refreshIxVpnLamp()
-        }
-
-        if (!ixMcpLamp) {
-          await refreshIxMcpLamp()
-        }
-      }
-
-      if (!ixUpdateStatus) {
-        await refreshIxUpdateStatus()
-      }
-
-      return { vpn: ixVpnLamp, mcp: ixMcpLamp, update: ixUpdateStatus }
-    })
-
-    ixIpcHandle('hermes:ix-agency:update:check', async () => {
-      await refreshIxUpdateStatus()
-
-      return ixUpdateStatus
-    })
-
-    ixIpcHandle('hermes:ix-agency:update:apply', async () => applyIxUpdate())
-
-    // Tray: lamp glyphs + tooltip for VPN and the admin-mcp gateway. Installed as
-    // the tray-menu override so the brand-neutral tray shell above renders the IX
-    // lamp menu instead of the plain update/open menu.
-    function ixLampGlyph(kind: 'green' | 'grey' | 'red' | 'yellow') {
-      return kind === 'green' ? '🟢' : kind === 'red' ? '🔴' : kind === 'yellow' ? '🟡' : '⚪'
-    }
-
-    function ixVpnLampColor(): 'green' | 'grey' | 'red' | 'yellow' {
-      switch (ixVpnLamp?.state) {
-        case 'connected':
-          return 'green'
-
-        case 'connecting':
-
-        case 'degraded':
-          return 'yellow'
-
-        case 'error':
-          return 'red'
-
-        default:
-          return 'grey'
-      }
-    }
-
-    ixTrayMenuOverride = () => {
-      if (!ixTray) {
-        return
-      }
-
-      const vpnColor = ixVpnLampColor()
-      const mcpColor = ixMcpLamp?.state ?? 'grey'
-
-      ixTray.setToolTip(
-        `${APP_NAME} — VPN: ${ixVpnLamp?.state ?? 'unknown'} (${ixVpnLamp?.detail ?? 'not checked yet'}) · ` +
-          `MCP: ${ixMcpLamp?.state ?? 'unknown'} (${ixMcpLamp?.detail ?? 'not checked yet'})` +
-          (ixUpdateStatus?.updateAvailable ? ` · Update ${ixUpdateStatus.latestVersion} available` : '')
+  }
+
+  // Tool loop degrades to plain chat when the gateway is unreachable.
+  let toolSpecs: Awaited<ReturnType<typeof loadIxChatToolSpecs>> = []
+
+  try {
+    toolSpecs = await loadIxChatToolSpecs(settings)
+  } catch {
+    toolSpecs = []
+  }
+
+  // Same live directory the Tools tab renders — every tile the gateway
+  // serves is reachable via admin_call_mcp, so list them all for the model.
+  const extraSystemBlocks: string[] = []
+
+  try {
+    const directory = await fetchIxMcpDirectory(settings)
+
+    if (directory.tiles.length) {
+      extraSystemBlocks.push(
+        `\n\nLIVE MCP DIRECTORY (${directory.tiles.length} tiles, ALL reachable via admin_call_mcp tileId):\n` +
+          directory.tiles.map(tile => `• ${tile.id} — ${tile.label}${tile.blurb ? ` (${tile.blurb})` : ''}`).join('\n')
       )
+    }
+  } catch {
+    // Directory unavailable — the bundled prompt guidance still applies.
+  }
 
-      const menu = Menu.buildFromTemplate([
-        { label: `${ixLampGlyph(vpnColor)} VPN: ${ixVpnLamp?.state ?? 'unknown'}`, enabled: false },
-        {
-          label: ixVpnLamp?.tunnelUp ? 'Disconnect VPN' : 'Connect VPN',
-          click: () => {
-            void withIxVpnConf(confPath => (ixVpnLamp?.tunnelUp ? ixVpnDisconnect(confPath) : ixVpnConnect(confPath)))
-              .catch(() => {
-                // surfaced via the next status poll; tray clicks have no toast
-              })
-              .finally(() => void refreshIxVpnLamp())
-          }
-        },
-        { type: 'separator' },
-        { label: `${ixLampGlyph(mcpColor)} admin-mcp: ${ixMcpLamp?.detail ?? 'not checked yet'}`, enabled: false },
-        { type: 'separator' },
-        ...(ixUpdateStatus?.updateAvailable
-          ? [
-              {
-                label: `⬆ Update available (${ixUpdateStatus.latestVersion}) — ${
-                  ixUpdateStatus.inPlace ? 'Restart to update' : 'Open the download page'
-                }`,
-                click: () => {
-                  void applyIxUpdate().catch(() => {
-                    // surfaced via the status detail on the next poll
-                  })
-                }
-              },
-              { type: 'separator' as const }
-            ]
-          : []),
-        {
-          label: `Open ${APP_NAME}`,
-          click: () => {
-            const win = BrowserWindow.getAllWindows().find(w => !w.isDestroyed())
+  const callGatewayTool = async (name: string, args: Record<string, unknown>) => {
+    const result = await ixGatewayRpc(settings.gatewayUrl, settings.gatewayToken, 'tools/call', {
+      name,
+      arguments: args
+    })
 
-            if (win) {
-              win.show()
-              win.focus()
-            }
-          }
-        }
-      ])
+    const resultText = Array.isArray(result?.content)
+      ? result.content
+          .filter((chunk: { type?: string }) => chunk?.type === 'text')
+          .map((chunk: { text?: string }) => chunk.text ?? '')
+          .join('\n')
+      : ''
 
-      ixTray.setContextMenu(menu)
+    if (result?.isError) {
+      throw new Error(resultText || 'Gateway tool call failed')
     }
 
-    // IX lamp pollers — the brand-neutral update poller registers above.
-    void app.whenReady().then(() => {
-      void refreshIxVpnLamp()
-      void refreshIxMcpLamp()
-      setInterval(() => void refreshIxMcpLamp(), 60_000)
-      setInterval(() => void refreshIxVpnLamp(), 45_000)
+    return resultText
+  }
+
+  try {
+    await runIxChatTurn({
+      conversation,
+      inputModality,
+      userText: text,
+      litellm: { baseUrl: settings.litellmUrl, apiKey: settings.litellmKey },
+      localAi: {
+        ...(await getLocalAiController().getInferenceTarget()),
+        recordRoute: input => getLocalAiController().recordRoute(input)
+      },
+      toolSpecs,
+      callGatewayTool,
+      gate: ixChatGate,
+      escalationGate: ixEscalationGate,
+      emit,
+      extraSystemBlocks
     })
+  } catch (error) {
+    emit({ type: 'error', message: error instanceof Error ? error.message : String(error) })
+  } finally {
+    ixChatRunning.delete(conversation.id)
+    writeIxChatStore(IX_CHAT_STORE_PATH, store)
+  }
 
-    // ── IX Agency: Cognito S2S + local Hermes init (first-run setup) ────────────
-    const HERMES_DEPLOYMENT_INSTALLER = path.join(
-      os.homedir(),
-      'dev',
-      'hermes-deployment',
-      'scripts',
-      'install-local.sh'
-    )
+  return { conversationId: conversation.id }
+})
 
-    function ixHermesHome() {
-      return process.env.HERMES_HOME || path.join(os.homedir(), '.hermes')
+ixIpcHandle('hermes:ix-agency:chat:confirm', async (_event, input) => {
+  await requireIxPortalAuth()
+
+  const nonce = typeof input?.nonce === 'string' ? input.nonce : ''
+  const approve = Boolean(input?.approve)
+  const conversationId = typeof input?.conversationId === 'string' ? input.conversationId : ''
+
+  const escalationResolved = ixEscalationGate.resolve(conversationId, nonce, approve)
+
+  const ok =
+    escalationResolved ||
+    (approve ? ixChatGate.confirm(nonce, conversationId) : ixChatGate.deny(nonce, conversationId))
+
+  // Reflect the decision in the persisted transcript so reloads render it.
+  const store = readIxChatStore(IX_CHAT_STORE_PATH)
+  const conversation = store.conversations.find(c => c.id === conversationId)
+  const card = conversation?.display.find(item => item.kind === 'confirm' && item.nonce === nonce)
+
+  if (card) {
+    card.state = ok && approve ? 'approved' : 'denied'
+    writeIxChatStore(IX_CHAT_STORE_PATH, store)
+  }
+
+  return { ok, state: ok && approve ? 'approved' : 'denied' }
+})
+
+// ── IX Agency status lamps + tray lamps ─────────────────────────────────────
+// Main-process pollers keep the tray truthful even with no IX view open:
+//  - VPN lamp: tunnel artifact + `wg show` handshake + exit-IP egress check
+//    (green ONLY when egress goes through the company Lightsail exit).
+//  - MCP lamp: /healthz + authenticated tools/list every 60s.
+// The update poller itself is brand-neutral and lives above; IX layers its
+// settings-driven feed override + lamp tray menu on via the hooks below.
+let ixVpnLamp: null | VpnDeepStatus = null
+
+let ixMcpLamp: McpLampStatus | null = null
+
+// IX Agency supports a user-overridable update manifest URL from settings.
+updateManifestUrlOverride = () => currentIxAgencySettings().updateManifestUrl
+
+async function computeIxVpnDeepStatus(): Promise<VpnDeepStatus> {
+  const settings = currentIxAgencySettings()
+  const base = ixVpnBaseStatus()
+
+  if (base.state !== 'connected') {
+    return {
+      state: base.state === 'unavailable' ? 'unavailable' : base.state === 'connecting' ? 'connecting' : 'disconnected',
+      tunnelUp: false,
+      handshakeAgeSecs: null,
+      egressIp: null,
+      expectedExitIp: settings.vpnExitIp,
+      detail: base.detail
+    }
+  }
+
+  const handshakeAgeSecs = wgHandshakeAgeSecs(base.interfaceName || IX_VPN_TUNNEL)
+
+  let egressIp: null | string = null
+  let egressError: string | undefined
+
+  try {
+    egressIp = await fetchEgressIp()
+  } catch (error) {
+    egressError = error instanceof Error ? error.message : String(error)
+  }
+
+  return combineVpnStatus({
+    tunnelUp: true,
+    handshakeAgeSecs,
+    egressIp,
+    egressError,
+    expectedExitIp: settings.vpnExitIp
+  })
+}
+
+async function refreshIxVpnLamp() {
+  try {
+    ixVpnLamp = await computeIxVpnDeepStatus()
+  } catch (error) {
+    ixVpnLamp = {
+      state: 'error',
+      tunnelUp: false,
+      handshakeAgeSecs: null,
+      egressIp: null,
+      expectedExitIp: currentIxAgencySettings().vpnExitIp,
+      detail: error instanceof Error ? error.message : String(error)
+    }
+  }
+
+  updateIxTray()
+}
+
+async function refreshIxMcpLamp() {
+  const settings = currentIxAgencySettings()
+
+  ixMcpLamp = await fetchMcpLampStatus(settings.gatewayUrl, settings.gatewayToken)
+  updateIxTray()
+}
+
+ixIpcHandle('hermes:ix-agency:status:summary', async (_event, input) => {
+  if (input?.refresh) {
+    await Promise.all([refreshIxVpnLamp(), refreshIxMcpLamp()])
+  } else {
+    if (!ixVpnLamp) {
+      await refreshIxVpnLamp()
     }
 
-    ixIpcHandle('hermes:ix-agency:hermes:status', async () => {
-      const settings = currentIxAgencySettings()
-      const configPath = path.join(ixHermesHome(), 'config.yaml')
-      const configExists = fileExists(configPath)
+    if (!ixMcpLamp) {
+      await refreshIxMcpLamp()
+    }
+  }
 
-      return {
-        initialized: settings.hermesInitialized && configExists,
-        configPath,
-        configExists,
-        hasCognitoCreds: Boolean(settings.cognitoClientId && settings.cognitoClientSecret),
-        installerAvailable: fileExists(HERMES_DEPLOYMENT_INSTALLER),
-        detail:
-          settings.hermesInitialized && configExists
-            ? 'Initialized'
-            : configExists
-              ? 'config.yaml exists but init has not been verified from this app'
-              : 'Not initialized'
-      }
-    })
+  if (!ixUpdateStatus) {
+    await refreshIxUpdateStatus()
+  }
 
-    // Validate the S2S credentials with a REAL client_credentials grant + JWKS
-    // signature verification; persist them (safeStorage) only on success.
-    ixIpcHandle('hermes:ix-agency:cognito:validate', async (_event, input) => {
-      const current = currentIxAgencySettings()
-      const clientId = (typeof input?.clientId === 'string' && input.clientId.trim()) || current.cognitoClientId
+  return { vpn: ixVpnLamp, mcp: ixMcpLamp, update: ixUpdateStatus }
+})
 
-      const clientSecret =
-        (typeof input?.clientSecret === 'string' && input.clientSecret.trim()) || current.cognitoClientSecret
+ixIpcHandle('hermes:ix-agency:update:check', async () => {
+  await refreshIxUpdateStatus()
 
-      if (!clientId || !clientSecret) {
-        throw new Error('Cognito S2S client id and secret are both required.')
-      }
+  return ixUpdateStatus
+})
 
-      const token = await fetchCognitoToken(current.cognitoOauth2Url, clientId, clientSecret, current.cognitoScope)
-      const detail = await verifyCognitoToken(token, clientId, current.cognitoScope)
+ixIpcHandle('hermes:ix-agency:update:apply', async () => applyIxUpdate())
 
-      writeIxAgencySettings(
-        IX_AGENCY_SETTINGS_PATH,
-        { ...current, cognitoClientId: clientId, cognitoClientSecret: clientSecret },
-        encryptDesktopSecret
-      )
+// Tray: lamp glyphs + tooltip for VPN and the admin-mcp gateway. Installed as
+// the tray-menu override so the brand-neutral tray shell above renders the IX
+// lamp menu instead of the plain update/open menu.
+function ixLampGlyph(kind: 'green' | 'grey' | 'red' | 'yellow') {
+  return kind === 'green' ? '🟢' : kind === 'red' ? '🔴' : kind === 'yellow' ? '🟡' : '⚪'
+}
 
-      return { ok: true, detail }
-    })
+function ixVpnLampColor(): 'green' | 'grey' | 'red' | 'yellow' {
+  switch (ixVpnLamp?.state) {
+    case 'connected':
+      return 'green'
 
-    // Initialize local Hermes: Cognito validation gates the whole flow, then the
-    // hermes-deployment installer runs for REAL when its checkout exists (else a
-    // minimal ~/.hermes/config.yaml pointed at the LiteLLM gateway is written),
-    // and secrets Hermes reads land in ~/.hermes/.env (0600). Shared by the
-    // Connect tab's Initialize button and the zero-touch auto-provision flow.
-    async function runIxHermesInit(): Promise<{ ok: boolean; log: string }> {
-      const settings = currentIxAgencySettings()
+    case 'connecting':
 
-      if (!settings.cognitoClientId || !settings.cognitoClientSecret) {
-        throw new Error('Validate the Cognito S2S credentials first.')
-      }
+    case 'degraded':
+      return 'yellow'
 
-      const token = await fetchCognitoToken(
-        settings.cognitoOauth2Url,
-        settings.cognitoClientId,
-        settings.cognitoClientSecret,
-        settings.cognitoScope
-      )
+    case 'error':
+      return 'red'
 
-      const verification = await verifyCognitoToken(token, settings.cognitoClientId, settings.cognitoScope)
+    default:
+      return 'grey'
+  }
+}
 
-      const hermesHome = ixHermesHome()
-      let log = `Cognito client-credentials login OK — ${verification}\n`
+ixTrayMenuOverride = () => {
+  if (!ixTray) {
+    return
+  }
 
-      if (fileExists(HERMES_DEPLOYMENT_INSTALLER)) {
-        try {
-          const out = await execFileAsync('bash', [HERMES_DEPLOYMENT_INSTALLER], {
-            timeout: 10 * 60_000,
-            maxBuffer: 8 * 1024 * 1024,
-            env: { ...process.env, HERMES_HOME: hermesHome }
+  const vpnColor = ixVpnLampColor()
+  const mcpColor = ixMcpLamp?.state ?? 'grey'
+
+  ixTray.setToolTip(
+    `${APP_NAME} — VPN: ${ixVpnLamp?.state ?? 'unknown'} (${ixVpnLamp?.detail ?? 'not checked yet'}) · ` +
+      `MCP: ${ixMcpLamp?.state ?? 'unknown'} (${ixMcpLamp?.detail ?? 'not checked yet'})` +
+      (ixUpdateStatus?.updateAvailable ? ` · Update ${ixUpdateStatus.latestVersion} available` : '')
+  )
+
+  const menu = Menu.buildFromTemplate([
+    { label: `${ixLampGlyph(vpnColor)} VPN: ${ixVpnLamp?.state ?? 'unknown'}`, enabled: false },
+    {
+      label: ixVpnLamp?.tunnelUp ? 'Disconnect VPN' : 'Connect VPN',
+      click: () => {
+        void withIxVpnConf(confPath => (ixVpnLamp?.tunnelUp ? ixVpnDisconnect(confPath) : ixVpnConnect(confPath)))
+          .catch(() => {
+            // surfaced via the next status poll; tray clicks have no toast
           })
+          .finally(() => void refreshIxVpnLamp())
+      }
+    },
+    { type: 'separator' },
+    { label: `${ixLampGlyph(mcpColor)} admin-mcp: ${ixMcpLamp?.detail ?? 'not checked yet'}`, enabled: false },
+    { type: 'separator' },
+    ...(ixUpdateStatus?.updateAvailable
+      ? [
+          {
+            label: `⬆ Update available (${ixUpdateStatus.latestVersion}) — ${
+              ixUpdateStatus.inPlace ? 'Restart to update' : 'Open the download page'
+            }`,
+            click: () => {
+              void applyIxUpdate().catch(() => {
+                // surfaced via the status detail on the next poll
+              })
+            }
+          },
+          { type: 'separator' as const }
+        ]
+      : []),
+    {
+      label: `Open ${APP_NAME}`,
+      click: () => {
+        const win = BrowserWindow.getAllWindows().find(w => !w.isDestroyed())
 
-          log += `install-local.sh OK\n${out.stdout.slice(-4000)}`
-        } catch (error) {
-          const detail = error instanceof Error ? error.message : String(error)
-
-          throw new Error(`hermes-deployment install-local.sh failed: ${detail}`)
+        if (win) {
+          win.show()
+          win.focus()
         }
-      } else {
-        fs.mkdirSync(hermesHome, { recursive: true })
       }
-
-      const configPath = path.join(hermesHome, 'config.yaml')
-      // Regenerate configs this app seeded (marker comment) so re-running init
-      // picks up new EKS MCP deployments; hand-edited configs — and the
-      // hermes-deployment seed, which carries no marker — are left alone. This
-      // runs after the installer branch too: install-local.sh never overwrites
-      // an existing config.yaml, so without this a desktop-seeded config would
-      // go stale forever on machines with the hermes-deployment checkout.
-      let seededByUs = false
-
-      try {
-        seededByUs = /^# (Seeded|Generated) by the Hermes desktop/.test(fs.readFileSync(configPath, 'utf8'))
-      } catch {
-        seededByUs = false
-      }
-
-      if (!fileExists(configPath) || seededByUs) {
-        // process.resourcesPath lets the generator fall back to the skill packs
-        // bundled with the packaged app when the dev checkouts are absent.
-        fs.writeFileSync(
-          configPath,
-          fullHermesConfigYaml(settings.litellmUrl, settings.gatewayUrl, os.homedir(), process.resourcesPath),
-          'utf8'
-        )
-        log += `wrote ${configPath} — LiteLLM model provider + admin-mcp gateway + direct entries for every EKS MCP deployment\n`
-      } else {
-        log += `${configPath} exists without the desktop seed marker (hand-edited or hermes-deployment seed) — left as-is\n`
-      }
-
-      // Portal admin-skills catalog → native SKILL.md folders Hermes loads like
-      // any other skill (no manual skill setup).
-      try {
-        const skillCount = materializeIxPortalSkills(hermesHome)
-
-        log += `materialized ${skillCount} platform skills under ~/.hermes/skills/ix-portal/\n`
-      } catch (error) {
-        log += `platform skill materialization failed: ${error instanceof Error ? error.message : String(error)}\n`
-      }
-
-      // Secrets Hermes reads from ~/.hermes/.env; the safeStorage store stays the
-      // source of truth.
-      const envPath = path.join(hermesHome, '.env')
-      let envContents = ''
-
-      try {
-        envContents = fs.readFileSync(envPath, 'utf8')
-      } catch {
-        envContents = ''
-      }
-
-      if (settings.gatewayToken) {
-        envContents = upsertEnvLine(envContents, 'ADMIN_MCP_TOKEN', settings.gatewayToken)
-        log += 'ADMIN_MCP_TOKEN written to ~/.hermes/.env\n'
-      } else {
-        log += 'No gateway token configured — admin-mcp calls will 401 until one is added.\n'
-      }
-
-      if (settings.litellmKey) {
-        envContents = upsertEnvLine(envContents, 'LITELLM_API_KEY', settings.litellmKey)
-        envContents = upsertEnvLine(envContents, 'OPENAI_API_KEY', settings.litellmKey)
-        log += 'LITELLM_API_KEY written to ~/.hermes/.env\n'
-      }
-
-      fs.writeFileSync(envPath, envContents, { mode: 0o600 })
-      writeIxAgencySettings(IX_AGENCY_SETTINGS_PATH, { ...settings, hermesInitialized: true }, encryptDesktopSecret)
-
-      return { ok: true, log }
     }
+  ])
 
-    ixIpcHandle('hermes:ix-agency:hermes:init', async () => runIxHermesInit())
+  ixTray.setContextMenu(menu)
+}
 
-    // ── IX Agency zero-touch provisioning ───────────────────────────────────────
-    // On every successful OTP login (and on boot with a live session) the portal's
-    // /api/portal/desktop/provision hands over the credentials a new employee
-    // previously pasted by hand. Only EMPTY slots are filled (manual overrides
-    // and previous fills always win — idempotent), the WireGuard conf lands in
-    // the same keychain slot the Import button writes (so the existing VPN
-    // auto-connect picks it up), and a first-run Hermes init fires once the
-    // Cognito credentials are in place. Secret values never reach the logs.
-    let ixAutoProvisionInFlight: null | Promise<void> = null
+// IX lamp pollers — the brand-neutral update poller registers above.
+void app.whenReady().then(() => {
+  void refreshIxVpnLamp()
+  void refreshIxMcpLamp()
+  setInterval(() => void refreshIxMcpLamp(), 60_000)
+  setInterval(() => void refreshIxVpnLamp(), 45_000)
+})
 
-    async function runIxAutoProvision(): Promise<void> {
-      if (ixAutoProvisionInFlight) {
-        return ixAutoProvisionInFlight
-      }
+// ── IX Agency: Cognito S2S + local Hermes init (first-run setup) ────────────
+const HERMES_DEPLOYMENT_INSTALLER = path.join(os.homedir(), 'dev', 'hermes-deployment', 'scripts', 'install-local.sh')
 
-      ixAutoProvisionInFlight = (async () => {
-        const settings = currentIxAgencySettings()
-        const payload = await fetchIxDesktopProvision(settings.portalUrl, ixPortalSessionFetch())
-        const { next, filled } = applyIxProvisionToSettings(settings, payload)
+function ixHermesHome() {
+  return process.env.HERMES_HOME || path.join(os.homedir(), '.hermes')
+}
 
-        if (filled.length) {
-          writeIxAgencySettings(IX_AGENCY_SETTINGS_PATH, next, encryptDesktopSecret)
-          rememberLog(
-            `[ix-provision] auto-filled from the portal: ${filled.join(', ')} ` +
-              `(litellm: ${payload.litellm.source || 'n/a'}, vpn: ${payload.wireguard.source || 'n/a'})`
-          )
+ixIpcHandle('hermes:ix-agency:hermes:status', async () => {
+  const settings = currentIxAgencySettings()
+  const configPath = path.join(ixHermesHome(), 'config.yaml')
+  const configExists = fileExists(configPath)
 
-          // A fresh VPN conf flips the lamp from 'unavailable' to 'disconnected';
-          // the renderer's login auto-connect then brings the tunnel up.
-          if (filled.includes('vpnConfSecret')) {
-            void refreshIxVpnLamp()
-          }
-        }
+  return {
+    initialized: settings.hermesInitialized && configExists,
+    configPath,
+    configExists,
+    hasCognitoCreds: Boolean(settings.cognitoClientId && settings.cognitoClientSecret),
+    installerAvailable: fileExists(HERMES_DEPLOYMENT_INSTALLER),
+    detail:
+      settings.hermesInitialized && configExists
+        ? 'Initialized'
+        : configExists
+          ? 'config.yaml exists but init has not been verified from this app'
+          : 'Not initialized'
+  }
+})
 
-        // First-run Hermes init: once the Cognito S2S credentials exist and init
-        // has never completed from this app, run it now — no button needed.
-        if (!next.hermesInitialized && next.cognitoClientId && next.cognitoClientSecret) {
-          try {
-            await runIxHermesInit()
-            rememberLog('[ix-provision] local Hermes initialized automatically after login')
-          } catch (error) {
-            rememberLog(
-              `[ix-provision] automatic Hermes init failed (retry from Settings → Connect): ${
-                error instanceof Error ? error.message : String(error)
-              }`
-            )
-          }
-        }
-      })().finally(() => {
-        ixAutoProvisionInFlight = null
+// Validate the S2S credentials with a REAL client_credentials grant + JWKS
+// signature verification; persist them (safeStorage) only on success.
+ixIpcHandle('hermes:ix-agency:cognito:validate', async (_event, input) => {
+  const current = currentIxAgencySettings()
+  const clientId = (typeof input?.clientId === 'string' && input.clientId.trim()) || current.cognitoClientId
+
+  const clientSecret =
+    (typeof input?.clientSecret === 'string' && input.clientSecret.trim()) || current.cognitoClientSecret
+
+  if (!clientId || !clientSecret) {
+    throw new Error('Cognito S2S client id and secret are both required.')
+  }
+
+  const token = await fetchCognitoToken(current.cognitoOauth2Url, clientId, clientSecret, current.cognitoScope)
+  const detail = await verifyCognitoToken(token, clientId, current.cognitoScope)
+
+  writeIxAgencySettings(
+    IX_AGENCY_SETTINGS_PATH,
+    { ...current, cognitoClientId: clientId, cognitoClientSecret: clientSecret },
+    encryptDesktopSecret
+  )
+
+  return { ok: true, detail }
+})
+
+// Initialize local Hermes: Cognito validation gates the whole flow, then the
+// hermes-deployment installer runs for REAL when its checkout exists (else a
+// minimal ~/.hermes/config.yaml pointed at the LiteLLM gateway is written),
+// and secrets Hermes reads land in ~/.hermes/.env (0600). Shared by the
+// Connect tab's Initialize button and the zero-touch auto-provision flow.
+async function runIxHermesInit(): Promise<{ ok: boolean; log: string }> {
+  const settings = currentIxAgencySettings()
+
+  if (!settings.cognitoClientId || !settings.cognitoClientSecret) {
+    throw new Error('Validate the Cognito S2S credentials first.')
+  }
+
+  const token = await fetchCognitoToken(
+    settings.cognitoOauth2Url,
+    settings.cognitoClientId,
+    settings.cognitoClientSecret,
+    settings.cognitoScope
+  )
+
+  const verification = await verifyCognitoToken(token, settings.cognitoClientId, settings.cognitoScope)
+
+  const hermesHome = ixHermesHome()
+  let log = `Cognito client-credentials login OK — ${verification}\n`
+
+  if (fileExists(HERMES_DEPLOYMENT_INSTALLER)) {
+    try {
+      const out = await execFileAsync('bash', [HERMES_DEPLOYMENT_INSTALLER], {
+        timeout: 10 * 60_000,
+        maxBuffer: 8 * 1024 * 1024,
+        env: { ...process.env, HERMES_HOME: hermesHome }
       })
 
-      return ixAutoProvisionInFlight
+      log += `install-local.sh OK\n${out.stdout.slice(-4000)}`
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : String(error)
+
+      throw new Error(`hermes-deployment install-local.sh failed: ${detail}`)
     }
+  } else {
+    fs.mkdirSync(hermesHome, { recursive: true })
+  }
+
+  const configPath = path.join(hermesHome, 'config.yaml')
+  // Regenerate configs this app seeded (marker comment) so re-running init
+  // picks up new EKS MCP deployments; hand-edited configs — and the
+  // hermes-deployment seed, which carries no marker — are left alone. This
+  // runs after the installer branch too: install-local.sh never overwrites
+  // an existing config.yaml, so without this a desktop-seeded config would
+  // go stale forever on machines with the hermes-deployment checkout.
+  let seededByUs = false
+
+  try {
+    seededByUs = /^# (Seeded|Generated) by the Hermes desktop/.test(fs.readFileSync(configPath, 'utf8'))
+  } catch {
+    seededByUs = false
+  }
+
+  if (!fileExists(configPath) || seededByUs) {
+    // process.resourcesPath lets the generator fall back to the skill packs
+    // bundled with the packaged app when the dev checkouts are absent.
+    fs.writeFileSync(
+      configPath,
+      fullHermesConfigYaml(settings.litellmUrl, settings.gatewayUrl, os.homedir(), process.resourcesPath),
+      'utf8'
+    )
+    log += `wrote ${configPath} — LiteLLM model provider + admin-mcp gateway + direct entries for every EKS MCP deployment\n`
+  } else {
+    log += `${configPath} exists without the desktop seed marker (hand-edited or hermes-deployment seed) — left as-is\n`
+  }
+
+  // Portal admin-skills catalog → native SKILL.md folders Hermes loads like
+  // any other skill (no manual skill setup).
+  try {
+    const skillCount = materializeIxPortalSkills(hermesHome)
+
+    log += `materialized ${skillCount} platform skills under ~/.hermes/skills/ix-portal/\n`
+  } catch (error) {
+    log += `platform skill materialization failed: ${error instanceof Error ? error.message : String(error)}\n`
+  }
+
+  // Secrets Hermes reads from ~/.hermes/.env; the safeStorage store stays the
+  // source of truth.
+  const envPath = path.join(hermesHome, '.env')
+  let envContents = ''
+
+  try {
+    envContents = fs.readFileSync(envPath, 'utf8')
+  } catch {
+    envContents = ''
+  }
+
+  if (settings.gatewayToken) {
+    envContents = upsertEnvLine(envContents, 'ADMIN_MCP_TOKEN', settings.gatewayToken)
+    log += 'ADMIN_MCP_TOKEN written to ~/.hermes/.env\n'
+  } else {
+    log += 'No gateway token configured — admin-mcp calls will 401 until one is added.\n'
+  }
+
+  if (settings.litellmKey) {
+    envContents = upsertEnvLine(envContents, 'LITELLM_API_KEY', settings.litellmKey)
+    envContents = upsertEnvLine(envContents, 'OPENAI_API_KEY', settings.litellmKey)
+    log += 'LITELLM_API_KEY written to ~/.hermes/.env\n'
+  }
+
+  fs.writeFileSync(envPath, envContents, { mode: 0o600 })
+  writeIxAgencySettings(IX_AGENCY_SETTINGS_PATH, { ...settings, hermesInitialized: true }, encryptDesktopSecret)
+
+  return { ok: true, log }
+}
+
+ixIpcHandle('hermes:ix-agency:hermes:init', async () => runIxHermesInit())
+
+// ── IX Agency zero-touch provisioning ───────────────────────────────────────
+// On every successful OTP login (and on boot with a live session) the portal's
+// /api/portal/desktop/provision hands over the credentials a new employee
+// previously pasted by hand. Only EMPTY slots are filled (manual overrides
+// and previous fills always win — idempotent), the WireGuard conf lands in
+// the same keychain slot the Import button writes (so the existing VPN
+// auto-connect picks it up), and a first-run Hermes init fires once the
+// Cognito credentials are in place. Secret values never reach the logs.
+let ixAutoProvisionInFlight: null | Promise<void> = null
+
+async function runIxAutoProvision(): Promise<void> {
+  if (ixAutoProvisionInFlight) {
+    return ixAutoProvisionInFlight
+  }
+
+  ixAutoProvisionInFlight = (async () => {
+    const settings = currentIxAgencySettings()
+    const payload = await fetchIxDesktopProvision(settings.portalUrl, ixPortalSessionFetch())
+    const { next, filled } = applyIxProvisionToSettings(settings, payload)
+
+    if (filled.length) {
+      writeIxAgencySettings(IX_AGENCY_SETTINGS_PATH, next, encryptDesktopSecret)
+      rememberLog(
+        `[ix-provision] auto-filled from the portal: ${filled.join(', ')} ` +
+          `(litellm: ${payload.litellm.source || 'n/a'}, vpn: ${payload.wireguard.source || 'n/a'})`
+      )
+
+      // A fresh VPN conf flips the lamp from 'unavailable' to 'disconnected';
+      // the renderer's login auto-connect then brings the tunnel up.
+      if (filled.includes('vpnConfSecret')) {
+        void refreshIxVpnLamp()
+      }
+    }
+
+    // First-run Hermes init: once the Cognito S2S credentials exist and init
+    // has never completed from this app, run it now — no button needed.
+    if (!next.hermesInitialized && next.cognitoClientId && next.cognitoClientSecret) {
+      try {
+        await runIxHermesInit()
+        rememberLog('[ix-provision] local Hermes initialized automatically after login')
+      } catch (error) {
+        rememberLog(
+          `[ix-provision] automatic Hermes init failed (retry from Settings → Connect): ${
+            error instanceof Error ? error.message : String(error)
+          }`
+        )
+      }
+    }
+  })().finally(() => {
+    ixAutoProvisionInFlight = null
+  })
+
+  return ixAutoProvisionInFlight
+}
   })()
 }
 
@@ -9667,1588 +9661,1551 @@ if (process.env.HERMES_DESKTOP_BRAND !== 'quizverse') {
 // IS_IX_AGENCY_BRAND block above.
 if (process.env.HERMES_DESKTOP_BRAND === 'quizverse') {
   ;(() => {
-    const QUIZVERSE_SETTINGS_PATH = path.join(app.getPath('userData'), 'quizverse.json')
+const QUIZVERSE_SETTINGS_PATH = path.join(app.getPath('userData'), 'quizverse.json')
 
-    function currentQuizverseSettings() {
-      return readQuizverseSettings(QUIZVERSE_SETTINGS_PATH, decryptDesktopSecret)
+function currentQuizverseSettings() {
+  return readQuizverseSettings(QUIZVERSE_SETTINGS_PATH, decryptDesktopSecret)
+}
+
+function broadcastDeepTutorStatus(status: ReturnType<DeepTutorSupervisor['status']>) {
+  for (const win of BrowserWindow.getAllWindows()) {
+    if (!win.isDestroyed()) {
+      win.webContents.send('hermes:quizverse:tutor:event', status)
     }
+  }
+}
 
-    function broadcastDeepTutorStatus(status: ReturnType<DeepTutorSupervisor['status']>) {
-      for (const win of BrowserWindow.getAllWindows()) {
-        if (!win.isDestroyed()) {
-          win.webContents.send('hermes:quizverse:tutor:event', status)
-        }
-      }
-    }
+const deepTutorSupervisor: DeepTutorSupervisor | null = IS_QUIZVERSE_BRAND
+  ? new DeepTutorSupervisor({
+      getSettings: currentQuizverseSettings,
+      log: line => rememberLog(line),
+      onStatusChange: status => broadcastDeepTutorStatus(status),
+      // DeepTutor's packaged Next standalone server needs Node 20+ — put the
+      // app's managed Node runtime first so a system without Node still works.
+      extraEnv: () => ({ PATH: pathWithHermesManagedNode() })
+    })
+  : null
 
-    const deepTutorSupervisor: DeepTutorSupervisor | null = IS_QUIZVERSE_BRAND
-      ? new DeepTutorSupervisor({
-          getSettings: currentQuizverseSettings,
-          log: line => rememberLog(line),
-          onStatusChange: status => broadcastDeepTutorStatus(status),
-          // DeepTutor's packaged Next standalone server needs Node 20+ — put the
-          // app's managed Node runtime first so a system without Node still works.
-          extraEnv: () => ({ PATH: pathWithHermesManagedNode() })
-        })
-      : null
+const qvTutorSockets = new Map<string, { ownerId: number; socket: WebSocket }>()
+const qvTutorStreams = new Map<string, { controller: AbortController; ownerId: number }>()
 
-    const qvTutorSockets = new Map<string, { ownerId: number; socket: WebSocket }>()
-    const qvTutorStreams = new Map<string, { controller: AbortController; ownerId: number }>()
+function qvTutorApiBase() {
+  const base = deepTutorSupervisor!.status().apiUrl
 
-    function qvTutorApiBase() {
-      const base = deepTutorSupervisor!.status().apiUrl
+  if (!base) {
+    throw new Error('TutorX API is not ready')
+  }
 
-      if (!base) {
-        throw new Error('TutorX API is not ready')
-      }
+  return base.replace(/\/+$/, '')
+}
 
-      return base.replace(/\/+$/, '')
-    }
+function qvTutorHeaders(extra: Record<string, string> = {}) {
+  const settings = currentQuizverseSettings()
 
-    function qvTutorHeaders(extra: Record<string, string> = {}) {
-      const settings = currentQuizverseSettings()
+  return {
+    ...extra,
+    ...(settings.apiKey ? { Authorization: `Bearer ${settings.apiKey}` } : {})
+  }
+}
 
-      return {
-        ...extra,
-        ...(settings.apiKey ? { Authorization: `Bearer ${settings.apiKey}` } : {})
-      }
-    }
+async function qvTutorRequest(input: {
+  body?: string
+  form?: { data?: ArrayBuffer; filename?: string; name: string; type?: string; value?: string }[]
+  headers?: Record<string, string>
+  method?: string
+  path?: string
+}) {
+  const requestPath = String(input.path ?? '')
 
-    async function qvTutorRequest(input: {
-      body?: string
-      form?: { data?: ArrayBuffer; filename?: string; name: string; type?: string; value?: string }[]
-      headers?: Record<string, string>
-      method?: string
-      path?: string
-    }) {
-      const requestPath = String(input.path ?? '')
+  if (!requestPath.startsWith('/api/v1/') || requestPath.includes('://')) {
+    throw new Error('TutorX request path is not allowed')
+  }
 
-      if (!requestPath.startsWith('/api/v1/') || requestPath.includes('://')) {
-        throw new Error('TutorX request path is not allowed')
-      }
+  let body: BodyInit | undefined = input.body
+  const headers = qvTutorHeaders(input.headers)
 
-      let body: BodyInit | undefined = input.body
-      const headers = qvTutorHeaders(input.headers)
+  if (input.form) {
+    const form = new FormData()
 
-      if (input.form) {
-        const form = new FormData()
-
-        for (const field of input.form) {
-          if (field.data) {
-            form.append(field.name, new Blob([field.data], { type: field.type }), field.filename)
-          } else {
-            form.append(field.name, field.value ?? '')
-          }
-        }
-
-        body = form
-        delete headers['content-type']
-        delete headers['Content-Type']
-      }
-
-      const response = await fetch(`${qvTutorApiBase()}${requestPath}`, {
-        body,
-        headers,
-        method: input.method ?? 'GET',
-        signal: AbortSignal.timeout(120_000)
-      })
-
-      return {
-        body: await response.text(),
-        contentType: response.headers.get('content-type') ?? '',
-        status: response.status
+    for (const field of input.form) {
+      if (field.data) {
+        form.append(field.name, new Blob([field.data], { type: field.type }), field.filename)
+      } else {
+        form.append(field.name, field.value ?? '')
       }
     }
 
-    /** Packaged renderers have a `file://`/`null` Origin, which FastAPI's CORS
-     * policy correctly rejects. Rewrite only requests to the supervised TutorX
-     * API to the backend's allow-listed desktop development origin. This includes
-     * WebSocket handshakes and leaves every other network request untouched. */
-    function installTutorXOriginRewrite() {
-      if (!IS_QUIZVERSE_BRAND || !deepTutorSupervisor) {
+    body = form
+    delete headers['content-type']
+    delete headers['Content-Type']
+  }
+
+  const response = await fetch(`${qvTutorApiBase()}${requestPath}`, {
+    body,
+    headers,
+    method: input.method ?? 'GET',
+    signal: AbortSignal.timeout(120_000)
+  })
+
+  return {
+    body: await response.text(),
+    contentType: response.headers.get('content-type') ?? '',
+    status: response.status
+  }
+}
+
+/** Packaged renderers have a `file://`/`null` Origin, which FastAPI's CORS
+ * policy correctly rejects. Rewrite only requests to the supervised TutorX
+ * API to the backend's allow-listed desktop development origin. This includes
+ * WebSocket handshakes and leaves every other network request untouched. */
+function installTutorXOriginRewrite() {
+  if (!IS_QUIZVERSE_BRAND || !deepTutorSupervisor) {
+    return
+  }
+
+  session.defaultSession.webRequest.onBeforeSendHeaders((details, callback) => {
+    const apiUrl = deepTutorSupervisor.status().apiUrl.replace(/\/+$/, '')
+
+    if (!apiUrl || !details.url.startsWith(`${apiUrl}/`)) {
+      callback({ requestHeaders: details.requestHeaders })
+
+      return
+    }
+
+    callback({
+      requestHeaders: {
+        ...details.requestHeaders,
+        Origin: 'http://localhost:5173'
+      }
+    })
+  })
+}
+
+// Brand separation, mirror of ixIpcHandle: the `hermes:quizverse:*` surface
+// only exists in the QuizVerse build.
+function qvIpcHandle(channel: string, handler: Parameters<typeof ipcMain.handle>[1]) {
+  if (IS_QUIZVERSE_BRAND) {
+    ipcMain.handle(channel, handler)
+  }
+}
+
+const QV_NAKAMA_BASE = 'https://nakama-rest.intelli-verse-x.ai'
+const QV_PLAY_AUTH_PATH = path.join(app.getPath('userData'), 'quizverse-play-auth.json')
+const QV_PLAY_TIMEOUT_MS = 12_000
+
+const QV_PLAY_RPC_ALLOWLIST = new Set([
+  'async_challenge_create',
+  'async_challenge_get',
+  'async_challenge_join',
+  'async_challenge_submit',
+  'daily_rewards_claim',
+  'friends_list',
+  'get_leaderboard',
+  'get_player_stats',
+  'learning_track_get',
+  'learning_track_progress_get',
+  'learning_track_progress_update',
+  'learning_video_record_watch',
+  'learning_check_submit',
+  'brain_coins_get',
+  'matchmaking_create_party',
+  'matchmaking_get_status',
+  'matchmaking_join_party',
+  'player_get_full_profile',
+  'progression_get_state',
+  'quiz_get_history',
+  'quiz_get_stats',
+  'quiz_submit_result_v2',
+  'quizverse_ai_generate_questions',
+  'quizverse_claim_daily_reward',
+  'quizverse_create_match',
+  'quizverse_fetch_external_quiz',
+  'quizverse_fetch_movies_quiz',
+  'quizverse_fetch_music_quiz',
+  'quizverse_fetch_news_quiz',
+  'quizverse_get_entitlements',
+  'quizverse_get_player_context',
+  'quizverse_get_questions',
+  'quizverse_knowledge_map',
+  'quizverse_request_questions',
+  'quizverse_weekly_fetch',
+  'send_friend_challenge',
+  'send_friend_invite',
+  'submit_score_and_sync',
+  'tournament_caller_status',
+  'tournament_bracket_state',
+  'tournament_claim_certificate',
+  'tournament_content_get_pack',
+  'tournament_enter',
+  'tournament_get',
+  'tournament_leaderboard_activity_feed',
+  'tournament_leaderboard_around_me',
+  'tournament_leaderboard_country',
+  'tournament_leaderboard_friends',
+  'tournament_leaderboard_tier_league',
+  'tournament_leaderboard_top',
+  'tournament_list',
+  'tournament_pre_enroll',
+  'tournament_submit_pack_result',
+  'tournament_submit_picks',
+  'tournament_streak_get',
+  'tournament_streak_check_in',
+  'tournament_intent_quiz_get',
+  'tournament_intent_quiz_submit',
+  'tournament_intent_quiz_get_recommendation',
+  'referral_my_code',
+  'certificate_get',
+  'quizverse_lap_submit_progress',
+  'quizverse_lap_get_leaderboard',
+  'quizverse_lap_battle_find',
+  'quizverse_words_daily_seed',
+  'quizverse_words_duel_get',
+  'quizverse_words_duel_leaderboard',
+  'quizverse_words_duel_submit',
+  'creator_event_create',
+  'creator_event_get',
+  'creator_event_list',
+  'creator_event_publish',
+  'creator_event_spa_join',
+  'creator_event_submit',
+  'wallet_get_balances'
+])
+
+const QV_PLAY_CONFIRMED_RPCS = new Set([
+  'tournament_claim_certificate',
+  'tournament_enter',
+  'tournament_pre_enroll',
+  'tournament_streak_check_in',
+  'tournament_submit_pack_result',
+  'tournament_submit_picks',
+  'tournament_intent_quiz_submit',
+  'quizverse_words_duel_submit'
+])
+
+const QV_PLAY_IDEMPOTENT_RPCS = new Set(QV_PLAY_CONFIRMED_RPCS)
+
+const QV_PLAY_AUTHENTICATED_RPCS = new Set([
+  'tournament_claim_certificate',
+  'tournament_enter',
+  'tournament_pre_enroll',
+  'tournament_streak_check_in',
+  'tournament_submit_pack_result',
+  'tournament_submit_picks',
+  'tournament_intent_quiz_submit'
+])
+
+interface QvPlayAuth {
+  authKind: 'authenticated' | 'guest'
+  cognitoAccessToken: string
+  cognitoRefreshToken: string
+  cognitoSubject: string
+  deviceId: string
+  token: string
+  refreshToken: string
+  userId: string
+  username: string
+}
+
+let qvPlayAuth: QvPlayAuth | null = null
+
+function readQvPlayAuth(): QvPlayAuth | null {
+  try {
+    const raw = JSON.parse(fs.readFileSync(QV_PLAY_AUTH_PATH, 'utf8'))
+    const token = decryptDesktopSecret(raw.token)
+    const refreshToken = decryptDesktopSecret(raw.refreshToken)
+
+    if (!token || !refreshToken || !raw.deviceId) {
+      return null
+    }
+
+    return {
+      authKind: raw.authKind === 'authenticated' ? 'authenticated' : 'guest',
+      cognitoAccessToken: decryptDesktopSecret(raw.cognitoAccessToken),
+      cognitoRefreshToken: decryptDesktopSecret(raw.cognitoRefreshToken),
+      cognitoSubject: String(raw.cognitoSubject ?? ''),
+      deviceId: String(raw.deviceId),
+      refreshToken,
+      token,
+      userId: String(raw.userId ?? ''),
+      username: String(raw.username ?? 'Guest')
+    }
+  } catch {
+    return null
+  }
+}
+
+function writeQvPlayAuth(auth: QvPlayAuth) {
+  fs.mkdirSync(path.dirname(QV_PLAY_AUTH_PATH), { recursive: true })
+  fs.writeFileSync(
+    QV_PLAY_AUTH_PATH,
+    `${JSON.stringify(
+      {
+        deviceId: auth.deviceId,
+        authKind: auth.authKind,
+        cognitoAccessToken: encryptDesktopSecret(auth.cognitoAccessToken),
+        cognitoRefreshToken: encryptDesktopSecret(auth.cognitoRefreshToken),
+        cognitoSubject: auth.cognitoSubject,
+        refreshToken: encryptDesktopSecret(auth.refreshToken),
+        token: encryptDesktopSecret(auth.token),
+        userId: auth.userId,
+        username: auth.username
+      },
+      null,
+      2
+    )}\n`
+  )
+}
+
+function qvJwtClaims(token: string): { exp?: number; sub?: string; uid?: string; usn?: string } {
+  try {
+    return JSON.parse(Buffer.from(token.split('.')[1], 'base64url').toString('utf8'))
+  } catch {
+    return {}
+  }
+}
+
+async function authenticateQvPlay(): Promise<QvPlayAuth> {
+  const stored = qvPlayAuth ?? readQvPlayAuth()
+  const claims = stored ? qvJwtClaims(stored.token) : {}
+
+  if (stored && (claims.exp ?? 0) > Date.now() / 1000 + 30) {
+    qvPlayAuth = stored
+
+    return stored
+  }
+
+  if (stored?.refreshToken) {
+    const response = await fetch(`${QV_NAKAMA_BASE}/v2/account/session/refresh`, {
+      body: JSON.stringify({ token: stored.refreshToken }),
+      headers: {
+        Authorization: `Basic ${Buffer.from('defaultkey:').toString('base64')}`,
+        'content-type': 'application/json'
+      },
+      method: 'POST',
+      signal: AbortSignal.timeout(QV_PLAY_TIMEOUT_MS)
+    })
+
+    if (response.ok) {
+      const body = await response.json()
+      const nextClaims = qvJwtClaims(body.token)
+
+      const refreshed = {
+        ...stored,
+        refreshToken: body.refresh_token ?? stored.refreshToken,
+        token: body.token,
+        userId: body.user_id ?? nextClaims.uid ?? stored.userId,
+        username: body.username ?? nextClaims.usn ?? stored.username
+      }
+
+      qvPlayAuth = refreshed
+      writeQvPlayAuth(refreshed)
+
+      return refreshed
+    }
+  }
+
+  const deviceId = stored?.deviceId || `qv_desktop_${crypto.randomUUID().replaceAll('-', '').slice(0, 20)}`
+
+  const response = await fetch(`${QV_NAKAMA_BASE}/v2/account/authenticate/custom?create=true`, {
+    body: JSON.stringify({ id: deviceId }),
+    headers: {
+      Authorization: `Basic ${Buffer.from('defaultkey:').toString('base64')}`,
+      'content-type': 'application/json'
+    },
+    method: 'POST',
+    signal: AbortSignal.timeout(QV_PLAY_TIMEOUT_MS)
+  })
+
+  if (!response.ok) {
+    throw new Error(`QuizVerse guest authentication failed (${response.status})`)
+  }
+
+  const body = await response.json()
+  const nextClaims = qvJwtClaims(body.token)
+
+  const auth = {
+    authKind: 'guest' as const,
+    cognitoAccessToken: '',
+    cognitoRefreshToken: '',
+    cognitoSubject: '',
+    deviceId,
+    refreshToken: body.refresh_token ?? '',
+    token: body.token,
+    userId: body.user_id ?? nextClaims.uid ?? '',
+    username: body.username ?? nextClaims.usn ?? 'Guest'
+  }
+
+  qvPlayAuth = auth
+  writeQvPlayAuth(auth)
+
+  return auth
+}
+
+async function authenticateQvCognitoNakama(cognitoSub: string, username: string): Promise<QvPlayAuth> {
+  const deviceId = qvPlayAuth?.deviceId || readQvPlayAuth()?.deviceId || `qv_desktop_${crypto.randomUUID().replaceAll('-', '').slice(0, 20)}`
+  const query = new URLSearchParams({ create: 'true', username })
+
+  const response = await fetch(`${QV_NAKAMA_BASE}/v2/account/authenticate/custom?${query}`, {
+    // Unity and the web auth broker both use the verified Cognito subject as
+    // the custom ID. The subject comes only from the PKCE token exchange;
+    // renderer input can never select this account ID.
+    body: JSON.stringify({ id: cognitoSub }),
+    headers: {
+      Authorization: `Basic ${Buffer.from('defaultkey:').toString('base64')}`,
+      'content-type': 'application/json'
+    },
+    method: 'POST',
+    signal: AbortSignal.timeout(QV_PLAY_TIMEOUT_MS)
+  })
+
+  if (!response.ok) {
+    throw new Error(`QuizVerse account session failed (${response.status})`)
+  }
+
+  const body = await response.json()
+  const claims = qvJwtClaims(body.token)
+
+  return {
+    authKind: 'authenticated',
+    cognitoAccessToken: '',
+    cognitoRefreshToken: '',
+    cognitoSubject: cognitoSub,
+    deviceId,
+    refreshToken: body.refresh_token ?? '',
+    token: body.token,
+    userId: body.user_id ?? claims.uid ?? cognitoSub,
+    username: body.username ?? claims.usn ?? username
+  }
+}
+
+async function ensureQvCognitoAuth(): Promise<QvPlayAuth> {
+  const auth = await authenticateQvPlay()
+
+  if (auth.authKind !== 'authenticated') {
+    throw new Error('Connect a QuizVerse Cognito account before using this product surface')
+  }
+
+  const accessClaims = qvJwtClaims(auth.cognitoAccessToken)
+
+  if ((accessClaims.exp ?? 0) > Date.now() / 1000 + 60) {
+    return auth
+  }
+
+  if (!auth.cognitoRefreshToken) {
+    throw new Error('QuizVerse Cognito session expired; sign in again')
+  }
+
+  try {
+    const config = qvOAuthConfig()
+
+    const tokens = await refreshQuizverseOAuthTokens({
+      clientId: config.clientId,
+      domain: config.domain,
+      refreshToken: auth.cognitoRefreshToken
+    })
+
+    if (!tokens.accessToken || !tokens.idToken) {
+      throw new Error('Cognito refresh response did not include fresh identity tokens')
+    }
+
+    const claims = await verifyQuizverseIdToken(tokens.idToken, {
+      clientId: config.clientId,
+      domain: config.domain,
+      issuer: config.issuer
+    })
+
+    const subject = String(claims.sub ?? '')
+
+    if (!subject || subject !== auth.cognitoSubject) {
+      throw new Error('Cognito refreshed identity does not match the linked account')
+    }
+
+    qvPlayAuth = {
+      ...auth,
+      cognitoAccessToken: tokens.accessToken,
+      cognitoRefreshToken: tokens.refreshToken
+    }
+    writeQvPlayAuth(qvPlayAuth)
+
+    return qvPlayAuth
+  } catch (error) {
+    qvPlayAuth = null
+
+    try {
+      fs.rmSync(QV_PLAY_AUTH_PATH, { force: true })
+    } catch {
+      // A read-only profile still receives the reauthentication state.
+    }
+
+    throw new Error(`QuizVerse Cognito session expired; sign in again (${error instanceof Error ? error.message : String(error)})`)
+  }
+}
+
+let qvOAuthPending: (QuizverseOAuthPending & { guestUserId: string }) | null = null
+
+function qvOAuthConfig() {
+  const settings = currentQuizverseSettings()
+
+  if (!settings.cognitoDomain || !settings.cognitoClientId || !settings.cognitoIssuer) {
+    throw new Error('Configure the QuizVerse Cognito domain, client id, and OIDC issuer in Setup')
+  }
+
+  return {
+    clientId: settings.cognitoClientId,
+    domain: settings.cognitoDomain,
+    issuer: settings.cognitoIssuer,
+    redirectUri: 'quizverse://auth/callback'
+  }
+}
+
+qvIpcHandle('hermes:quizverse:auth:start', async () => {
+  const guest = await authenticateQvPlay()
+  const started = beginQuizverseOAuth(qvOAuthConfig())
+  qvOAuthPending = { ...started.pending, guestUserId: guest.authKind === 'guest' ? guest.userId : '' }
+  await shell.openExternal(started.url)
+
+  return { state: 'pending' }
+})
+
+qvIpcHandle('hermes:quizverse:auth:status', async () => {
+  const auth = qvPlayAuth ?? readQvPlayAuth()
+
+  return {
+    authenticated: auth?.authKind === 'authenticated',
+    configured: Boolean(currentQuizverseSettings().cognitoDomain && currentQuizverseSettings().cognitoClientId),
+    userId: auth?.userId ?? '',
+    username: auth?.username ?? ''
+  }
+})
+
+async function completeQvOAuthDeepLink(callbackUrl: string) {
+  if (!qvOAuthPending) {
+    throw new Error('QuizVerse OAuth callback has no pending login')
+  }
+
+  const pending = qvOAuthPending
+  qvOAuthPending = null
+
+  const completed = await completeQuizverseOAuth({
+    authenticateNakama: async (sub, username) => authenticateQvCognitoNakama(sub, username),
+    callbackUrl,
+    config: qvOAuthConfig(),
+    exchangeCode: exchangeQuizverseOAuthCode,
+    mergeGuest: async (ghostUserId, cognitoSub, accessToken) => {
+      if (!ghostUserId) {
         return
       }
 
-      session.defaultSession.webRequest.onBeforeSendHeaders((details, callback) => {
-        const apiUrl = deepTutorSupervisor.status().apiUrl.replace(/\/+$/, '')
-
-        if (!apiUrl || !details.url.startsWith(`${apiUrl}/`)) {
-          callback({ requestHeaders: details.requestHeaders })
-
-          return
-        }
-
-        callback({
-          requestHeaders: {
-            ...details.requestHeaders,
-            Origin: 'http://localhost:5173'
-          }
-        })
-      })
-    }
-
-    // Brand separation, mirror of ixIpcHandle: the `hermes:quizverse:*` surface
-    // only exists in the QuizVerse build.
-    function qvIpcHandle(channel: string, handler: Parameters<typeof ipcMain.handle>[1]) {
-      if (IS_QUIZVERSE_BRAND) {
-        ipcMain.handle(channel, handler)
-      }
-    }
-
-    const QV_NAKAMA_BASE = 'https://nakama-rest.intelli-verse-x.ai'
-    const QV_PLAY_AUTH_PATH = path.join(app.getPath('userData'), 'quizverse-play-auth.json')
-    const QV_PLAY_TIMEOUT_MS = 12_000
-
-    const QV_PLAY_RPC_ALLOWLIST = new Set([
-      'async_challenge_create',
-      'async_challenge_get',
-      'async_challenge_join',
-      'async_challenge_submit',
-      'daily_rewards_claim',
-      'friends_list',
-      'get_leaderboard',
-      'get_player_stats',
-      'learning_track_get',
-      'learning_track_progress_get',
-      'learning_track_progress_update',
-      'learning_video_record_watch',
-      'learning_check_submit',
-      'brain_coins_get',
-      'matchmaking_create_party',
-      'matchmaking_get_status',
-      'matchmaking_join_party',
-      'player_get_full_profile',
-      'progression_get_state',
-      'quiz_get_history',
-      'quiz_get_stats',
-      'quiz_submit_result_v2',
-      'quizverse_ai_generate_questions',
-      'quizverse_claim_daily_reward',
-      'quizverse_create_match',
-      'quizverse_fetch_external_quiz',
-      'quizverse_fetch_movies_quiz',
-      'quizverse_fetch_music_quiz',
-      'quizverse_fetch_news_quiz',
-      'quizverse_get_entitlements',
-      'quizverse_get_player_context',
-      'quizverse_get_questions',
-      'quizverse_knowledge_map',
-      'quizverse_request_questions',
-      'quizverse_weekly_fetch',
-      'send_friend_challenge',
-      'send_friend_invite',
-      'submit_score_and_sync',
-      'tournament_caller_status',
-      'tournament_bracket_state',
-      'tournament_claim_certificate',
-      'tournament_content_get_pack',
-      'tournament_enter',
-      'tournament_get',
-      'tournament_leaderboard_activity_feed',
-      'tournament_leaderboard_around_me',
-      'tournament_leaderboard_country',
-      'tournament_leaderboard_friends',
-      'tournament_leaderboard_tier_league',
-      'tournament_leaderboard_top',
-      'tournament_list',
-      'tournament_pre_enroll',
-      'tournament_submit_pack_result',
-      'tournament_submit_picks',
-      'tournament_streak_get',
-      'tournament_streak_check_in',
-      'tournament_intent_quiz_get',
-      'tournament_intent_quiz_submit',
-      'tournament_intent_quiz_get_recommendation',
-      'referral_my_code',
-      'certificate_get',
-      'quizverse_lap_submit_progress',
-      'quizverse_lap_get_leaderboard',
-      'quizverse_lap_battle_find',
-      'quizverse_words_daily_seed',
-      'quizverse_words_duel_get',
-      'quizverse_words_duel_leaderboard',
-      'quizverse_words_duel_submit',
-      'creator_event_create',
-      'creator_event_get',
-      'creator_event_list',
-      'creator_event_publish',
-      'creator_event_spa_join',
-      'creator_event_submit',
-      'wallet_get_balances'
-    ])
-
-    const QV_PLAY_CONFIRMED_RPCS = new Set([
-      'tournament_claim_certificate',
-      'tournament_enter',
-      'tournament_pre_enroll',
-      'tournament_streak_check_in',
-      'tournament_submit_pack_result',
-      'tournament_submit_picks',
-      'tournament_intent_quiz_submit',
-      'quizverse_words_duel_submit'
-    ])
-
-    const QV_PLAY_IDEMPOTENT_RPCS = new Set(QV_PLAY_CONFIRMED_RPCS)
-
-    const QV_PLAY_AUTHENTICATED_RPCS = new Set([
-      'tournament_claim_certificate',
-      'tournament_enter',
-      'tournament_pre_enroll',
-      'tournament_streak_check_in',
-      'tournament_submit_pack_result',
-      'tournament_submit_picks',
-      'tournament_intent_quiz_submit'
-    ])
-
-    interface QvPlayAuth {
-      authKind: 'authenticated' | 'guest'
-      cognitoAccessToken: string
-      cognitoRefreshToken: string
-      cognitoSubject: string
-      deviceId: string
-      token: string
-      refreshToken: string
-      userId: string
-      username: string
-    }
-
-    let qvPlayAuth: QvPlayAuth | null = null
-
-    function readQvPlayAuth(): QvPlayAuth | null {
       try {
-        const raw = JSON.parse(fs.readFileSync(QV_PLAY_AUTH_PATH, 'utf8'))
-        const token = decryptDesktopSecret(raw.token)
-        const refreshToken = decryptDesktopSecret(raw.refreshToken)
-
-        if (!token || !refreshToken || !raw.deviceId) {
-          return null
-        }
-
-        return {
-          authKind: raw.authKind === 'authenticated' ? 'authenticated' : 'guest',
-          cognitoAccessToken: decryptDesktopSecret(raw.cognitoAccessToken),
-          cognitoRefreshToken: decryptDesktopSecret(raw.cognitoRefreshToken),
-          cognitoSubject: String(raw.cognitoSubject ?? ''),
-          deviceId: String(raw.deviceId),
-          refreshToken,
-          token,
-          userId: String(raw.userId ?? ''),
-          username: String(raw.username ?? 'Guest')
-        }
-      } catch {
-        return null
-      }
-    }
-
-    function writeQvPlayAuth(auth: QvPlayAuth) {
-      fs.mkdirSync(path.dirname(QV_PLAY_AUTH_PATH), { recursive: true })
-      fs.writeFileSync(
-        QV_PLAY_AUTH_PATH,
-        `${JSON.stringify(
-          {
-            deviceId: auth.deviceId,
-            authKind: auth.authKind,
-            cognitoAccessToken: encryptDesktopSecret(auth.cognitoAccessToken),
-            cognitoRefreshToken: encryptDesktopSecret(auth.cognitoRefreshToken),
-            cognitoSubject: auth.cognitoSubject,
-            refreshToken: encryptDesktopSecret(auth.refreshToken),
-            token: encryptDesktopSecret(auth.token),
-            userId: auth.userId,
-            username: auth.username
-          },
-          null,
-          2
-        )}\n`
-      )
-    }
-
-    function qvJwtClaims(token: string): { exp?: number; sub?: string; uid?: string; usn?: string } {
-      try {
-        return JSON.parse(Buffer.from(token.split('.')[1], 'base64url').toString('utf8'))
-      } catch {
-        return {}
-      }
-    }
-
-    async function authenticateQvPlay(): Promise<QvPlayAuth> {
-      const stored = qvPlayAuth ?? readQvPlayAuth()
-      const claims = stored ? qvJwtClaims(stored.token) : {}
-
-      if (stored && (claims.exp ?? 0) > Date.now() / 1000 + 30) {
-        qvPlayAuth = stored
-
-        return stored
-      }
-
-      if (stored?.refreshToken) {
-        const response = await fetch(`${QV_NAKAMA_BASE}/v2/account/session/refresh`, {
-          body: JSON.stringify({ token: stored.refreshToken }),
+        const response = await fetch(`${QV_NAKAMA_BASE}/v2/rpc/account_merge_ghost_to_cognito?unwrap=true`, {
+          body: JSON.stringify({
+            cognito_access_token: accessToken,
+            cognito_user_id: cognitoSub,
+            ghost_user_id: ghostUserId
+          }),
           headers: {
-            Authorization: `Basic ${Buffer.from('defaultkey:').toString('base64')}`,
+            Authorization: `Bearer ${(qvPlayAuth ?? readQvPlayAuth())?.token ?? ''}`,
             'content-type': 'application/json'
           },
           method: 'POST',
           signal: AbortSignal.timeout(QV_PLAY_TIMEOUT_MS)
         })
 
-        if (response.ok) {
-          const body = await response.json()
-          const nextClaims = qvJwtClaims(body.token)
-
-          const refreshed = {
-            ...stored,
-            refreshToken: body.refresh_token ?? stored.refreshToken,
-            token: body.token,
-            userId: body.user_id ?? nextClaims.uid ?? stored.userId,
-            username: body.username ?? nextClaims.usn ?? stored.username
-          }
-
-          qvPlayAuth = refreshed
-          writeQvPlayAuth(refreshed)
-
-          return refreshed
+        if (!response.ok) {
+          rememberLog(`[qv-auth] guest merge deferred (${response.status})`)
         }
-      }
-
-      const deviceId = stored?.deviceId || `qv_desktop_${crypto.randomUUID().replaceAll('-', '').slice(0, 20)}`
-
-      const response = await fetch(`${QV_NAKAMA_BASE}/v2/account/authenticate/custom?create=true`, {
-        body: JSON.stringify({ id: deviceId }),
-        headers: {
-          Authorization: `Basic ${Buffer.from('defaultkey:').toString('base64')}`,
-          'content-type': 'application/json'
-        },
-        method: 'POST',
-        signal: AbortSignal.timeout(QV_PLAY_TIMEOUT_MS)
-      })
-
-      if (!response.ok) {
-        throw new Error(`QuizVerse guest authentication failed (${response.status})`)
-      }
-
-      const body = await response.json()
-      const nextClaims = qvJwtClaims(body.token)
-
-      const auth = {
-        authKind: 'guest' as const,
-        cognitoAccessToken: '',
-        cognitoRefreshToken: '',
-        cognitoSubject: '',
-        deviceId,
-        refreshToken: body.refresh_token ?? '',
-        token: body.token,
-        userId: body.user_id ?? nextClaims.uid ?? '',
-        username: body.username ?? nextClaims.usn ?? 'Guest'
-      }
-
-      qvPlayAuth = auth
-      writeQvPlayAuth(auth)
-
-      return auth
-    }
-
-    async function authenticateQvCognitoNakama(cognitoSub: string, username: string): Promise<QvPlayAuth> {
-      const deviceId =
-        qvPlayAuth?.deviceId ||
-        readQvPlayAuth()?.deviceId ||
-        `qv_desktop_${crypto.randomUUID().replaceAll('-', '').slice(0, 20)}`
-      const query = new URLSearchParams({ create: 'true', username })
-
-      const response = await fetch(`${QV_NAKAMA_BASE}/v2/account/authenticate/custom?${query}`, {
-        // Unity and the web auth broker both use the verified Cognito subject as
-        // the custom ID. The subject comes only from the PKCE token exchange;
-        // renderer input can never select this account ID.
-        body: JSON.stringify({ id: cognitoSub }),
-        headers: {
-          Authorization: `Basic ${Buffer.from('defaultkey:').toString('base64')}`,
-          'content-type': 'application/json'
-        },
-        method: 'POST',
-        signal: AbortSignal.timeout(QV_PLAY_TIMEOUT_MS)
-      })
-
-      if (!response.ok) {
-        throw new Error(`QuizVerse account session failed (${response.status})`)
-      }
-
-      const body = await response.json()
-      const claims = qvJwtClaims(body.token)
-
-      return {
-        authKind: 'authenticated',
-        cognitoAccessToken: '',
-        cognitoRefreshToken: '',
-        cognitoSubject: cognitoSub,
-        deviceId,
-        refreshToken: body.refresh_token ?? '',
-        token: body.token,
-        userId: body.user_id ?? claims.uid ?? cognitoSub,
-        username: body.username ?? claims.usn ?? username
-      }
-    }
-
-    async function ensureQvCognitoAuth(): Promise<QvPlayAuth> {
-      const auth = await authenticateQvPlay()
-
-      if (auth.authKind !== 'authenticated') {
-        throw new Error('Connect a QuizVerse Cognito account before using this product surface')
-      }
-
-      const accessClaims = qvJwtClaims(auth.cognitoAccessToken)
-
-      if ((accessClaims.exp ?? 0) > Date.now() / 1000 + 60) {
-        return auth
-      }
-
-      if (!auth.cognitoRefreshToken) {
-        throw new Error('QuizVerse Cognito session expired; sign in again')
-      }
-
-      try {
-        const config = qvOAuthConfig()
-
-        const tokens = await refreshQuizverseOAuthTokens({
-          clientId: config.clientId,
-          domain: config.domain,
-          refreshToken: auth.cognitoRefreshToken
-        })
-
-        if (!tokens.accessToken || !tokens.idToken) {
-          throw new Error('Cognito refresh response did not include fresh identity tokens')
-        }
-
-        const claims = await verifyQuizverseIdToken(tokens.idToken, {
-          clientId: config.clientId,
-          domain: config.domain,
-          issuer: config.issuer
-        })
-
-        const subject = String(claims.sub ?? '')
-
-        if (!subject || subject !== auth.cognitoSubject) {
-          throw new Error('Cognito refreshed identity does not match the linked account')
-        }
-
-        qvPlayAuth = {
-          ...auth,
-          cognitoAccessToken: tokens.accessToken,
-          cognitoRefreshToken: tokens.refreshToken
-        }
-        writeQvPlayAuth(qvPlayAuth)
-
-        return qvPlayAuth
       } catch (error) {
-        qvPlayAuth = null
-
-        try {
-          fs.rmSync(QV_PLAY_AUTH_PATH, { force: true })
-        } catch {
-          // A read-only profile still receives the reauthentication state.
-        }
-
-        throw new Error(
-          `QuizVerse Cognito session expired; sign in again (${error instanceof Error ? error.message : String(error)})`
-        )
+        rememberLog(`[qv-auth] guest merge deferred: ${error instanceof Error ? error.message : String(error)}`)
       }
-    }
+    },
+    pending,
+    previousGuestUserId: pending.guestUserId,
+    verifyIdToken: verifyQuizverseIdToken
+  })
 
-    let qvOAuthPending: (QuizverseOAuthPending & { guestUserId: string }) | null = null
+  qvPlayAuth = {
+    ...completed.nakama,
+    authKind: 'authenticated',
+    cognitoAccessToken: completed.tokens.accessToken,
+    cognitoRefreshToken: completed.tokens.refreshToken,
+    cognitoSubject: String(qvJwtClaims(completed.tokens.idToken).sub ?? ''),
+    deviceId: (qvPlayAuth ?? readQvPlayAuth())?.deviceId ?? `qv_desktop_${crypto.randomUUID().replaceAll('-', '').slice(0, 20)}`
+  }
+  writeQvPlayAuth(qvPlayAuth)
 
-    function qvOAuthConfig() {
-      const settings = currentQuizverseSettings()
-
-      if (!settings.cognitoDomain || !settings.cognitoClientId || !settings.cognitoIssuer) {
-        throw new Error('Configure the QuizVerse Cognito domain, client id, and OIDC issuer in Setup')
-      }
-
-      return {
-        clientId: settings.cognitoClientId,
-        domain: settings.cognitoDomain,
-        issuer: settings.cognitoIssuer,
-        redirectUri: 'quizverse://auth/callback'
-      }
-    }
-
-    qvIpcHandle('hermes:quizverse:auth:start', async () => {
-      const guest = await authenticateQvPlay()
-      const started = beginQuizverseOAuth(qvOAuthConfig())
-      qvOAuthPending = { ...started.pending, guestUserId: guest.authKind === 'guest' ? guest.userId : '' }
-      await shell.openExternal(started.url)
-
-      return { state: 'pending' }
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('hermes:quizverse:auth:event', {
+      authenticated: true,
+      userId: qvPlayAuth.userId,
+      username: qvPlayAuth.username
     })
+  }
+}
 
-    qvIpcHandle('hermes:quizverse:auth:status', async () => {
-      const auth = qvPlayAuth ?? readQvPlayAuth()
+app.on('brand-auth-callback' as never, (_event, callbackUrl: string) => {
+  void completeQvOAuthDeepLink(callbackUrl).catch(error => {
+    rememberLog(`[qv-auth] callback failed: ${error instanceof Error ? error.message : String(error)}`)
 
-      return {
-        authenticated: auth?.authKind === 'authenticated',
-        configured: Boolean(currentQuizverseSettings().cognitoDomain && currentQuizverseSettings().cognitoClientId),
-        userId: auth?.userId ?? '',
-        username: auth?.username ?? ''
-      }
-    })
-
-    async function completeQvOAuthDeepLink(callbackUrl: string) {
-      if (!qvOAuthPending) {
-        throw new Error('QuizVerse OAuth callback has no pending login')
-      }
-
-      const pending = qvOAuthPending
-      qvOAuthPending = null
-
-      const completed = await completeQuizverseOAuth({
-        authenticateNakama: async (sub, username) => authenticateQvCognitoNakama(sub, username),
-        callbackUrl,
-        config: qvOAuthConfig(),
-        exchangeCode: exchangeQuizverseOAuthCode,
-        mergeGuest: async (ghostUserId, cognitoSub, accessToken) => {
-          if (!ghostUserId) {
-            return
-          }
-
-          try {
-            const response = await fetch(`${QV_NAKAMA_BASE}/v2/rpc/account_merge_ghost_to_cognito?unwrap=true`, {
-              body: JSON.stringify({
-                cognito_access_token: accessToken,
-                cognito_user_id: cognitoSub,
-                ghost_user_id: ghostUserId
-              }),
-              headers: {
-                Authorization: `Bearer ${(qvPlayAuth ?? readQvPlayAuth())?.token ?? ''}`,
-                'content-type': 'application/json'
-              },
-              method: 'POST',
-              signal: AbortSignal.timeout(QV_PLAY_TIMEOUT_MS)
-            })
-
-            if (!response.ok) {
-              rememberLog(`[qv-auth] guest merge deferred (${response.status})`)
-            }
-          } catch (error) {
-            rememberLog(`[qv-auth] guest merge deferred: ${error instanceof Error ? error.message : String(error)}`)
-          }
-        },
-        pending,
-        previousGuestUserId: pending.guestUserId,
-        verifyIdToken: verifyQuizverseIdToken
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('hermes:quizverse:auth:event', {
+        authenticated: false,
+        error: error instanceof Error ? error.message : String(error)
       })
-
-      qvPlayAuth = {
-        ...completed.nakama,
-        authKind: 'authenticated',
-        cognitoAccessToken: completed.tokens.accessToken,
-        cognitoRefreshToken: completed.tokens.refreshToken,
-        cognitoSubject: String(qvJwtClaims(completed.tokens.idToken).sub ?? ''),
-        deviceId:
-          (qvPlayAuth ?? readQvPlayAuth())?.deviceId ??
-          `qv_desktop_${crypto.randomUUID().replaceAll('-', '').slice(0, 20)}`
-      }
-      writeQvPlayAuth(qvPlayAuth)
-
-      if (mainWindow && !mainWindow.isDestroyed()) {
-        mainWindow.webContents.send('hermes:quizverse:auth:event', {
-          authenticated: true,
-          userId: qvPlayAuth.userId,
-          username: qvPlayAuth.username
-        })
-      }
     }
+  })
+})
 
-    app.on('brand-auth-callback' as never, (_event, callbackUrl: string) => {
-      void completeQvOAuthDeepLink(callbackUrl).catch(error => {
-        rememberLog(`[qv-auth] callback failed: ${error instanceof Error ? error.message : String(error)}`)
+async function qvPlayRpc(name: string, payload: Record<string, unknown>) {
+  if (!QV_PLAY_RPC_ALLOWLIST.has(name)) {
+    throw new Error(`QuizVerse RPC is not allowed: ${name}`)
+  }
 
-        if (mainWindow && !mainWindow.isDestroyed()) {
-          mainWindow.webContents.send('hermes:quizverse:auth:event', {
-            authenticated: false,
-            error: error instanceof Error ? error.message : String(error)
-          })
-        }
-      })
+  let auth = await authenticateQvPlay()
+
+  const call = () =>
+    fetch(`${QV_NAKAMA_BASE}/v2/rpc/${encodeURIComponent(name)}?unwrap=true`, {
+      body: JSON.stringify(payload),
+      headers: { Authorization: `Bearer ${auth.token}`, 'content-type': 'application/json' },
+      method: 'POST',
+      signal: AbortSignal.timeout(QV_PLAY_TIMEOUT_MS)
     })
 
-    async function qvPlayRpc(name: string, payload: Record<string, unknown>) {
-      if (!QV_PLAY_RPC_ALLOWLIST.has(name)) {
-        throw new Error(`QuizVerse RPC is not allowed: ${name}`)
-      }
+  let response = await call()
 
-      let auth = await authenticateQvPlay()
+  if (response.status === 401) {
+    qvPlayAuth = auth.refreshToken ? { ...auth, token: '' } : null
+    auth = await authenticateQvPlay()
+    response = await call()
+  }
 
-      const call = () =>
-        fetch(`${QV_NAKAMA_BASE}/v2/rpc/${encodeURIComponent(name)}?unwrap=true`, {
-          body: JSON.stringify(payload),
-          headers: { Authorization: `Bearer ${auth.token}`, 'content-type': 'application/json' },
-          method: 'POST',
-          signal: AbortSignal.timeout(QV_PLAY_TIMEOUT_MS)
-        })
+  const text = await response.text()
 
-      let response = await call()
+  if (!response.ok) {
+    throw new Error(`${name} failed (${response.status}): ${text.slice(0, 300)}`)
+  }
 
-      if (response.status === 401) {
-        qvPlayAuth = auth.refreshToken ? { ...auth, token: '' } : null
-        auth = await authenticateQvPlay()
-        response = await call()
-      }
+  return text ? JSON.parse(text) : {}
+}
 
-      const text = await response.text()
+const qvProductControllers = new Map<string, AbortController>()
 
-      if (!response.ok) {
-        throw new Error(`${name} failed (${response.status}): ${text.slice(0, 300)}`)
-      }
+qvIpcHandle('hermes:quizverse:product:cancel', async (_event, rawStreamId) => {
+  const streamId = String(rawStreamId)
+  qvProductControllers.get(streamId)?.abort()
+  qvProductControllers.delete(streamId)
+})
 
-      return text ? JSON.parse(text) : {}
-    }
+qvIpcHandle('hermes:quizverse:product:request', async (event, input) => {
+  const request = canonicalizeQuizverseProductRequest(
+    String(input?.path ?? ''),
+    String(input?.method ?? 'GET')
+  )
 
-    const qvProductControllers = new Map<string, AbortController>()
-
-    qvIpcHandle('hermes:quizverse:product:cancel', async (_event, rawStreamId) => {
-      const streamId = String(rawStreamId)
-      qvProductControllers.get(streamId)?.abort()
-      qvProductControllers.delete(streamId)
+  if (request.requiresConfirmation) {
+    const confirmation = await dialog.showMessageBox({
+      buttons: ['Cancel', 'Confirm product action'],
+      cancelId: 0,
+      defaultId: 0,
+      detail: `${request.method} ${request.requestPath}`,
+      message: 'Allow this QuizVerse product write?',
+      noLink: true,
+      type: 'warning'
     })
 
-    qvIpcHandle('hermes:quizverse:product:request', async (event, input) => {
-      const request = canonicalizeQuizverseProductRequest(String(input?.path ?? ''), String(input?.method ?? 'GET'))
+    if (confirmation.response !== 1) {
+      throw new Error('QuizVerse product write was cancelled')
+    }
+  }
 
-      if (request.requiresConfirmation) {
-        const confirmation = await dialog.showMessageBox({
-          buttons: ['Cancel', 'Confirm product action'],
-          cancelId: 0,
-          defaultId: 0,
-          detail: `${request.method} ${request.requestPath}`,
-          message: 'Allow this QuizVerse product write?',
-          noLink: true,
-          type: 'warning'
-        })
+  const auth = request.requiresAuth ? await ensureQvCognitoAuth() : null
 
-        if (confirmation.response !== 1) {
-          throw new Error('QuizVerse product write was cancelled')
-        }
+  const streamId = typeof input?.streamId === 'string' && /^[A-Za-z0-9_-]{8,100}$/.test(input.streamId)
+    ? input.streamId
+    : ''
+
+  const streamController = streamId ? new AbortController() : null
+
+  if (streamController) {
+    qvProductControllers.set(streamId, streamController)
+  }
+
+  let body: BodyInit | undefined
+  let contentType = 'application/json'
+
+  if (request.method !== 'GET' && Array.isArray(input?.form)) {
+    if (input.form.length > 24) {
+      throw new Error('QuizVerse product form has too many fields')
+    }
+
+    const form = new FormData()
+    let encodedBytes = 0
+
+    for (const rawField of input.form) {
+      const name = String(rawField?.name ?? '').trim()
+
+      if (!/^[A-Za-z][A-Za-z0-9_-]{0,63}$/.test(name)) {
+        throw new Error('QuizVerse product form field name is invalid')
       }
 
-      const auth = request.requiresAuth ? await ensureQvCognitoAuth() : null
+      if (rawField?.dataBase64 !== undefined) {
+        const encoded = String(rawField.dataBase64)
+        encodedBytes += encoded.length
 
-      const streamId =
-        typeof input?.streamId === 'string' && /^[A-Za-z0-9_-]{8,100}$/.test(input.streamId) ? input.streamId : ''
-
-      const streamController = streamId ? new AbortController() : null
-
-      if (streamController) {
-        qvProductControllers.set(streamId, streamController)
-      }
-
-      let body: BodyInit | undefined
-      let contentType = 'application/json'
-
-      if (request.method !== 'GET' && Array.isArray(input?.form)) {
-        if (input.form.length > 24) {
-          throw new Error('QuizVerse product form has too many fields')
+        if (encodedBytes > 36_000_000) {
+          throw new Error('QuizVerse product upload exceeds the 27 MB limit')
         }
 
-        const form = new FormData()
-        let encodedBytes = 0
-
-        for (const rawField of input.form) {
-          const name = String(rawField?.name ?? '').trim()
-
-          if (!/^[A-Za-z][A-Za-z0-9_-]{0,63}$/.test(name)) {
-            throw new Error('QuizVerse product form field name is invalid')
-          }
-
-          if (rawField?.dataBase64 !== undefined) {
-            const encoded = String(rawField.dataBase64)
-            encodedBytes += encoded.length
-
-            if (encodedBytes > 36_000_000) {
-              throw new Error('QuizVerse product upload exceeds the 27 MB limit')
-            }
-
-            const bytes = Buffer.from(encoded, 'base64')
-            const filename = path.basename(String(rawField.filename ?? 'upload.bin')).slice(0, 180)
-            const mime = String(rawField.mime ?? 'application/octet-stream').slice(0, 120)
-            form.append(name, new Blob([bytes], { type: mime }), filename)
-          } else {
-            form.append(name, String(rawField?.value ?? '').slice(0, 2_000_000))
-          }
-        }
-
-        body = form
-        contentType = ''
-      } else if (request.method !== 'GET' && input?.body !== undefined) {
-        body = JSON.stringify(input.body)
-      }
-
-      const cacheableWordsContent =
-        request.method === 'GET' &&
-        (request.requestPath.startsWith('/api/words/content/') || request.requestPath.startsWith('/quizverse-words-'))
-
-      const cachePath = cacheableWordsContent
-        ? path.join(
-            effectiveDesktopHermesHome(),
-            'cache',
-            'quizverse',
-            'words',
-            `${crypto.createHash('sha256').update(request.url).digest('hex')}.json`
-          )
-        : ''
-
-      let cached: QuizverseWordsCacheRecord | null = null
-
-      if (cachePath && input?.cacheMode === 'reload') {
-        try {
-          fs.rmSync(cachePath, { force: true })
-        } catch {
-          // A read-only profile can still attempt an unconditional network fetch.
-        }
-      }
-
-      if (cachePath && input?.cacheMode !== 'reload') {
-        try {
-          const envelope = JSON.parse(fs.readFileSync(cachePath, 'utf8'))
-          const decrypted = decryptDesktopSecret(envelope.payload)
-          const value = JSON.parse(decrypted)
-
-          const candidate = {
-            ...value,
-            expiresAt:
-              typeof value.expiresAt === 'number'
-                ? value.expiresAt
-                : quizverseWordsCacheExpiry(request.requestPath, value.body, value.savedAt)
-          }
-
-          if (isQuizverseWordsCacheFresh(candidate)) {
-            cached = candidate
-          } else {
-            throw new Error('expired or invalid cache envelope')
-          }
-        } catch {
-          try {
-            fs.rmSync(cachePath, { force: true })
-          } catch {
-            // A read-only profile simply refetches without cache recovery.
-          }
-        }
-      }
-
-      let response: Response
-
-      try {
-        response = await fetch(request.url, {
-          body,
-          headers: auth
-            ? {
-                Authorization: `Bearer ${auth.cognitoAccessToken}`,
-                ...(request.requestPath === '/api/lap/notes/create'
-                  ? { 'X-Nakama-Authorization': `Bearer ${auth.token}` }
-                  : {}),
-                ...(contentType ? { 'content-type': contentType } : {})
-              }
-            : {
-                ...(contentType ? { 'content-type': contentType } : {}),
-                ...(cached?.etag ? { 'If-None-Match': cached.etag } : {})
-              },
-          method: request.method,
-          signal: streamController
-            ? AbortSignal.any([streamController.signal, AbortSignal.timeout(QV_PLAY_TIMEOUT_MS)])
-            : AbortSignal.timeout(QV_PLAY_TIMEOUT_MS)
-        })
-      } catch (error) {
-        if (streamId) {
-          qvProductControllers.delete(streamId)
-        }
-
-        if (cached) {
-          return {
-            body: cached.body,
-            contentType: cached.contentType,
-            etag: cached.etag,
-            offline: true,
-            ok: true,
-            status: 200
-          }
-        }
-
-        throw error
-      }
-
-      if (response.status === 304 && cached) {
-        return {
-          body: cached.body,
-          contentType: cached.contentType,
-          etag: cached.etag,
-          offline: false,
-          ok: true,
-          status: 200
-        }
-      }
-
-      let responseBody = ''
-
-      if (streamId && response.body) {
-        const reader = response.body.getReader()
-        const decoder = new TextDecoder()
-
-        try {
-          while (true) {
-            const { done, value } = await reader.read()
-
-            if (done) {
-              break
-            }
-            const chunk = decoder.decode(value, { stream: true })
-            responseBody += chunk
-            event.sender.send('hermes:quizverse:product:chunk', { chunk, streamId })
-          }
-
-          const finalChunk = decoder.decode()
-
-          if (finalChunk) {
-            responseBody += finalChunk
-            event.sender.send('hermes:quizverse:product:chunk', { chunk: finalChunk, streamId })
-          }
-        } finally {
-          qvProductControllers.delete(streamId)
-        }
+        const bytes = Buffer.from(encoded, 'base64')
+        const filename = path.basename(String(rawField.filename ?? 'upload.bin')).slice(0, 180)
+        const mime = String(rawField.mime ?? 'application/octet-stream').slice(0, 120)
+        form.append(name, new Blob([bytes], { type: mime }), filename)
       } else {
-        responseBody = await response.text()
+        form.append(name, String(rawField?.value ?? '').slice(0, 2_000_000))
       }
-
-      const responseContentType = response.headers.get('content-type') ?? ''
-      const etag = response.headers.get('etag') ?? ''
-
-      if (cachePath && response.ok) {
-        try {
-          fs.mkdirSync(path.dirname(cachePath), { recursive: true })
-          const savedAt = Date.now()
-          const expiresAt = quizverseWordsCacheExpiry(request.requestPath, responseBody, savedAt)
-
-          if (!expiresAt) {
-            throw new Error('response has no valid cache expiry')
-          }
-
-          fs.writeFileSync(
-            cachePath,
-            JSON.stringify({
-              payload: encryptDesktopSecret(
-                JSON.stringify({
-                  body: responseBody,
-                  contentType: responseContentType,
-                  etag,
-                  expiresAt,
-                  savedAt
-                })
-              )
-            }),
-            { mode: 0o600 }
-          )
-        } catch (error) {
-          rememberLog(
-            `[qv-content] encrypted cache write skipped: ${error instanceof Error ? error.message : String(error)}`
-          )
-        }
-      }
-
-      return {
-        body: responseBody,
-        contentType: responseContentType,
-        etag,
-        offline: false,
-        ok: response.ok,
-        status: response.status
-      }
-    })
-
-    qvIpcHandle('hermes:quizverse:play:session', async () => {
-      const auth = await authenticateQvPlay()
-
-      return { deviceId: auth.deviceId, userId: auth.userId, username: auth.username }
-    })
-    qvIpcHandle('hermes:quizverse:play:rpc', async (_event, name, payload) => {
-      const rpcName = String(name)
-      const rpcPayload = payload && typeof payload === 'object' ? (payload as Record<string, unknown>) : {}
-
-      if (
-        QV_PLAY_IDEMPOTENT_RPCS.has(rpcName) &&
-        !/^[A-Za-z0-9_-]{8,100}$/.test(String(rpcPayload.idempotency_key ?? ''))
-      ) {
-        throw new Error(`${rpcName} requires an idempotency_key`)
-      }
-
-      if (QV_PLAY_AUTHENTICATED_RPCS.has(rpcName)) {
-        const auth = await authenticateQvPlay()
-
-        if (auth.authKind !== 'authenticated') {
-          throw new Error(`${rpcName} requires a linked Cognito account`)
-        }
-      }
-
-      if (QV_PLAY_CONFIRMED_RPCS.has(rpcName)) {
-        const confirmation = await dialog.showMessageBox({
-          buttons: ['Cancel', 'Confirm tournament write'],
-          cancelId: 0,
-          defaultId: 0,
-          detail: rpcName,
-          message: 'Allow this QuizVerse tournament write?',
-          noLink: true,
-          type: 'warning'
-        })
-
-        if (confirmation.response !== 1) {
-          throw new Error('QuizVerse tournament write was cancelled')
-        }
-      }
-
-      return qvPlayRpc(rpcName, rpcPayload)
-    })
-
-    interface QvRealtimeConnection {
-      client: NakamaClient
-      matchId?: string
-      ownerId: number
-      session: NakamaSession
-      socket: NakamaSocket
     }
 
-    const qvRealtimeConnections = new Map<string, QvRealtimeConnection>()
+    body = form
+    contentType = ''
+  } else if (request.method !== 'GET' && input?.body !== undefined) {
+    body = JSON.stringify(input.body)
+  }
 
-    function qvRealtimeConnection(id: string, ownerId: number): QvRealtimeConnection {
-      const connection = qvRealtimeConnections.get(id)
+  const cacheableWordsContent = request.method === 'GET' && (
+    request.requestPath.startsWith('/api/words/content/') ||
+    request.requestPath.startsWith('/quizverse-words-')
+  )
 
-      if (!connection || connection.ownerId !== ownerId) {
-        throw new Error('QuizVerse realtime connection is unavailable')
-      }
+  const cachePath = cacheableWordsContent
+    ? path.join(effectiveDesktopHermesHome(), 'cache', 'quizverse', 'words', `${crypto.createHash('sha256').update(request.url).digest('hex')}.json`)
+    : ''
 
-      return connection
+  let cached: QuizverseWordsCacheRecord | null = null
+
+  if (cachePath && input?.cacheMode === 'reload') {
+    try {
+      fs.rmSync(cachePath, { force: true })
+    } catch {
+      // A read-only profile can still attempt an unconditional network fetch.
     }
+  }
 
-    qvIpcHandle('hermes:quizverse:play:realtime:connect', async event => {
-      const auth = await authenticateQvPlay()
-      const client = new NakamaClient('defaultkey', new URL(QV_NAKAMA_BASE).hostname, '443', true)
-      const activeSession = NakamaSession.restore(auth.token, auth.refreshToken)
-      const socket = client.createSocket(true, false)
+  if (cachePath && input?.cacheMode !== 'reload') {
+    try {
+      const envelope = JSON.parse(fs.readFileSync(cachePath, 'utf8'))
+      const decrypted = decryptDesktopSecret(envelope.payload)
+      const value = JSON.parse(decrypted)
 
-      await socket.connect(activeSession, true)
-      const id = crypto.randomUUID()
-
-      const emit = (type: string, data?: unknown) => {
-        if (!event.sender.isDestroyed()) {
-          event.sender.send('hermes:quizverse:play:realtime:event', { data, id, type })
-        }
+      const candidate = {
+        ...value,
+        expiresAt: typeof value.expiresAt === 'number'
+          ? value.expiresAt
+          : quizverseWordsCacheExpiry(request.requestPath, value.body, value.savedAt)
       }
 
-      socket.onmatchdata = frame => {
-        const data = frame.data instanceof Uint8Array ? new TextDecoder().decode(frame.data) : String(frame.data ?? '')
-
-        emit('match-data', { data, matchId: frame.match_id, opCode: frame.op_code })
+      if (isQuizverseWordsCacheFresh(candidate)) {
+        cached = candidate
+      } else {
+        throw new Error('expired or invalid cache envelope')
       }
-
-      socket.onmatchpresence = presence => emit('match-presence', presence)
-      socket.onmatchmakermatched = matched => emit('matchmaker-matched', matched)
-      socket.onnotification = notification => emit('notification', notification)
-
-      socket.ondisconnect = disconnect => {
-        qvRealtimeConnections.delete(id)
-        emit('disconnect', disconnect)
-      }
-
-      socket.onerror = error => emit('error', error instanceof Error ? error.message : String(error))
-      qvRealtimeConnections.set(id, { client, ownerId: event.sender.id, session: activeSession, socket })
-
-      return { id, userId: activeSession.user_id ?? auth.userId }
-    })
-
-    qvIpcHandle('hermes:quizverse:play:realtime:list-matches', async (event, id, query) => {
-      const connection = qvRealtimeConnection(String(id), event.sender.id)
-
-      const result = await connection.client.listMatches(
-        connection.session,
-        10,
-        true,
-        undefined,
-        1,
-        1,
-        String(query ?? '')
-      )
-
-      return result.matches ?? []
-    })
-
-    qvIpcHandle('hermes:quizverse:play:realtime:join-match', async (event, id, matchId) => {
-      const connection = qvRealtimeConnection(String(id), event.sender.id)
-      const match = await connection.socket.joinMatch(String(matchId))
-
-      connection.matchId = match.match_id
-
-      return {
-        matchId: match.match_id,
-        presences: (match.presences ?? []).map(presence => ({
-          sessionId: presence.session_id,
-          userId: presence.user_id,
-          username: presence.username
-        }))
-      }
-    })
-
-    qvIpcHandle('hermes:quizverse:play:realtime:create-match', async (event, id, payload) => {
-      const connection = qvRealtimeConnection(String(id), event.sender.id)
-
+    } catch {
       try {
-        const created = (await qvPlayRpc(
-          'quizverse_create_match',
-          payload && typeof payload === 'object' ? payload : {}
-        )) as Record<string, unknown>
-
-        const matchId = String(
-          created.match_id ?? (created.data as Record<string, unknown> | undefined)?.match_id ?? ''
-        )
-
-        if (!matchId) {
-          throw new Error('the server returned no match_id')
-        }
-
-        const match = await connection.socket.joinMatch(matchId)
-
-        connection.matchId = match.match_id
-
-        return { matchId: match.match_id }
-      } catch (error) {
-        const detail =
-          error instanceof Error ? error.message : typeof error === 'string' ? error : JSON.stringify(error)
-
-        throw new Error(`sync-turn-v1 match setup failed: ${detail || 'unknown Nakama error'}`)
+        fs.rmSync(cachePath, { force: true })
+      } catch {
+        // A read-only profile simply refetches without cache recovery.
       }
+    }
+  }
+
+  let response: Response
+
+  try {
+    response = await fetch(request.url, {
+      body,
+      headers: auth
+        ? {
+            Authorization: `Bearer ${auth.cognitoAccessToken}`,
+            ...(request.requestPath === '/api/lap/notes/create' ? { 'X-Nakama-Authorization': `Bearer ${auth.token}` } : {}),
+            ...(contentType ? { 'content-type': contentType } : {})
+          }
+        : {
+            ...(contentType ? { 'content-type': contentType } : {}),
+            ...(cached?.etag ? { 'If-None-Match': cached.etag } : {})
+          },
+      method: request.method,
+      signal: streamController
+        ? AbortSignal.any([streamController.signal, AbortSignal.timeout(QV_PLAY_TIMEOUT_MS)])
+        : AbortSignal.timeout(QV_PLAY_TIMEOUT_MS)
+    })
+  } catch (error) {
+    if (streamId) {qvProductControllers.delete(streamId)}
+
+    if (cached) {
+      return { body: cached.body, contentType: cached.contentType, etag: cached.etag, offline: true, ok: true, status: 200 }
+    }
+
+    throw error
+  }
+
+  if (response.status === 304 && cached) {
+    return { body: cached.body, contentType: cached.contentType, etag: cached.etag, offline: false, ok: true, status: 200 }
+  }
+
+  let responseBody = ''
+
+  if (streamId && response.body) {
+    const reader = response.body.getReader()
+    const decoder = new TextDecoder()
+
+    try {
+      while (true) {
+        const { done, value } = await reader.read()
+
+        if (done) {break}
+        const chunk = decoder.decode(value, { stream: true })
+        responseBody += chunk
+        event.sender.send('hermes:quizverse:product:chunk', { chunk, streamId })
+      }
+
+      const finalChunk = decoder.decode()
+
+      if (finalChunk) {
+        responseBody += finalChunk
+        event.sender.send('hermes:quizverse:product:chunk', { chunk: finalChunk, streamId })
+      }
+    } finally {
+      qvProductControllers.delete(streamId)
+    }
+  } else {
+    responseBody = await response.text()
+  }
+
+  const responseContentType = response.headers.get('content-type') ?? ''
+  const etag = response.headers.get('etag') ?? ''
+
+  if (cachePath && response.ok) {
+    try {
+      fs.mkdirSync(path.dirname(cachePath), { recursive: true })
+      const savedAt = Date.now()
+      const expiresAt = quizverseWordsCacheExpiry(request.requestPath, responseBody, savedAt)
+
+      if (!expiresAt) {
+        throw new Error('response has no valid cache expiry')
+      }
+
+      fs.writeFileSync(cachePath, JSON.stringify({
+        payload: encryptDesktopSecret(JSON.stringify({
+          body: responseBody,
+          contentType: responseContentType,
+          etag,
+          expiresAt,
+          savedAt
+        }))
+      }), { mode: 0o600 })
+    } catch (error) {
+      rememberLog(`[qv-content] encrypted cache write skipped: ${error instanceof Error ? error.message : String(error)}`)
+    }
+  }
+
+  return {
+    body: responseBody,
+    contentType: responseContentType,
+    etag,
+    offline: false,
+    ok: response.ok,
+    status: response.status
+  }
+})
+
+qvIpcHandle('hermes:quizverse:play:session', async () => {
+  const auth = await authenticateQvPlay()
+
+  return { deviceId: auth.deviceId, userId: auth.userId, username: auth.username }
+})
+qvIpcHandle('hermes:quizverse:play:rpc', async (_event, name, payload) => {
+  const rpcName = String(name)
+  const rpcPayload = payload && typeof payload === 'object' ? payload as Record<string, unknown> : {}
+
+  if (QV_PLAY_IDEMPOTENT_RPCS.has(rpcName) && !/^[A-Za-z0-9_-]{8,100}$/.test(String(rpcPayload.idempotency_key ?? ''))) {
+    throw new Error(`${rpcName} requires an idempotency_key`)
+  }
+
+  if (QV_PLAY_AUTHENTICATED_RPCS.has(rpcName)) {
+    const auth = await authenticateQvPlay()
+
+    if (auth.authKind !== 'authenticated') {
+      throw new Error(`${rpcName} requires a linked Cognito account`)
+    }
+  }
+
+  if (QV_PLAY_CONFIRMED_RPCS.has(rpcName)) {
+    const confirmation = await dialog.showMessageBox({
+      buttons: ['Cancel', 'Confirm tournament write'],
+      cancelId: 0,
+      defaultId: 0,
+      detail: rpcName,
+      message: 'Allow this QuizVerse tournament write?',
+      noLink: true,
+      type: 'warning'
     })
 
-    qvIpcHandle('hermes:quizverse:play:realtime:send', async (event, id, opCode, payload) => {
-      const connection = qvRealtimeConnection(String(id), event.sender.id)
+    if (confirmation.response !== 1) {
+      throw new Error('QuizVerse tournament write was cancelled')
+    }
+  }
 
-      if (!connection.matchId) {
-        throw new Error('Join a QuizVerse match before sending realtime state')
+  return qvPlayRpc(rpcName, rpcPayload)
+})
+
+interface QvRealtimeConnection {
+  client: NakamaClient
+  matchId?: string
+  ownerId: number
+  session: NakamaSession
+  socket: NakamaSocket
+}
+
+const qvRealtimeConnections = new Map<string, QvRealtimeConnection>()
+
+function qvRealtimeConnection(id: string, ownerId: number): QvRealtimeConnection {
+  const connection = qvRealtimeConnections.get(id)
+
+  if (!connection || connection.ownerId !== ownerId) {
+    throw new Error('QuizVerse realtime connection is unavailable')
+  }
+
+  return connection
+}
+
+qvIpcHandle('hermes:quizverse:play:realtime:connect', async event => {
+  const auth = await authenticateQvPlay()
+  const client = new NakamaClient('defaultkey', new URL(QV_NAKAMA_BASE).hostname, '443', true)
+  const activeSession = NakamaSession.restore(auth.token, auth.refreshToken)
+  const socket = client.createSocket(true, false)
+
+  await socket.connect(activeSession, true)
+  const id = crypto.randomUUID()
+
+  const emit = (type: string, data?: unknown) => {
+    if (!event.sender.isDestroyed()) {
+      event.sender.send('hermes:quizverse:play:realtime:event', { data, id, type })
+    }
+  }
+
+  socket.onmatchdata = frame => {
+    const data = frame.data instanceof Uint8Array
+      ? new TextDecoder().decode(frame.data)
+      : String(frame.data ?? '')
+
+    emit('match-data', { data, matchId: frame.match_id, opCode: frame.op_code })
+  }
+
+  socket.onmatchpresence = presence => emit('match-presence', presence)
+  socket.onmatchmakermatched = matched => emit('matchmaker-matched', matched)
+  socket.onnotification = notification => emit('notification', notification)
+
+  socket.ondisconnect = disconnect => {
+    qvRealtimeConnections.delete(id)
+    emit('disconnect', disconnect)
+  }
+
+  socket.onerror = error => emit('error', error instanceof Error ? error.message : String(error))
+  qvRealtimeConnections.set(id, { client, ownerId: event.sender.id, session: activeSession, socket })
+
+  return { id, userId: activeSession.user_id ?? auth.userId }
+})
+
+qvIpcHandle('hermes:quizverse:play:realtime:list-matches', async (event, id, query) => {
+  const connection = qvRealtimeConnection(String(id), event.sender.id)
+
+  const result = await connection.client.listMatches(
+    connection.session,
+    10,
+    true,
+    undefined,
+    1,
+    1,
+    String(query ?? '')
+  )
+
+  return result.matches ?? []
+})
+
+qvIpcHandle('hermes:quizverse:play:realtime:join-match', async (event, id, matchId) => {
+  const connection = qvRealtimeConnection(String(id), event.sender.id)
+  const match = await connection.socket.joinMatch(String(matchId))
+
+  connection.matchId = match.match_id
+
+  return {
+    matchId: match.match_id,
+    presences: (match.presences ?? []).map(presence => ({
+      sessionId: presence.session_id,
+      userId: presence.user_id,
+      username: presence.username
+    }))
+  }
+})
+
+qvIpcHandle('hermes:quizverse:play:realtime:create-match', async (event, id, payload) => {
+  const connection = qvRealtimeConnection(String(id), event.sender.id)
+
+  try {
+    const created = await qvPlayRpc(
+      'quizverse_create_match',
+      payload && typeof payload === 'object' ? payload : {}
+    ) as Record<string, unknown>
+
+    const matchId = String(created.match_id ?? (created.data as Record<string, unknown> | undefined)?.match_id ?? '')
+
+    if (!matchId) {
+      throw new Error('the server returned no match_id')
+    }
+
+    const match = await connection.socket.joinMatch(matchId)
+
+    connection.matchId = match.match_id
+
+    return { matchId: match.match_id }
+  } catch (error) {
+    const detail = error instanceof Error
+      ? error.message
+      : typeof error === 'string'
+        ? error
+        : JSON.stringify(error)
+
+    throw new Error(`sync-turn-v1 match setup failed: ${detail || 'unknown Nakama error'}`)
+  }
+})
+
+qvIpcHandle('hermes:quizverse:play:realtime:send', async (event, id, opCode, payload) => {
+  const connection = qvRealtimeConnection(String(id), event.sender.id)
+
+  if (!connection.matchId) {
+    throw new Error('Join a QuizVerse match before sending realtime state')
+  }
+
+  connection.socket.sendMatchState(
+    connection.matchId,
+    Number(opCode),
+    JSON.stringify(payload && typeof payload === 'object' ? payload : {})
+  )
+})
+
+qvIpcHandle('hermes:quizverse:play:realtime:close', async (event, id) => {
+  const key = String(id)
+  const connection = qvRealtimeConnection(key, event.sender.id)
+
+  if (connection.matchId) {
+    await connection.socket.leaveMatch(connection.matchId).catch(() => undefined)
+  }
+
+  connection.socket.disconnect(true)
+  qvRealtimeConnections.delete(key)
+})
+
+qvIpcHandle('hermes:quizverse:settings:get', async () => quizverseSettingsForRenderer(currentQuizverseSettings()))
+
+qvIpcHandle('hermes:quizverse:litellm:validate', async (_event, input) => {
+  const settings = currentQuizverseSettings()
+  const base = String(input?.url || settings.litellmUrl).replace(/\/+$/, '').replace(/\/v1$/, '')
+  const key = String(input?.key || settings.litellmKey)
+
+  if (!key) {
+    throw new Error('LiteLLM API key is required')
+  }
+
+  const headers = { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' }
+  const modelsResponse = await fetch(`${base}/v1/models`, { headers, signal: AbortSignal.timeout(15_000) })
+
+  if (!modelsResponse.ok) {
+    throw new Error(`LiteLLM model discovery failed (${modelsResponse.status})`)
+  }
+
+  const models = await modelsResponse.json() as { data?: { id?: string; owned_by?: string }[] }
+  const selected = models.data?.find(model => model.id)?.id
+
+  if (!selected) {
+    throw new Error('LiteLLM returned no available models')
+  }
+
+  const completionResponse = await fetch(`${base}/v1/chat/completions`, {
+    body: JSON.stringify({
+      max_tokens: 1,
+      messages: [{ content: 'Reply OK.', role: 'user' }],
+      model: selected,
+      stream: false
+    }),
+    headers,
+    method: 'POST',
+    signal: AbortSignal.timeout(30_000)
+  })
+
+  if (!completionResponse.ok) {
+    throw new Error(`LiteLLM completion validation failed (${completionResponse.status}): ${await completionResponse.text()}`)
+  }
+
+  return {
+    model: selected,
+    modelCount: models.data?.length ?? 0,
+    provider: models.data?.find(model => model.id === selected)?.owned_by ?? 'LiteLLM'
+  }
+})
+
+qvIpcHandle('hermes:quizverse:tutor:request', async (_event, input) =>
+  qvTutorRequest(input && typeof input === 'object' ? input : {})
+)
+
+qvIpcHandle('hermes:quizverse:tutor:stream:start', async (event, pathValue) => {
+  const requestPath = String(pathValue ?? '')
+
+  if (!requestPath.startsWith('/api/v1/') || requestPath.includes('://')) {
+    throw new Error('TutorX stream path is not allowed')
+  }
+
+  const id = crypto.randomUUID()
+  const controller = new AbortController()
+
+  qvTutorStreams.set(id, { controller, ownerId: event.sender.id })
+
+  void (async () => {
+    const emit = (type: string, data?: unknown) => {
+      if (!event.sender.isDestroyed()) {
+        event.sender.send('hermes:quizverse:tutor:stream:event', { data, id, type })
       }
+    }
 
-      connection.socket.sendMatchState(
-        connection.matchId,
-        Number(opCode),
-        JSON.stringify(payload && typeof payload === 'object' ? payload : {})
-      )
-    })
-
-    qvIpcHandle('hermes:quizverse:play:realtime:close', async (event, id) => {
-      const key = String(id)
-      const connection = qvRealtimeConnection(key, event.sender.id)
-
-      if (connection.matchId) {
-        await connection.socket.leaveMatch(connection.matchId).catch(() => undefined)
-      }
-
-      connection.socket.disconnect(true)
-      qvRealtimeConnections.delete(key)
-    })
-
-    qvIpcHandle('hermes:quizverse:settings:get', async () => quizverseSettingsForRenderer(currentQuizverseSettings()))
-
-    qvIpcHandle('hermes:quizverse:litellm:validate', async (_event, input) => {
-      const settings = currentQuizverseSettings()
-      const base = String(input?.url || settings.litellmUrl)
-        .replace(/\/+$/, '')
-        .replace(/\/v1$/, '')
-      const key = String(input?.key || settings.litellmKey)
-
-      if (!key) {
-        throw new Error('LiteLLM API key is required')
-      }
-
-      const headers = { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' }
-      const modelsResponse = await fetch(`${base}/v1/models`, { headers, signal: AbortSignal.timeout(15_000) })
-
-      if (!modelsResponse.ok) {
-        throw new Error(`LiteLLM model discovery failed (${modelsResponse.status})`)
-      }
-
-      const models = (await modelsResponse.json()) as { data?: { id?: string; owned_by?: string }[] }
-      const selected = models.data?.find(model => model.id)?.id
-
-      if (!selected) {
-        throw new Error('LiteLLM returned no available models')
-      }
-
-      const completionResponse = await fetch(`${base}/v1/chat/completions`, {
-        body: JSON.stringify({
-          max_tokens: 1,
-          messages: [{ content: 'Reply OK.', role: 'user' }],
-          model: selected,
-          stream: false
-        }),
-        headers,
-        method: 'POST',
-        signal: AbortSignal.timeout(30_000)
+    try {
+      const response = await fetch(`${qvTutorApiBase()}${requestPath}`, {
+        headers: qvTutorHeaders(),
+        signal: controller.signal
       })
 
-      if (!completionResponse.ok) {
-        throw new Error(
-          `LiteLLM completion validation failed (${completionResponse.status}): ${await completionResponse.text()}`
-        )
+      if (!response.ok || !response.body) {
+        throw new Error(`TutorX event stream failed (${response.status})`)
       }
 
-      return {
-        model: selected,
-        modelCount: models.data?.length ?? 0,
-        provider: models.data?.find(model => model.id === selected)?.owned_by ?? 'LiteLLM'
-      }
-    })
+      const reader = response.body.getReader()
 
-    qvIpcHandle('hermes:quizverse:tutor:request', async (_event, input) =>
-      qvTutorRequest(input && typeof input === 'object' ? input : {})
-    )
+      while (true) {
+        const { done, value } = await reader.read()
 
-    qvIpcHandle('hermes:quizverse:tutor:stream:start', async (event, pathValue) => {
-      const requestPath = String(pathValue ?? '')
+        if (done) {
+          emit('done')
 
-      if (!requestPath.startsWith('/api/v1/') || requestPath.includes('://')) {
-        throw new Error('TutorX stream path is not allowed')
-      }
-
-      const id = crypto.randomUUID()
-      const controller = new AbortController()
-
-      qvTutorStreams.set(id, { controller, ownerId: event.sender.id })
-
-      void (async () => {
-        const emit = (type: string, data?: unknown) => {
-          if (!event.sender.isDestroyed()) {
-            event.sender.send('hermes:quizverse:tutor:stream:event', { data, id, type })
-          }
+          break
         }
 
-        try {
-          const response = await fetch(`${qvTutorApiBase()}${requestPath}`, {
-            headers: qvTutorHeaders(),
-            signal: controller.signal
-          })
+        emit('data', Buffer.from(value).toString('utf8'))
+      }
+    } catch (error) {
+      if (!controller.signal.aborted) {
+        emit('error', error instanceof Error ? error.message : String(error))
+      }
+    } finally {
+      qvTutorStreams.delete(id)
+    }
+  })()
 
-          if (!response.ok || !response.body) {
-            throw new Error(`TutorX event stream failed (${response.status})`)
-          }
+  return id
+})
 
-          const reader = response.body.getReader()
+qvIpcHandle('hermes:quizverse:tutor:stream:stop', async (event, idValue) => {
+  const id = String(idValue)
+  const entry = qvTutorStreams.get(id)
 
-          while (true) {
-            const { done, value } = await reader.read()
+  if (entry && entry.ownerId === event.sender.id) {
+    entry.controller.abort()
+    qvTutorStreams.delete(id)
+  }
+})
 
-            if (done) {
-              emit('done')
+qvIpcHandle('hermes:quizverse:tutor:ws:connect', async (event, pathValue, userIdValue) => {
+  const requestPath = String(pathValue ?? '')
 
-              break
-            }
+  if (!requestPath.startsWith('/api/v1/') || requestPath.includes('://')) {
+    throw new Error('TutorX WebSocket path is not allowed')
+  }
 
-            emit('data', Buffer.from(value).toString('utf8'))
-          }
-        } catch (error) {
-          if (!controller.signal.aborted) {
-            emit('error', error instanceof Error ? error.message : String(error))
-          }
-        } finally {
-          qvTutorStreams.delete(id)
+  const id = crypto.randomUUID()
+  const url = new URL(`${qvTutorApiBase().replace(/^http/, 'ws')}${requestPath}`)
+  const settings = currentQuizverseSettings()
+
+  if (settings.apiKey) {
+    url.searchParams.set('token', settings.apiKey)
+  }
+
+  if (userIdValue) {
+    url.searchParams.set('user_id', String(userIdValue))
+  }
+
+  const socket = new WebSocket(url)
+  const ownerId = event.sender.id
+
+  const emit = (type: string, data?: unknown) => {
+    if (!event.sender.isDestroyed()) {
+      event.sender.send('hermes:quizverse:tutor:ws:event', { data, id, type })
+    }
+  }
+
+  qvTutorSockets.set(id, { ownerId, socket })
+  socket.addEventListener('open', () => emit('open'))
+  socket.addEventListener('message', message => emit('message', String(message.data)))
+  socket.addEventListener('error', () => emit('error'))
+  socket.addEventListener('close', close => {
+    qvTutorSockets.delete(id)
+    emit('close', { code: close.code, reason: close.reason })
+  })
+
+  return id
+})
+
+qvIpcHandle('hermes:quizverse:tutor:ws:send', async (event, idValue, dataValue) => {
+  const entry = qvTutorSockets.get(String(idValue))
+
+  if (!entry || entry.ownerId !== event.sender.id || entry.socket.readyState !== WebSocket.OPEN) {
+    throw new Error('TutorX WebSocket is not open')
+  }
+
+  entry.socket.send(String(dataValue))
+})
+
+qvIpcHandle('hermes:quizverse:tutor:ws:close', async (event, idValue) => {
+  const id = String(idValue)
+  const entry = qvTutorSockets.get(id)
+
+  if (entry && entry.ownerId === event.sender.id) {
+    entry.socket.close()
+    qvTutorSockets.delete(id)
+  }
+})
+
+qvIpcHandle('hermes:quizverse:settings:save', async (_event, input) => {
+  const next = sanitizeQuizverseSettingsInput(input, currentQuizverseSettings())
+
+  writeQuizverseSettings(QUIZVERSE_SETTINGS_PATH, next, encryptDesktopSecret)
+  broadcastDeepTutorStatus(deepTutorSupervisor!.status())
+
+  return quizverseSettingsForRenderer(next)
+})
+
+qvIpcHandle('hermes:quizverse:tutor:status', async () => {
+  const status = deepTutorSupervisor!.status()
+
+  // Remote mode (and an externally managed local server) has no child to
+  // watch, so reachability is probed on demand for a truthful lamp.
+  if (status.state === 'remote') {
+    const reachable = await deepTutorSupervisor!.probe()
+
+    return { ...status, detail: reachable ? status.detail : `${status.detail} (unreachable)` , reachable }
+  }
+
+  return { ...status, reachable: status.state === 'running' }
+})
+
+qvIpcHandle('hermes:quizverse:tutor:start', async () => deepTutorSupervisor!.start())
+
+qvIpcHandle('hermes:quizverse:tutor:stop', async () => deepTutorSupervisor!.stop())
+
+qvIpcHandle('hermes:quizverse:tutor:restart', async () => deepTutorSupervisor!.restart())
+
+// Managed install: venv + `pip install -U deeptutor` under userData, then the
+// settings point at the managed entry point. Progress lines stream to the
+// Setup tab over provision:event; concurrent runs collapse into one.
+let qvProvisionInFlight: null | Promise<{ error: string; ok: false } | { ok: true }> = null
+
+function broadcastQvProvisionEvent(payload: { done?: boolean; error?: string; line?: string }) {
+  for (const win of BrowserWindow.getAllWindows()) {
+    if (!win.isDestroyed()) {
+      win.webContents.send('hermes:quizverse:provision:event', payload)
+    }
+  }
+}
+
+qvIpcHandle('hermes:quizverse:tutor:provision', async () => {
+  qvProvisionInFlight ??= (async () => {
+    const deeptutorRoot = path.join(app.getPath('userData'), 'deeptutor')
+
+    try {
+      const binPath = await provisionDeepTutor({
+        venvDir: path.join(deeptutorRoot, 'venv'),
+        workspaceDir: path.join(deeptutorRoot, 'workspace'),
+        log: line => {
+          rememberLog(`[qv-provision] ${line}`)
+          broadcastQvProvisionEvent({ line })
         }
-      })()
-
-      return id
-    })
-
-    qvIpcHandle('hermes:quizverse:tutor:stream:stop', async (event, idValue) => {
-      const id = String(idValue)
-      const entry = qvTutorStreams.get(id)
-
-      if (entry && entry.ownerId === event.sender.id) {
-        entry.controller.abort()
-        qvTutorStreams.delete(id)
-      }
-    })
-
-    qvIpcHandle('hermes:quizverse:tutor:ws:connect', async (event, pathValue, userIdValue) => {
-      const requestPath = String(pathValue ?? '')
-
-      if (!requestPath.startsWith('/api/v1/') || requestPath.includes('://')) {
-        throw new Error('TutorX WebSocket path is not allowed')
-      }
-
-      const id = crypto.randomUUID()
-      const url = new URL(`${qvTutorApiBase().replace(/^http/, 'ws')}${requestPath}`)
-      const settings = currentQuizverseSettings()
-
-      if (settings.apiKey) {
-        url.searchParams.set('token', settings.apiKey)
-      }
-
-      if (userIdValue) {
-        url.searchParams.set('user_id', String(userIdValue))
-      }
-
-      const socket = new WebSocket(url)
-      const ownerId = event.sender.id
-
-      const emit = (type: string, data?: unknown) => {
-        if (!event.sender.isDestroyed()) {
-          event.sender.send('hermes:quizverse:tutor:ws:event', { data, id, type })
-        }
-      }
-
-      qvTutorSockets.set(id, { ownerId, socket })
-      socket.addEventListener('open', () => emit('open'))
-      socket.addEventListener('message', message => emit('message', String(message.data)))
-      socket.addEventListener('error', () => emit('error'))
-      socket.addEventListener('close', close => {
-        qvTutorSockets.delete(id)
-        emit('close', { code: close.code, reason: close.reason })
       })
 
-      return id
-    })
-
-    qvIpcHandle('hermes:quizverse:tutor:ws:send', async (event, idValue, dataValue) => {
-      const entry = qvTutorSockets.get(String(idValue))
-
-      if (!entry || entry.ownerId !== event.sender.id || entry.socket.readyState !== WebSocket.OPEN) {
-        throw new Error('TutorX WebSocket is not open')
+      const next = {
+        ...currentQuizverseSettings(),
+        tutorMode: 'local' as const,
+        localCommand: managedLocalCommand(binPath),
+        localDirectory: path.join(deeptutorRoot, 'workspace')
       }
-
-      entry.socket.send(String(dataValue))
-    })
-
-    qvIpcHandle('hermes:quizverse:tutor:ws:close', async (event, idValue) => {
-      const id = String(idValue)
-      const entry = qvTutorSockets.get(id)
-
-      if (entry && entry.ownerId === event.sender.id) {
-        entry.socket.close()
-        qvTutorSockets.delete(id)
-      }
-    })
-
-    qvIpcHandle('hermes:quizverse:settings:save', async (_event, input) => {
-      const next = sanitizeQuizverseSettingsInput(input, currentQuizverseSettings())
 
       writeQuizverseSettings(QUIZVERSE_SETTINGS_PATH, next, encryptDesktopSecret)
+
+      if (next.litellmKey) {
+        try {
+          injectTutorXLitellmConfig(next.localDirectory, next.litellmUrl, next.litellmKey)
+        } catch (injectError) {
+          rememberLog(
+            `[qv-provision] LiteLLM config inject failed: ${
+              injectError instanceof Error ? injectError.message : String(injectError)
+            }`
+          )
+        }
+      }
+
+      broadcastQvProvisionEvent({ done: true })
       broadcastDeepTutorStatus(deepTutorSupervisor!.status())
 
-      return quizverseSettingsForRenderer(next)
-    })
+      return { ok: true as const }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
 
-    qvIpcHandle('hermes:quizverse:tutor:status', async () => {
-      const status = deepTutorSupervisor!.status()
+      rememberLog(`[qv-provision] failed: ${message}`)
+      broadcastQvProvisionEvent({ done: true, error: message })
 
-      // Remote mode (and an externally managed local server) has no child to
-      // watch, so reachability is probed on demand for a truthful lamp.
-      if (status.state === 'remote') {
-        const reachable = await deepTutorSupervisor!.probe()
-
-        return { ...status, detail: reachable ? status.detail : `${status.detail} (unreachable)`, reachable }
-      }
-
-      return { ...status, reachable: status.state === 'running' }
-    })
-
-    qvIpcHandle('hermes:quizverse:tutor:start', async () => deepTutorSupervisor!.start())
-
-    qvIpcHandle('hermes:quizverse:tutor:stop', async () => deepTutorSupervisor!.stop())
-
-    qvIpcHandle('hermes:quizverse:tutor:restart', async () => deepTutorSupervisor!.restart())
-
-    // Managed install: venv + `pip install -U deeptutor` under userData, then the
-    // settings point at the managed entry point. Progress lines stream to the
-    // Setup tab over provision:event; concurrent runs collapse into one.
-    let qvProvisionInFlight: null | Promise<{ error: string; ok: false } | { ok: true }> = null
-
-    function broadcastQvProvisionEvent(payload: { done?: boolean; error?: string; line?: string }) {
-      for (const win of BrowserWindow.getAllWindows()) {
-        if (!win.isDestroyed()) {
-          win.webContents.send('hermes:quizverse:provision:event', payload)
-        }
-      }
+      return { error: message, ok: false as const }
+    } finally {
+      qvProvisionInFlight = null
     }
+  })()
 
-    qvIpcHandle('hermes:quizverse:tutor:provision', async () => {
-      qvProvisionInFlight ??= (async () => {
-        const deeptutorRoot = path.join(app.getPath('userData'), 'deeptutor')
+  return qvProvisionInFlight
+})
 
-        try {
-          const binPath = await provisionDeepTutor({
-            venvDir: path.join(deeptutorRoot, 'venv'),
-            workspaceDir: path.join(deeptutorRoot, 'workspace'),
-            log: line => {
-              rememberLog(`[qv-provision] ${line}`)
-              broadcastQvProvisionEvent({ line })
-            }
+qvIpcHandle('hermes:quizverse:tutor:pick-directory', async () => {
+  const result = await dialog.showOpenDialog({
+    title: 'Choose your TutorX workspace directory',
+    properties: ['openDirectory'],
+    defaultPath: currentQuizverseSettings().localDirectory || app.getPath('home')
+  })
+
+  if (result.canceled || result.filePaths.length === 0) {
+    return { canceled: true, dir: null }
+  }
+
+  return { canceled: false, dir: result.filePaths[0] }
+})
+
+// The QuizVerse status strip's update lamp. Same poller/apply machinery as
+// the tray (feed already brand-resolved via currentUpdateManifestUrl), just
+// exposed on the brand's own IPC surface — the ix-agency channels don't
+// register in this build.
+qvIpcHandle('hermes:quizverse:update:check', async () => {
+  await refreshIxUpdateStatus()
+
+  return ixUpdateStatus
+})
+
+qvIpcHandle('hermes:quizverse:update:apply', async () => applyIxUpdate())
+
+const qvMcpSocket = quizverseMcpSocketPath(app.getPath('userData'))
+const qvMcpServerSocket = quizverseMcpServerSocketPath()
+let qvMcpBroker: Awaited<ReturnType<typeof startQuizverseMcpBroker>> | null = null
+let qvMcpChild: ChildProcess | null = null
+let qvMcpError = ''
+let qvMcpShutdownComplete = false
+
+async function startQvMcpBroker() {
+  if (qvMcpBroker && isQuizverseMcpChildRunning(qvMcpChild)) {
+    return
+  }
+
+  if (qvMcpBroker) {
+    stopQuizverseMcpBroker(qvMcpBroker, qvMcpSocket)
+    qvMcpBroker = null
+  }
+
+  try {
+    ensureDesktopBrandProvision()
+    qvMcpBroker = await startQuizverseMcpBroker({
+      auditPath: path.join(effectiveDesktopHermesHome(), 'logs', 'quizverse-mcp-audit.jsonl'),
+      handlers: {
+        approve: async request => {
+          const result = await dialog.showMessageBox({
+            buttons: ['Deny', request.hardConfirmation ? 'Approve value-bearing action' : 'Approve once'],
+            cancelId: 0,
+            defaultId: 0,
+            detail: `${request.tool}\n${JSON.stringify(request.payload, null, 2).slice(0, 1200)}`,
+            message: request.hardConfirmation
+              ? 'QuizVerse Chat requests a value-bearing action'
+              : 'QuizVerse Chat requests a game action',
+            noLink: true,
+            type: 'warning'
           })
 
-          const next = {
-            ...currentQuizverseSettings(),
-            tutorMode: 'local' as const,
-            localCommand: managedLocalCommand(binPath),
-            localDirectory: path.join(deeptutorRoot, 'workspace')
+          return result.response === 1
+        },
+        capability: async () => {
+          const auth = await authenticateQvPlay()
+
+          return { authKind: auth.authKind, playerId: auth.userId }
+        },
+        rpc: async (name, payload) => qvPlayRpc(name, payload),
+        tutor: async requestPath => {
+          const response = await qvTutorRequest({ method: 'GET', path: requestPath })
+
+          if (response.status < 200 || response.status >= 300) {
+            throw new Error(`TutorX request failed (${response.status})`)
           }
 
-          writeQuizverseSettings(QUIZVERSE_SETTINGS_PATH, next, encryptDesktopSecret)
-
-          if (next.litellmKey) {
-            try {
-              injectTutorXLitellmConfig(next.localDirectory, next.litellmUrl, next.litellmKey)
-            } catch (injectError) {
-              rememberLog(
-                `[qv-provision] LiteLLM config inject failed: ${
-                  injectError instanceof Error ? injectError.message : String(injectError)
-                }`
-              )
-            }
-          }
-
-          broadcastQvProvisionEvent({ done: true })
-          broadcastDeepTutorStatus(deepTutorSupervisor!.status())
-
-          return { ok: true as const }
-        } catch (error) {
-          const message = error instanceof Error ? error.message : String(error)
-
-          rememberLog(`[qv-provision] failed: ${message}`)
-          broadcastQvProvisionEvent({ done: true, error: message })
-
-          return { error: message, ok: false as const }
-        } finally {
-          qvProvisionInFlight = null
+          return response.body ? JSON.parse(response.body) : {}
         }
-      })()
-
-      return qvProvisionInFlight
+      },
+      idempotencyPath: path.join(app.getPath('userData'), 'quizverse-mcp-idempotency.json'),
+      secret: QV_MCP_BROKER_SECRET,
+      socketPath: qvMcpSocket
     })
 
-    qvIpcHandle('hermes:quizverse:tutor:pick-directory', async () => {
-      const result = await dialog.showOpenDialog({
-        title: 'Choose your TutorX workspace directory',
-        properties: ['openDirectory'],
-        defaultPath: currentQuizverseSettings().localDirectory || app.getPath('home')
+    const mcpServerPath = IS_PACKAGED
+      ? path.join(process.resourcesPath, 'quizverse-mcp', 'server.mjs')
+      : path.join(SOURCE_REPO_ROOT, 'packages', 'quizverse-mcp', 'server.mjs')
+
+    qvMcpChild = await startQuizverseMcpChild({
+      brokerSecret: QV_MCP_BROKER_SECRET,
+      brokerSocket: qvMcpSocket,
+      executable: process.execPath,
+      serverPath: mcpServerPath,
+      serverSocket: qvMcpServerSocket
+    })
+    qvMcpChild.once('exit', code => {
+      qvMcpChild = null
+      qvMcpError = `QuizVerse MCP child exited (${code})`
+    })
+    qvMcpError = ''
+    rememberLog('[qv-mcp] player auth broker and MCP child ready')
+  } catch (error) {
+    await stopQuizverseMcpChild(qvMcpChild, qvMcpServerSocket)
+    qvMcpChild = null
+    stopQuizverseMcpBroker(qvMcpBroker, qvMcpSocket)
+    qvMcpBroker = null
+    qvMcpError = error instanceof Error ? error.message : String(error)
+    rememberLog(`[qv-mcp] broker failed: ${qvMcpError}`)
+  }
+}
+
+qvIpcHandle('hermes:quizverse:mcp:status', async () => {
+  if (!qvMcpBroker) {
+    await startQvMcpBroker()
+  }
+
+  const auth = qvMcpBroker ? await authenticateQvPlay().catch(() => null) : null
+  const effectiveHome = effectiveDesktopHermesHome()
+  const configPath = path.join(effectiveHome, 'config.yaml')
+
+  const serverPath = IS_PACKAGED
+    ? path.join(process.resourcesPath, 'quizverse-mcp', 'server.mjs')
+    : path.join(SOURCE_REPO_ROOT, 'packages', 'quizverse-mcp', 'server.mjs')
+
+  const relayPath = IS_PACKAGED
+    ? path.join(process.resourcesPath, 'quizverse-mcp', 'relay.mjs')
+    : path.join(SOURCE_REPO_ROOT, 'packages', 'quizverse-mcp', 'relay.mjs')
+
+  const provision = inspectQuizverseProvision({
+    configPath,
+    electronExecutable: process.execPath,
+    relayPath,
+    serverPath,
+    serverSocket: qvMcpServerSocket,
+    skillsRoot: path.join(effectiveHome, 'skills', 'quizverse')
+  })
+
+  let probe: Awaited<ReturnType<typeof probeQuizverseMcp>> | null = null
+
+  if (qvMcpBroker && isQuizverseMcpChildRunning(qvMcpChild) && provision.ready) {
+    probe = await probeQuizverseMcp(qvMcpServerSocket).catch(error => {
+      qvMcpError = error instanceof Error ? error.message : String(error)
+
+      return null
+    })
+
+    if (probe) {qvMcpError = ''}
+  }
+
+  const probeStatus = probe
+    ? validateQuizverseProbe(
+      probe,
+      auth ? { authKind: auth.authKind, playerId: auth.userId } : null
+    )
+    : { ready: false, reason: qvMcpError || 'MCP protocol probe did not complete' }
+
+  const ready = Boolean(
+    qvMcpBroker &&
+    isQuizverseMcpChildRunning(qvMcpChild) &&
+    provision.ready &&
+    probeStatus.ready
+  )
+
+  const degradedReason = !provision.ready ? provision.reason : probeStatus.reason
+
+  return {
+    auth: auth?.authKind ?? 'pending',
+    detail: qvMcpError || (ready
+      ? `Player tools are available in ${effectiveHome} (${probeStatus.reason}).`
+      : degradedReason),
+    state: ready ? 'ready' : 'error',
+    toolCount: probe?.toolIds.length ?? 0
+  }
+})
+
+void app.whenReady().then(async () => {
+  installTutorXOriginRewrite()
+  await startQvMcpBroker()
+})
+
+{
+  // The DeepTutor child tree must never outlive the app.
+  app.on('will-quit', event => {
+    deepTutorSupervisor?.stop()
+
+    if (!qvMcpShutdownComplete && qvMcpChild) {
+      event.preventDefault()
+      const child = qvMcpChild
+      qvMcpChild = null
+      void stopQuizverseMcpChild(child, qvMcpServerSocket).finally(() => {
+        qvMcpShutdownComplete = true
+        stopQuizverseMcpBroker(qvMcpBroker, qvMcpSocket)
+        qvMcpBroker = null
+        app.quit()
       })
 
-      if (result.canceled || result.filePaths.length === 0) {
-        return { canceled: true, dir: null }
-      }
-
-      return { canceled: false, dir: result.filePaths[0] }
-    })
-
-    // The QuizVerse status strip's update lamp. Same poller/apply machinery as
-    // the tray (feed already brand-resolved via currentUpdateManifestUrl), just
-    // exposed on the brand's own IPC surface — the ix-agency channels don't
-    // register in this build.
-    qvIpcHandle('hermes:quizverse:update:check', async () => {
-      await refreshIxUpdateStatus()
-
-      return ixUpdateStatus
-    })
-
-    qvIpcHandle('hermes:quizverse:update:apply', async () => applyIxUpdate())
-
-    const qvMcpSocket = quizverseMcpSocketPath(app.getPath('userData'))
-    const qvMcpServerSocket = quizverseMcpServerSocketPath()
-    let qvMcpBroker: Awaited<ReturnType<typeof startQuizverseMcpBroker>> | null = null
-    let qvMcpChild: ChildProcess | null = null
-    let qvMcpError = ''
-    let qvMcpShutdownComplete = false
-
-    async function startQvMcpBroker() {
-      if (qvMcpBroker && isQuizverseMcpChildRunning(qvMcpChild)) {
-        return
-      }
-
-      if (qvMcpBroker) {
-        stopQuizverseMcpBroker(qvMcpBroker, qvMcpSocket)
-        qvMcpBroker = null
-      }
-
-      try {
-        ensureDesktopBrandProvision()
-        qvMcpBroker = await startQuizverseMcpBroker({
-          auditPath: path.join(effectiveDesktopHermesHome(), 'logs', 'quizverse-mcp-audit.jsonl'),
-          handlers: {
-            approve: async request => {
-              const result = await dialog.showMessageBox({
-                buttons: ['Deny', request.hardConfirmation ? 'Approve value-bearing action' : 'Approve once'],
-                cancelId: 0,
-                defaultId: 0,
-                detail: `${request.tool}\n${JSON.stringify(request.payload, null, 2).slice(0, 1200)}`,
-                message: request.hardConfirmation
-                  ? 'QuizVerse Chat requests a value-bearing action'
-                  : 'QuizVerse Chat requests a game action',
-                noLink: true,
-                type: 'warning'
-              })
-
-              return result.response === 1
-            },
-            capability: async () => {
-              const auth = await authenticateQvPlay()
-
-              return { authKind: auth.authKind, playerId: auth.userId }
-            },
-            rpc: async (name, payload) => qvPlayRpc(name, payload),
-            tutor: async requestPath => {
-              const response = await qvTutorRequest({ method: 'GET', path: requestPath })
-
-              if (response.status < 200 || response.status >= 300) {
-                throw new Error(`TutorX request failed (${response.status})`)
-              }
-
-              return response.body ? JSON.parse(response.body) : {}
-            }
-          },
-          idempotencyPath: path.join(app.getPath('userData'), 'quizverse-mcp-idempotency.json'),
-          secret: QV_MCP_BROKER_SECRET,
-          socketPath: qvMcpSocket
-        })
-
-        const mcpServerPath = IS_PACKAGED
-          ? path.join(process.resourcesPath, 'quizverse-mcp', 'server.mjs')
-          : path.join(SOURCE_REPO_ROOT, 'packages', 'quizverse-mcp', 'server.mjs')
-
-        qvMcpChild = await startQuizverseMcpChild({
-          brokerSecret: QV_MCP_BROKER_SECRET,
-          brokerSocket: qvMcpSocket,
-          executable: process.execPath,
-          serverPath: mcpServerPath,
-          serverSocket: qvMcpServerSocket
-        })
-        qvMcpChild.once('exit', code => {
-          qvMcpChild = null
-          qvMcpError = `QuizVerse MCP child exited (${code})`
-        })
-        qvMcpError = ''
-        rememberLog('[qv-mcp] player auth broker and MCP child ready')
-      } catch (error) {
-        await stopQuizverseMcpChild(qvMcpChild, qvMcpServerSocket)
-        qvMcpChild = null
-        stopQuizverseMcpBroker(qvMcpBroker, qvMcpSocket)
-        qvMcpBroker = null
-        qvMcpError = error instanceof Error ? error.message : String(error)
-        rememberLog(`[qv-mcp] broker failed: ${qvMcpError}`)
-      }
+      return
     }
 
-    qvIpcHandle('hermes:quizverse:mcp:status', async () => {
-      if (!qvMcpBroker) {
-        await startQvMcpBroker()
-      }
+    stopQuizverseMcpBroker(qvMcpBroker, qvMcpSocket)
+    qvMcpBroker = null
+  })
 
-      const auth = qvMcpBroker ? await authenticateQvPlay().catch(() => null) : null
-      const effectiveHome = effectiveDesktopHermesHome()
-      const configPath = path.join(effectiveHome, 'config.yaml')
+  // Workspace webviews open external links (target=_blank, window.open) in
+  // the system browser instead of spawning unmanaged Electron windows. Scoped
+  // to the QuizVerse guest partitions so other webviews (e.g. the chat
+  // preview pane) keep their existing behavior.
+  const QUIZVERSE_WEBVIEW_PARTITIONS = ['persist:quizverse-tutor', 'persist:quizverse-web']
 
-      const serverPath = IS_PACKAGED
-        ? path.join(process.resourcesPath, 'quizverse-mcp', 'server.mjs')
-        : path.join(SOURCE_REPO_ROOT, 'packages', 'quizverse-mcp', 'server.mjs')
-
-      const relayPath = IS_PACKAGED
-        ? path.join(process.resourcesPath, 'quizverse-mcp', 'relay.mjs')
-        : path.join(SOURCE_REPO_ROOT, 'packages', 'quizverse-mcp', 'relay.mjs')
-
-      const provision = inspectQuizverseProvision({
-        configPath,
-        electronExecutable: process.execPath,
-        relayPath,
-        serverPath,
-        serverSocket: qvMcpServerSocket,
-        skillsRoot: path.join(effectiveHome, 'skills', 'quizverse')
-      })
-
-      let probe: Awaited<ReturnType<typeof probeQuizverseMcp>> | null = null
-
-      if (qvMcpBroker && isQuizverseMcpChildRunning(qvMcpChild) && provision.ready) {
-        probe = await probeQuizverseMcp(qvMcpServerSocket).catch(error => {
-          qvMcpError = error instanceof Error ? error.message : String(error)
-
-          return null
-        })
-
-        if (probe) {
-          qvMcpError = ''
-        }
-      }
-
-      const probeStatus = probe
-        ? validateQuizverseProbe(probe, auth ? { authKind: auth.authKind, playerId: auth.userId } : null)
-        : { ready: false, reason: qvMcpError || 'MCP protocol probe did not complete' }
-
-      const ready = Boolean(
-        qvMcpBroker && isQuizverseMcpChildRunning(qvMcpChild) && provision.ready && probeStatus.ready
-      )
-
-      const degradedReason = !provision.ready ? provision.reason : probeStatus.reason
-
-      return {
-        auth: auth?.authKind ?? 'pending',
-        detail:
-          qvMcpError ||
-          (ready ? `Player tools are available in ${effectiveHome} (${probeStatus.reason}).` : degradedReason),
-        state: ready ? 'ready' : 'error',
-        toolCount: probe?.toolIds.length ?? 0
-      }
-    })
-
-    void app.whenReady().then(async () => {
-      installTutorXOriginRewrite()
-      await startQvMcpBroker()
-    })
-
-    {
-      // The DeepTutor child tree must never outlive the app.
-      app.on('will-quit', event => {
-        deepTutorSupervisor?.stop()
-
-        if (!qvMcpShutdownComplete && qvMcpChild) {
-          event.preventDefault()
-          const child = qvMcpChild
-          qvMcpChild = null
-          void stopQuizverseMcpChild(child, qvMcpServerSocket).finally(() => {
-            qvMcpShutdownComplete = true
-            stopQuizverseMcpBroker(qvMcpBroker, qvMcpSocket)
-            qvMcpBroker = null
-            app.quit()
-          })
-
-          return
-        }
-
-        stopQuizverseMcpBroker(qvMcpBroker, qvMcpSocket)
-        qvMcpBroker = null
-      })
-
-      // Workspace webviews open external links (target=_blank, window.open) in
-      // the system browser instead of spawning unmanaged Electron windows. Scoped
-      // to the QuizVerse guest partitions so other webviews (e.g. the chat
-      // preview pane) keep their existing behavior.
-      const QUIZVERSE_WEBVIEW_PARTITIONS = ['persist:quizverse-tutor', 'persist:quizverse-web']
-
-      app.on('web-contents-created', (_event, contents) => {
-        if (contents.getType() !== 'webview') {
-          return
-        }
-
-        const isQuizverseGuest = QUIZVERSE_WEBVIEW_PARTITIONS.some(
-          partition => contents.session === session.fromPartition(partition)
-        )
-
-        if (!isQuizverseGuest) {
-          return
-        }
-
-        contents.setWindowOpenHandler(({ url }) => {
-          if (/^https?:\/\//i.test(url)) {
-            void shell.openExternal(url)
-          }
-
-          return { action: 'deny' }
-        })
-      })
+  app.on('web-contents-created', (_event, contents) => {
+    if (contents.getType() !== 'webview') {
+      return
     }
+
+    const isQuizverseGuest = QUIZVERSE_WEBVIEW_PARTITIONS.some(
+      partition => contents.session === session.fromPartition(partition)
+    )
+
+    if (!isQuizverseGuest) {
+      return
+    }
+
+    contents.setWindowOpenHandler(({ url }) => {
+      if (/^https?:\/\//i.test(url)) {
+        void shell.openExternal(url)
+      }
+
+      return { action: 'deny' }
+    })
+  })
+}
   })()
 }
 
