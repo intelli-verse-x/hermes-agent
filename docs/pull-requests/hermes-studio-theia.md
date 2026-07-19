@@ -8,7 +8,7 @@ Hermes needs an IDE-grade project surface without embedding an editor in the cha
 
 Consume the existing `intelli-verse-x/theia` fork through coordinated PR
 `intelli-verse-x/theia#1`, pinned to product commit
-`f0837fa5f3ed11295eb50a454511dceaa647d62b` (upstream base
+`425e874dbd19e85d65046d6daa08cc02f2d9a85d` (upstream base
 `3595b053a48a1a4c7171aea0361a25f782140af9`). Launch it as a supervised
 sibling connected to one Hermes session over authenticated local IPC. This PR
 is stacked on Adaptive Local AI only to consume its route-status contract; it is
