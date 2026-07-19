@@ -9,7 +9,7 @@ const skillPath = path.join(repoRoot, 'skills', 'local-first-inference', 'SKILL.
 const text = fs.readFileSync(skillPath, 'utf8')
 const voiceSkillPath = path.join(repoRoot, 'skills', 'desktop-voice-actions', 'SKILL.md')
 const voiceText = fs.readFileSync(voiceSkillPath, 'utf8')
-const frontmatter = text.match(/^---\n([\s\S]*?)\n---\n/)
+const frontmatter = text.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n/)
 
 test('local-first inference skill is concise and auto-discoverable', () => {
   assert.ok(frontmatter, 'valid YAML frontmatter is required')

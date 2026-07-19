@@ -77,9 +77,10 @@ test('uninstall rejects dangerous roots', () => {
 })
 
 test('managed uninstall paths cannot escape their root', async t => {
-  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'local-ai-managed-cleanup-'))
-  t.after(() => fs.rm(root, { recursive: true, force: true }))
-  await fs.mkdir(path.join(root, 'models'))
+  const parent = await fs.mkdtemp(path.join(os.tmpdir(), 'local-ai-managed-cleanup-'))
+  const root = path.join(parent, 'runtime-data')
+  t.after(() => fs.rm(parent, { recursive: true, force: true }))
+  await fs.mkdir(path.join(root, 'models'), { recursive: true })
   await removeLocalAiInstallation({ rootDirectory: root, managedPaths: ['models'] })
   await assert.rejects(fs.stat(path.join(root, 'models')), { code: 'ENOENT' })
   await assert.rejects(

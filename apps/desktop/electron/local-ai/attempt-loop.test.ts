@@ -3,6 +3,7 @@ import fs from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
 import test from 'node:test'
+import { fileURLToPath } from 'node:url'
 
 import { runCandidateReadinessLoop } from './attempt-loop'
 import { LocalAiController, localAiControllerInternals } from './controller'
@@ -103,7 +104,9 @@ test('a dead existing endpoint clears fresh historical readiness', async t => {
   assert.equal(status.runtime.state, 'stopped')
   assert.equal(status.runtime.lastVerifiedAt, undefined)
   assert.equal(status.routeHealth, 'unavailable')
-  assert.equal((await fs.stat(path.join(root, 'controller.json'))).mode & 0o777, 0o600)
+  if (process.platform !== 'win32') {
+    assert.equal((await fs.stat(path.join(root, 'controller.json'))).mode & 0o777, 0o600)
+  }
 })
 
 test('fresh historical existing readiness is accepted only after full inference reprobe', async t => {
@@ -224,8 +227,19 @@ test('non-catalog adoption ranks candidates and persists verified external capab
 
   const controller = new LocalAiController({
     dataRoot: root,
-    assetsRoot: path.resolve(path.dirname(new URL(import.meta.url).pathname), '../../assets'),
-    fetchImpl
+    assetsRoot: path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../assets'),
+    fetchImpl,
+    freeDiskBytes: async () => 100 * 1024 ** 3,
+    probeHardware: async () => ({
+      schemaVersion: 1,
+      platform: process.platform,
+      architecture: process.arch,
+      logicalCpuCount: 8,
+      memoryBytes: 64 * 1024 ** 3,
+      freeMemoryBytes: 48 * 1024 ** 3,
+      usableMemoryBytes: 48 * 1024 ** 3,
+      accelerators: ['cpu']
+    })
   })
 
   await controller.setMode('local-first')
@@ -240,7 +254,7 @@ test('non-catalog adoption ranks candidates and persists verified external capab
   assert.equal(visionInferenceCalls, 0)
   assert.deepEqual(persisted.externalModel.capabilities, ['chat', 'tools'])
   assert.equal(persisted.externalModel.verifiedContextTokens, 512)
-  assert.equal(stateMode, 0o600)
+  if (process.platform !== 'win32') {assert.equal(stateMode, 0o600)}
 })
 
 test('packaged restart rehydrates the exact launch spec and independently reprobes readiness', async t => {
@@ -335,7 +349,9 @@ test('packaged restart rehydrates the exact launch spec and independently reprob
   assert.equal(captured?.threads, launchSpec.threads)
   assert.equal(captured?.contextTokens, launchSpec.contextTokens)
   assert.deepEqual(captured?.extraArgs, launchSpec.extraArgs)
-  assert.equal((await fs.stat(path.join(root, 'controller.json'))).mode & 0o777, 0o600)
+  if (process.platform !== 'win32') {
+    assert.equal((await fs.stat(path.join(root, 'controller.json'))).mode & 0o777, 0o600)
+  }
 })
 
 test('runtime extraction selects platform-correct tar and ZIP commands', async () => {

@@ -108,6 +108,8 @@ export interface LocalAiControllerOptions {
   fetchImpl?: typeof fetch
   emit?: (progress: LocalAiProgress) => void
   createSidecar?: (options: ManagedSidecarOptions) => ManagedLlamaSidecar
+  probeHardware?: () => Promise<HardwareProfile>
+  freeDiskBytes?: (directory: string) => Promise<number>
 }
 
 function humanGiB(bytes: number): string {
@@ -386,8 +388,8 @@ export class LocalAiController extends EventEmitter {
   }> {
     const [{ models }, hardware, availableDisk] = await Promise.all([
       this.catalogs(),
-      probeHardware(),
-      freeDiskBytes(this.options.dataRoot)
+      this.options.probeHardware?.() ?? probeHardware(),
+      this.options.freeDiskBytes?.(this.options.dataRoot) ?? freeDiskBytes(this.options.dataRoot)
     ])
 
     if (modelId) {
@@ -483,7 +485,7 @@ export class LocalAiController extends EventEmitter {
     await this.refreshLiveReadiness()
 
     const [available, routed] = await Promise.all([
-      freeDiskBytes(this.options.dataRoot),
+      this.options.freeDiskBytes?.(this.options.dataRoot) ?? freeDiskBytes(this.options.dataRoot),
       this.readRoutingMetrics()
     ])
 
@@ -631,8 +633,8 @@ export class LocalAiController extends EventEmitter {
   private async compatibleModelCandidates(requestedModelId: string): Promise<ModelCatalogEntry[]> {
     const [{ models }, hardware, availableDiskBytes] = await Promise.all([
       this.catalogs(),
-      probeHardware(),
-      freeDiskBytes(this.options.dataRoot)
+      this.options.probeHardware?.() ?? probeHardware(),
+      this.options.freeDiskBytes?.(this.options.dataRoot) ?? freeDiskBytes(this.options.dataRoot)
     ])
 
     const candidates = models.models.filter(model =>
