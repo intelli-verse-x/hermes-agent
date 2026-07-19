@@ -1,0 +1,60 @@
+# Hermes Studio (Eclipse Theia) foundation
+
+## Problem
+
+Hermes needs an IDE-grade project surface without embedding an editor in the chat renderer or allowing editor code to bypass Hermes secrets, routing, trust, and approval policy.
+
+## Decision
+
+Build an optional, separately versioned Eclipse Theia product using Open VSX. Launch it as a supervised sibling process connected to one Hermes session over authenticated local IPC. This PR is stacked on Adaptive Local AI only to consume its route-status contract; it is a separate follow-up and must not be merged with that work.
+
+## Architecture
+
+- `packages/hermes-studio`: Theia 1.73 product, neutral metadata, Open VSX policy, first-party command extension.
+- Protocol v1: handshake, capability negotiation, identity, context, diagnostics, prompt streaming, route disclosure, approval observation, reviewed WorkspaceEdit, reconnect, health.
+- Desktop manager: optional/BYO state, exact launch linkage, fixed IPC allowlist, process supervision, crash budget, signed manifest/checksum/extraction contracts.
+
+See ADR-001 for the Mermaid diagram and full responsibility split.
+
+## Security boundaries
+
+Per-launch 256-bit token, request IDs, expiry and replay defense; Unix socket/named pipe only. Provider secrets are schema-forbidden. Unknown capabilities fail closed. Untrusted workspaces cannot request edits. Studio and voice cannot approve. Local-only rejects cloud. The editor has no raw IPC, model shell, policy, credentials, or mutation authority.
+
+## UX
+
+Command palette provides Install, Use installed Theia-compatible editor, Chat only, and Open/Focus Project. Managed installation starts with explicit license/source/network/disk/privacy disclosure and no first-run download. Studio failure never blocks Hermes chat.
+
+## Cross-platform support
+
+Path and endpoint fixtures cover macOS, Windows, and Linux. Managed artifacts are selected by OS/architecture and require HTTPS, signature, checksum, and traversal-safe staging. Studio versions use independent current/previous slots in the next delivery phase.
+
+## Scope
+
+Reviewable product and governance foundation, Desktop manager/IPC, extension command contract, tests, documentation, and non-publishing three-platform CI.
+
+## Out of scope
+
+Editor binaries, publishing, production downloader, Microsoft Marketplace, remote browser deployment, full broker server, direct shell/model execution, and WorkspaceEdit execution. Those require the phase-2 review UI and existing structured approval broker integration.
+
+## Tests
+
+- protocol authentication, replay, expiry, secret rejection;
+- workspace trust, canonical paths, session/window linkage;
+- route/local-only and voice approval policy;
+- crash budget, signed manifest, artifact hash, archive traversal;
+- first-run consent and fixed IPC allowlist;
+- extension command and brand isolation contracts;
+- macOS/Windows/Linux fixtures and source resource budget;
+- Desktop typecheck/lint/build and existing brand separation checks.
+
+## Rollout/rollback
+
+Foundation CI does not publish. Phase 2 begins behind an opt-in preference. Managed candidates are staged by signed manifest, health-checked, and activated atomically; failed candidates return to the previous slot. Removing/breaking Studio leaves chat operational.
+
+## Risks
+
+Theia/Electron dependency weight, extension compatibility, cross-platform process focus, and protocol drift. Coherent Theia release pins, capability negotiation, budgets, explicit health/version fields, and non-publishing CI reduce these risks.
+
+## Follow-ups
+
+Production socket/pipe transport, secure persisted preferences, downloader/version slots, context/diagnostics adapters, digest-bound WorkspaceEdit review, accessibility audit, measured runtime budgets, approved Open VSX mirror/offline cache, and signed staged distribution.

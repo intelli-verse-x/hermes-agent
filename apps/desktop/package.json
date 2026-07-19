@@ -204,6 +204,10 @@
         "to": "local-ai/local-ai-runtime-catalog.v1.json"
       },
       {
+        "from": "assets/hermes-studio-source.v1.json",
+        "to": "studio/hermes-studio-source.v1.json"
+      },
+      {
         "from": "../../skills/local-first-inference",
         "to": "hermes-skills/local-first-inference"
       },

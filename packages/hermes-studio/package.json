@@ -1,0 +1,24 @@
+{
+  "name": "@hermes/studio-contracts",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Hermes Desktop contracts for the pinned intelli-verse-x/theia Studio product.",
+  "license": "MIT",
+  "type": "module",
+  "main": "lib/protocol.js",
+  "scripts": {
+    "build": "tsc",
+    "test": "tsx --test test/*.test.ts",
+    "typecheck": "tsc --noEmit",
+    "verify:resources": "node scripts/verify-resources.mjs"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@types/node": "^22.20.0",
+    "tsx": "^4.22.4",
+    "typescript": "^6.0.3"
+  },
+  "engines": {
+    "node": "^20.19.0 || >=22.12.0"
+  }
+}

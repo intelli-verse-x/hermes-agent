@@ -105,6 +105,14 @@ contextBridge.exposeInMainWorld('hermesDesktop', {
     setDefaultProjectDir: dir => ipcRenderer.invoke('hermes:setting:defaultProjectDir:set', dir),
     pickDefaultProjectDir: () => ipcRenderer.invoke('hermes:setting:defaultProjectDir:pick')
   },
+  studio: {
+    status: () => ipcRenderer.invoke('hermes:studio:status'),
+    chooseExternal: () => ipcRenderer.invoke('hermes:studio:choose-external'),
+    consentInstall: version => ipcRenderer.invoke('hermes:studio:install-consent', version),
+    launch: input => ipcRenderer.invoke('hermes:studio:launch', input),
+    focus: () => ipcRenderer.invoke('hermes:studio:focus'),
+    stop: () => ipcRenderer.invoke('hermes:studio:stop')
+  },
   zoom: {
     // Current zoom of this window, as { level, percent }.
     get: () => ipcRenderer.invoke('hermes:zoom:get'),
@@ -331,9 +339,10 @@ contextBridge.exposeInMainWorld('hermesDesktop', {
           chatList: () => ipcRenderer.invoke('hermes:ix-agency:chat:list'),
           chatGet: conversationId => ipcRenderer.invoke('hermes:ix-agency:chat:get', conversationId),
           chatSend: async payload => {
-            const governedPayload = payload?.inputModality === 'voice'
-              ? { ...payload, voiceCaptureToken: await consumeVoiceCaptureAttestation() }
-              : payload
+            const governedPayload =
+              payload?.inputModality === 'voice'
+                ? { ...payload, voiceCaptureToken: await consumeVoiceCaptureAttestation() }
+                : payload
 
             return ipcRenderer.invoke('hermes:ix-agency:chat:send', governedPayload)
           },
@@ -435,7 +444,8 @@ contextBridge.exposeInMainWorld('hermesDesktop', {
 
             ipcRenderer.on('hermes:quizverse:product:chunk', listener)
 
-            return ipcRenderer.invoke('hermes:quizverse:product:request', { ...input, streamId })
+            return ipcRenderer
+              .invoke('hermes:quizverse:product:request', { ...input, streamId })
               .finally(() => ipcRenderer.removeListener('hermes:quizverse:product:chunk', listener))
           },
           productCancel: streamId => ipcRenderer.invoke('hermes:quizverse:product:cancel', streamId),
