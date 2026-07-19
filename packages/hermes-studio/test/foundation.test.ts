@@ -150,7 +150,7 @@ test('supervisor enforces restart budget and exact session/window linkage', () =
   )
   assert.equal(status.sessionId, 'session-1')
   assert.equal(status.windowId, 'window-1')
-  assert.equal(status.workspaceId, workspaceId('/tmp/work'))
+  assert.equal(status.workspaceId, workspaceId(status.workspaceCanonicalPath!))
   assert.throws(() => manager.launch({ workspacePath: '/tmp/work', sessionId: '', windowId: 'w' }, '/opt/theia', '0.1.0'), /identity/)
 })
 

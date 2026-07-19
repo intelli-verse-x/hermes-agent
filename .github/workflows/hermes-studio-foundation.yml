@@ -39,7 +39,14 @@ jobs:
       - run: npm run verify:resources --workspace @hermes/studio-contracts
       - run: npm exec --workspace apps/desktop -- tsx --test electron/studio-manager.test.ts
       - run: npm run typecheck --workspace apps/desktop
-      - run: npm run check:brand-separation --workspace apps/desktop
+      - name: Build and verify IX Agency separation
+        run: npm run build --workspace apps/desktop && npm run check:brand-separation --workspace apps/desktop
+        env:
+          DESKTOP_BRAND: ix-agency
+      - name: Build and verify QuizVerse separation
+        run: npm run build --workspace apps/desktop && npm run check:brand-separation --workspace apps/desktop
+        env:
+          DESKTOP_BRAND: quizverse
       - name: Assert no publishable Studio archive
         shell: bash
         run: |
