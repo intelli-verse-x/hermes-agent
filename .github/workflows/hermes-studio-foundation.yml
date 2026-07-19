@@ -1,0 +1,49 @@
+name: Hermes Studio foundation
+
+on:
+  pull_request:
+    paths:
+      - "packages/hermes-studio/**"
+      - "apps/desktop/electron/studio-manager*"
+      - "apps/desktop/electron/preload.ts"
+      - "apps/desktop/electron/main.ts"
+      - "apps/desktop/src/global.d.ts"
+      - "apps/desktop/src/app/command-palette/**"
+      - "docs/architecture/adr-001-hermes-studio-theia.md"
+      - ".github/workflows/hermes-studio-foundation.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  foundation:
+    name: Foundation (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest, ubuntu-latest]
+    timeout-minutes: 35
+    env:
+      HERMES_STUDIO_NO_PUBLISH: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm test --workspace @hermes/studio-contracts
+      - run: npm run typecheck --workspace @hermes/studio-contracts
+      - run: npm run verify:resources --workspace @hermes/studio-contracts
+      - run: npm exec --workspace apps/desktop -- tsx --test electron/studio-manager.test.ts
+      - run: npm run typecheck --workspace apps/desktop
+      - run: npm run check:brand-separation --workspace apps/desktop
+      - name: Assert no publishable Studio archive
+        shell: bash
+        run: |
+          if ls packages/hermes-studio/*.{zip,dmg,exe,AppImage,tar.gz} 2>/dev/null; then
+            echo "Publishing artifacts are forbidden in foundation CI"
+            exit 1
+          fi

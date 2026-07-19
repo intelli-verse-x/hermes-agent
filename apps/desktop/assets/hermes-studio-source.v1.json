@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "product": "hermes-studio",
+  "repository": "https://github.com/intelli-verse-x/theia",
+  "upstreamRepository": "https://github.com/eclipse-theia/theia",
+  "upstreamBase": "3595b053a48a1a4c7171aea0361a25f782140af9",
+  "productCommit": "f0837fa5f3ed11295eb50a454511dceaa647d62b",
+  "productPath": "examples/hermes-studio",
+  "bridgePath": "packages/hermes-bridge",
+  "protocolVersion": 1,
+  "minimumDesktopVersion": "0.17.5",
+  "releaseManifest": "https://github.com/intelli-verse-x/theia/releases/download/hermes-studio-v0.1.0/manifest.v1.json",
+  "releaseRequired": true,
+  "signatureAlgorithm": "Ed25519",
+  "artifactDigest": "SHA-256",
+  "status": "source-pinned-awaiting-signed-release"
+}
