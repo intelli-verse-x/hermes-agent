@@ -4,7 +4,7 @@
   "repository": "https://github.com/intelli-verse-x/theia",
   "upstreamRepository": "https://github.com/eclipse-theia/theia",
   "upstreamBase": "3595b053a48a1a4c7171aea0361a25f782140af9",
-  "productCommit": "64826a1454b076b2b6a98ec986b856b5ccf5476c",
+  "productCommit": "f9e91c82552ab11c2af969d7cff16f4efd7ba78a",
   "productPath": "examples/hermes-studio",
   "bridgePath": "packages/hermes-bridge",
   "protocolVersion": 1,

@@ -15,7 +15,7 @@ generic npm scaffold:
 
 - upstream base: `3595b053a48a1a4c7171aea0361a25f782140af9`;
 - reviewed downstream product commit:
-  `64826a1454b076b2b6a98ec986b856b5ccf5476c`;
+  `f9e91c82552ab11c2af969d7cff16f4efd7ba78a`;
 - product: `examples/hermes-studio`;
 - first-party bridge: `packages/hermes-bridge`;
 - extension registry: Open VSX.

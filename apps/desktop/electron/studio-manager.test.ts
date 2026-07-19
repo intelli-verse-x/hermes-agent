@@ -25,7 +25,7 @@ test('source contract pins the canonical fork and protocol', () => {
 
   assert.equal(contract.repository, 'https://github.com/intelli-verse-x/theia')
   assert.equal(contract.protocolVersion, 1)
-  assert.equal(contract.productCommit, '64826a1454b076b2b6a98ec986b856b5ccf5476c')
+  assert.equal(contract.productCommit, 'f9e91c82552ab11c2af969d7cff16f4efd7ba78a')
   assert.equal(contract.releaseRequired, true)
   assert.equal(contract.status, 'source-pinned-awaiting-signed-release')
 })
