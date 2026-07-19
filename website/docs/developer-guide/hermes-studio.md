@@ -14,8 +14,8 @@ The editor product is built from
 generic npm scaffold:
 
 - upstream base: `3595b053a48a1a4c7171aea0361a25f782140af9`;
-- initial downstream product commit:
-  `425e874dbd19e85d65046d6daa08cc02f2d9a85d`;
+- reviewed downstream product commit:
+  `64826a1454b076b2b6a98ec986b856b5ccf5476c`;
 - product: `examples/hermes-studio`;
 - first-party bridge: `packages/hermes-bridge`;
 - extension registry: Open VSX.
