@@ -11,8 +11,8 @@ Hermes needs an IDE-grade surface without turning the existing chat desktop into
 
 We selected and consume the existing
 [`intelli-verse-x/theia`](https://github.com/intelli-verse-x/theia) fork over
-Code-OSS. The first product commit is pinned to
-`425e874dbd19e85d65046d6daa08cc02f2d9a85d`, based on upstream
+Code-OSS. The reviewed product commit is pinned to
+`64826a1454b076b2b6a98ec986b856b5ccf5476c`, based on upstream
 `3595b053a48a1a4c7171aea0361a25f782140af9`:
 
 - Theia is an Eclipse Foundation project under EPL-2.0 (with its documented secondary license), supports commercial products, is modular at npm package boundaries, has no telemetry by default, and uses Open VSX by default.
