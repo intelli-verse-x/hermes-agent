@@ -355,10 +355,18 @@ test('packaged restart rehydrates the exact launch spec and independently reprob
 })
 
 test('runtime extraction selects platform-correct tar and ZIP commands', async () => {
-  const calls: Array<{ command: string; args: readonly string[] }> = []
+  const calls: Array<{
+    command: string
+    args: readonly string[]
+    options?: { env?: NodeJS.ProcessEnv }
+  }> = []
 
-  const execute = (async (command: string, args: readonly string[]) => {
-    calls.push({ command, args })
+  const execute = (async (
+    command: string,
+    args: readonly string[],
+    options?: { env?: NodeJS.ProcessEnv }
+  ) => {
+    calls.push({ command, args, options })
 
     return { stdout: '', stderr: '' }
   }) as never
@@ -395,6 +403,8 @@ test('runtime extraction selects platform-correct tar and ZIP commands', async (
   assert.equal(calls[0].command, 'tar')
   assert.equal(calls[1].command, 'powershell.exe')
   assert.match(calls[1].args.join(' '), /Expand-Archive/)
+  assert.equal(calls[1].options?.env?.HERMES_RUNTIME_ARCHIVE_PATH, 'C:\\downloads\\runtime.zip')
+  assert.equal(calls[1].options?.env?.HERMES_RUNTIME_DESTINATION, 'C:\\runtime')
   assert.equal(calls[2].command, 'unzip')
   assert.equal(calls[3].command, 'unzip')
 })

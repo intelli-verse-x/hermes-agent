@@ -150,11 +150,17 @@ async function extractRuntimeArchive(
         '-NoProfile',
         '-NonInteractive',
         '-Command',
-        'Expand-Archive -LiteralPath $args[0] -DestinationPath $args[1] -Force',
-        archivePath,
-        destination
+        'Expand-Archive -LiteralPath $env:HERMES_RUNTIME_ARCHIVE_PATH -DestinationPath $env:HERMES_RUNTIME_DESTINATION -Force'
       ],
-      { timeout: 120_000, windowsHide: true }
+      {
+        env: {
+          ...process.env,
+          HERMES_RUNTIME_ARCHIVE_PATH: archivePath,
+          HERMES_RUNTIME_DESTINATION: destination
+        },
+        timeout: 120_000,
+        windowsHide: true
+      }
     )
 
     return

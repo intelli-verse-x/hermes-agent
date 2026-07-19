@@ -105,10 +105,14 @@ if (process.platform === 'linux') {
     '-NoProfile',
     '-NonInteractive',
     '-Command',
-    'Expand-Archive -LiteralPath $args[0] -DestinationPath $args[1] -Force',
-    path.join(release, zips[0]),
-    extraction
-  ])
+    'Expand-Archive -LiteralPath $env:HERMES_ARCHIVE_PATH -DestinationPath $env:HERMES_ARCHIVE_DESTINATION -Force'
+  ], {
+    env: {
+      ...process.env,
+      HERMES_ARCHIVE_PATH: path.join(release, zips[0]),
+      HERMES_ARCHIVE_DESTINATION: extraction
+    }
+  })
   verifyResourceTree(extraction)
   const executable = walk(extraction).find(file => file.endsWith(`${brand.productName}.exe`))
   assert(executable, `ZIP lacks ${brand.productName}.exe`)
