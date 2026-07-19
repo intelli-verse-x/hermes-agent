@@ -4,10 +4,10 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="robots" content="noindex" />
-    <title>Download IX Agency — Intelliverse X</title>
+    <title>Download IX Agency · QuizVerse · Admin — Intelliverse X</title>
     <meta
       name="description"
-      content="Download the IX Agency desktop app for macOS, Windows and Linux. Auto-updating build from the Intelliverse X release feed."
+      content="Official download page for IX Agency desktop, QuizVerse desktop, and Admin Dashboard access. macOS, Windows, and Linux installers from the Intelliverse X release feed."
     />
     <style>
       :root {
@@ -175,12 +175,24 @@
   </head>
   <body>
     <div class="wrap">
-      <nav class="product-tabs" role="tablist" aria-label="Desktop app instructions">
+      <div class="availability" id="launch-banner" data-state="ready" role="status" style="margin-bottom: 22px">
+        <b style="color: var(--text)">Launch download hub</b> —
+        share this page:
+        <a href="https://intelliverse-x-desktop.s3.amazonaws.com/index.html" style="color: var(--accent)">
+          https://intelliverse-x-desktop.s3.amazonaws.com/index.html
+        </a>
+        · Desktop apps: <b style="color: var(--text)">IX Agency</b> (admin/operator) + <b style="color: var(--text)">QuizVerse</b> · Web console: Admin portal
+      </div>
+
+      <nav class="product-tabs" role="tablist" aria-label="Product download and setup">
         <button class="product-tab" id="tab-ix" role="tab" aria-controls="panel-ix" aria-selected="true" tabindex="0">
-          IVX Admin Desktop
+          IX Agency
         </button>
         <button class="product-tab" id="tab-quizverse" role="tab" aria-controls="panel-quizverse" aria-selected="false" tabindex="-1">
-          QuizVerse Desktop
+          QuizVerse
+        </button>
+        <button class="product-tab" id="tab-admin" role="tab" aria-controls="panel-admin" aria-selected="false" tabindex="-1">
+          Admin (web + desktop)
         </button>
       </nav>
 
@@ -228,9 +240,19 @@
       </div>
 
       <section class="steps">
+        <h2>Download &amp; install (IX Agency)</h2>
+        <ol class="steps-list">
+          <li><b>Pick your OS</b> — use the big Download button (detected) or the cards below (macOS .dmg, Windows .exe, Linux AppImage).</li>
+          <li><b>macOS:</b> open the .dmg → drag <b>IX Agency</b> to Applications → if Gatekeeper says “damaged”, run <code style="display:inline;padding:1px 5px">xattr -cr "/Applications/IX Agency.app"</code> once, then open from Applications.</li>
+          <li><b>Windows:</b> run the .exe → if SmartScreen appears, <b>More info → Run anyway</b> (only from this page).</li>
+          <li><b>Linux:</b> <code style="display:inline;padding:1px 5px">chmod +x IX-Agency-*.AppImage</code> then run it (or install .deb / .rpm).</li>
+        </ol>
+      </section>
+
+      <section class="steps">
         <h2>After you install</h2>
         <ol class="steps-list">
-          <li><b>Open the app and sign in</b> with your work email — you'll get a 6-digit code by email. The session lasts 12 hours.</li>
+          <li><b>Open the app and sign in</b> with your work email + password, then the <b>6-digit email OTP</b> (expires in ~5 minutes). An access grant alone does not create a login.</li>
           <li><b>Everything else is automatic.</b> On sign-in the app fetches your credentials from the portal (gateway token, personal LiteLLM key, VPN profile, Cognito secret), connects the company VPN (expect an admin-password / UAC prompt) and initializes the local Hermes agent. No values to paste.</li>
           <li><b>One prerequisite:</b> install the VPN backend — macOS <code style="display:inline;padding:1px 5px">brew install wireguard-tools</code>, Windows "WireGuard for Windows".</li>
           <li>Prefer manual control? <b>Settings → Connect</b> still accepts your own values — anything you set there is never overwritten.</li>
@@ -503,10 +525,142 @@
           · <span id="qv-foot-ver"></span>
         </footer>
       </main>
+
+      <main id="panel-admin" role="tabpanel" aria-labelledby="tab-admin" tabindex="0" hidden>
+        <header>
+          <div class="logo" aria-hidden="true" style="background: linear-gradient(135deg, #0ea5e9, #2563eb)">AD</div>
+          <h1>Admin — web + desktop</h1>
+          <p class="sub">
+            Two surfaces, same accounts:
+            <b style="color: var(--text)">Admin Dashboard</b> = browser console ·
+            <b style="color: var(--text)">IX Agency</b> = the admin/operator <b style="color: var(--text)">desktop application</b>
+            (VPN, local Hermes agent, auto-provisioned keys). There is no separate “Admin.app” binary — download IX Agency below.
+          </p>
+          <div class="verpill">
+            <span class="dot"></span>
+            <span>Desktop feed · <b id="admin-ix-ver">IX Agency</b></span>
+            <span>· Web · <b>admin.intelli-verse-x.ai</b></span>
+          </div>
+        </header>
+
+        <div class="primary">
+          <div class="primary-card">
+            <div class="who">
+              <span class="os-ico" aria-hidden="true">💻</span>
+              <div>
+                <h2>Download Admin desktop (IX Agency)</h2>
+                <p id="admin-desktop-desc">macOS / Windows / Linux installers from the IX Agency release feed</p>
+              </div>
+            </div>
+            <a class="btn" id="admin-desktop-btn" href="#ix-agency">Download desktop app</a>
+          </div>
+        </div>
+
+        <div class="grid" id="admin-downloads" style="margin-bottom: 28px">
+          <div class="card">
+            <h3>🍎 macOS <span class="tag">Apple Silicon</span></h3>
+            <div class="files">
+              <a class="file" href="https://intelliverse-x-desktop.s3.amazonaws.com/ix-agency/IX-Agency-1.0.0-mac-arm64.dmg" download>
+                <span class="ext">.dmg</span><span class="sz">IX Agency 1.0.0</span>
+              </a>
+              <a class="file" href="https://intelliverse-x-desktop.s3.amazonaws.com/ix-agency/IX-Agency-1.0.0-mac-arm64.zip" download>
+                <span class="ext">.zip</span><span class="sz">IX Agency 1.0.0</span>
+              </a>
+            </div>
+          </div>
+          <div class="card">
+            <h3>🪟 Windows <span class="tag">x64</span></h3>
+            <div class="files">
+              <a class="file" href="https://intelliverse-x-desktop.s3.amazonaws.com/ix-agency/IX-Agency-1.0.0-win-x64.exe" download>
+                <span class="ext">.exe</span><span class="sz">IX Agency 1.0.0</span>
+              </a>
+            </div>
+          </div>
+          <div class="card">
+            <h3>🐧 Linux <span class="tag">x86_64</span></h3>
+            <div class="files">
+              <a class="file" href="https://intelliverse-x-desktop.s3.amazonaws.com/ix-agency/IX-Agency-1.0.0-linux-x86_64.AppImage" download>
+                <span class="ext">AppImage</span><span class="sz">IX Agency 1.0.0</span>
+              </a>
+            </div>
+          </div>
+        </div>
+
+        <div class="primary">
+          <div class="primary-card">
+            <div class="who">
+              <span class="os-ico" aria-hidden="true">🌐</span>
+              <div>
+                <h2>Open Admin Dashboard (website)</h2>
+                <p>Browser console · Chrome / Edge / Safari · email + password + 6-digit OTP</p>
+              </div>
+            </div>
+            <a class="btn ghost" href="https://admin.intelli-verse-x.ai/admin/portal" target="_blank" rel="noreferrer">
+              Open admin portal
+            </a>
+          </div>
+        </div>
+
+        <section class="steps">
+          <h2>Install Admin desktop (IX Agency)</h2>
+          <ol class="steps-list">
+            <li><b>Download</b> the macOS .dmg / Windows .exe / Linux AppImage from the cards above (or the <a href="#ix-agency" id="admin-goto-ix">IX Agency</a> tab).</li>
+            <li><b>macOS:</b> open .dmg → drag <b>IX Agency</b> to Applications → if Gatekeeper blocks, run <code style="display:inline;padding:1px 5px">xattr -cr "/Applications/IX Agency.app"</code> once.</li>
+            <li><b>Sign in</b> with the same work email + password + 6-digit OTP used for the admin website.</li>
+            <li><b>Auto-setup:</b> gateway token, LiteLLM key, VPN profile, and local Hermes agent provision on first sign-in.</li>
+          </ol>
+        </section>
+
+        <section class="steps">
+          <h2>How to start (web console)</h2>
+          <ol class="steps-list">
+            <li><b>Get an access grant</b> from your admin (Team page). Grant alone does not create Cognito login.</li>
+            <li><b>Open</b> <a href="https://admin.intelli-verse-x.ai" target="_blank" rel="noreferrer">https://admin.intelli-verse-x.ai</a>.</li>
+            <li><b>Sign in:</b> email + password (first time: Forgot password) → enter the <b>6-digit OTP</b> from email.</li>
+            <li><b>Land on Tools / Copilot</b> — use All tools grid or Chat with all your tools.</li>
+          </ol>
+        </section>
+
+        <section class="steps">
+          <h2>How admins grant access</h2>
+          <ol class="steps-list">
+            <li>Go to <a href="https://admin.intelli-verse-x.ai/admin/team" target="_blank" rel="noreferrer">/admin/team</a> (super admin / owner).</li>
+            <li>Invite with email, apps, privilege, optional bundles.</li>
+            <li>Copy the invite note and send it yourself (nothing is emailed automatically) + link users to this download page.</li>
+            <li>On first desktop sign-in, IX Agency auto-provisions gateway / LiteLLM / VPN — no secrets to paste in chat.</li>
+          </ol>
+          <p style="margin-top: 14px">
+            <a class="btn ghost" href="https://admin.intelli-verse-x.ai/admin/team" target="_blank" rel="noreferrer">Team &amp; invites →</a>
+            <a class="btn ghost" href="https://admin.intelli-verse-x.ai/admin/portal/tools" target="_blank" rel="noreferrer">All tools →</a>
+            <a class="btn ghost" href="https://admin.intelli-verse-x.ai/admin/portal/chat" target="_blank" rel="noreferrer">Copilot chat →</a>
+          </p>
+        </section>
+
+        <div class="note">
+          <b>Product map:</b>
+          <b>Admin Dashboard</b> = website only.
+          <b>IX Agency</b> = admin/operator desktop app (this is what you install).
+          <b>QuizVerse</b> = learner/player desktop (separate install).
+        </div>
+
+        <footer>
+          Admin desktop = IX Agency ·
+          Web =
+          <a href="https://admin.intelli-verse-x.ai" target="_blank" rel="noreferrer">admin.intelli-verse-x.ai</a>
+          · share
+          <a href="https://intelliverse-x-desktop.s3.amazonaws.com/index.html">this S3 page</a>
+        </footer>
+      </main>
     </div>
 
     <script>
       const tabs = Array.from(document.querySelectorAll('[role="tab"]'));
+
+      function hashForTab(tabId) {
+        if (tabId === "tab-quizverse") return "#quizverse";
+        if (tabId === "tab-admin") return "#admin";
+        return "#ix-agency";
+      }
 
       function activateTab(tab, { focus = false, updateHash = true } = {}) {
         for (const item of tabs) {
@@ -517,7 +671,7 @@
         }
         if (focus) tab.focus();
         if (updateHash) {
-          history.replaceState(null, "", tab.id === "tab-quizverse" ? "#quizverse" : "#ivx-admin");
+          history.replaceState(null, "", hashForTab(tab.id));
         }
       }
 
@@ -536,8 +690,11 @@
         });
       }
 
-      if (location.hash.toLowerCase() === "#quizverse") {
+      const hash = location.hash.toLowerCase();
+      if (hash === "#quizverse") {
         activateTab(document.getElementById("tab-quizverse"), { updateHash: false });
+      } else if (hash === "#admin" || hash === "#admin-dashboard") {
+        activateTab(document.getElementById("tab-admin"), { updateHash: false });
       }
 
       // The artifacts + electron-updater channel manifests live under ix-agency/
@@ -697,11 +854,30 @@
           btn.setAttribute("download", "");
           btn.textContent = "Download " + ver;
           btn.style.visibility = "visible";
+          // Mirror onto Admin tab — IX Agency IS the admin desktop app
+          const adminBtn = document.getElementById("admin-desktop-btn");
+          const adminVer = document.getElementById("admin-ix-ver");
+          const adminDesc = document.getElementById("admin-desktop-desc");
+          if (adminBtn) {
+            adminBtn.href = FEED + pick.url;
+            adminBtn.setAttribute("download", "");
+            adminBtn.textContent = "Download IX Agency " + ver;
+          }
+          if (adminVer) adminVer.textContent = "IX Agency v" + ver;
+          if (adminDesc) {
+            adminDesc.textContent =
+              meta.title + " · " + humanSize(pick.size) + " · same sign-in as admin.intelli-verse-x.ai";
+          }
         } else {
           document.getElementById("primary-title").textContent = "Choose your platform";
           document.getElementById("primary-desc").textContent = "Pick the right download for your OS below.";
         }
       }
+
+      document.getElementById("admin-goto-ix")?.addEventListener("click", (e) => {
+        e.preventDefault();
+        activateTab(document.getElementById("tab-ix"), { focus: true });
+      });
 
       async function loadQuizverse() {
         const feed = "quizverse/";
