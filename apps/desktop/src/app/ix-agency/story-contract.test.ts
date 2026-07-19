@@ -67,7 +67,7 @@ describe('IVX Agency ecosystem story', () => {
   it('states the qualified six-stage connected journey', () => {
     for (const source of [indexText, downloadText]) {
       expect(source).toContain(
-        'approved content → Quest quest → participant movement → Kiosk kiosk → product handoff → consent-scoped Memory'
+        'approved content → Quest campaign → participant movement → Kiosk completion → product handoff → consent-scoped Memory'
       )
       expect(source).toContain('operator approval')
     }
