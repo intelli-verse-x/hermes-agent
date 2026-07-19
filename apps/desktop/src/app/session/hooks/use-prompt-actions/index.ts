@@ -25,6 +25,7 @@ import { $busy, $connection, $messages, setAwaitingResponse, setBusy, setMessage
 import { clearSessionSubagents } from '@/store/subagents'
 import { clearSessionTodos } from '@/store/todos'
 
+import { assertVoiceSubmissionAllowed } from '../../../chat/voice-submission-policy'
 import type {
   ClientSessionState,
   FileAttachResponse,
@@ -462,6 +463,10 @@ export function usePromptActions({
     async (rawText: string, options?: SubmitTextOptions) => {
       const visibleText = rawText.trim()
       const attachments = options?.attachments ?? $composerAttachments.get()
+
+      if (options?.inputModality === 'voice') {
+        assertVoiceSubmissionAllowed(visibleText)
+      }
 
       if (!attachments.length && SLASH_COMMAND_RE.test(visibleText)) {
         triggerHaptic('selection')

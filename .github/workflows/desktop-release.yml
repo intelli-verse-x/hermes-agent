@@ -61,6 +61,8 @@ jobs:
         with:
           node-version: 22
 
+      - uses: astral-sh/setup-uv@v6
+
       - name: Linux packaging deps (rpm for the rpm target)
         if: matrix.platform == 'ubuntu-22.04'
         run: sudo apt-get update && sudo apt-get install -y rpm
@@ -82,6 +84,17 @@ jobs:
         run: |
           npx tsc -p . --noEmit
           npx tsx --test electron/ix-updater.test.ts electron/ix-status.test.ts electron/qv-deeptutor.test.ts
+          npm run test:local-ai
+          npm run test:governed-voice
+          npx vitest run --environment jsdom src/components/local-ai-setup-overlay.test.tsx src/components/assistant-ui/tool/approval.test.tsx src/store/prompts.test.ts src/store/local-ai.test.ts
+
+      - name: Test governed local routing and computer use
+        run: >-
+          uv run --with pytest pytest -q
+          tests/test_adaptive_local_client.py
+          tests/tools/test_voice_privacy.py
+          tests/tools/test_computer_use.py::TestGovernedApproval
+          tests/tui_gateway/test_voice_attestation.py
 
       - name: Build renderer + electron bundles
         working-directory: apps/desktop
@@ -91,7 +104,7 @@ jobs:
         working-directory: apps/desktop
         run: node scripts/check-brand-separation.mjs
 
-      - name: Package + publish to S3 feed
+      - name: Package locally for verification
         working-directory: apps/desktop
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
@@ -107,6 +120,39 @@ jobs:
           CSC_IDENTITY_AUTO_DISCOVERY: ${{ secrets.CSC_LINK != '' }}
         # Unset EMPTY signing vars: electron-builder treats an empty CSC_LINK
         # as a certificate *path* and dies with "<cwd> not a file".
+        run: |
+          for v in CSC_LINK CSC_KEY_PASSWORD APPLE_ID APPLE_APP_SPECIFIC_PASSWORD APPLE_TEAM_ID; do
+            if [ -z "${!v:-}" ]; then unset "$v"; fi
+          done
+          npm run builder -- --publish never
+
+      - name: Verify unpacked app payload resources (not installer container)
+        working-directory: apps/desktop
+        env:
+          HERMES_DESKTOP_SKIP_BUILD: "1"
+        run: node scripts/test-desktop.mjs all
+
+      - name: Inspect and smoke platform release artifacts
+        working-directory: apps/desktop
+        run: npm run verify:platform-artifacts
+
+      - name: Validate packaged macOS restart rehydration
+        if: matrix.platform == 'macos-latest'
+        working-directory: apps/desktop
+        run: npx tsx --test --test-name-pattern "packaged restart rehydrates" electron/local-ai/attempt-loop.test.ts
+
+      - name: Publish verified package to S3 feed
+        working-directory: apps/desktop
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: us-east-1
+          CSC_LINK: ${{ secrets.CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          CSC_IDENTITY_AUTO_DISCOVERY: ${{ secrets.CSC_LINK != '' }}
         run: |
           for v in CSC_LINK CSC_KEY_PASSWORD APPLE_ID APPLE_APP_SPECIFIC_PASSWORD APPLE_TEAM_ID; do
             if [ -z "${!v:-}" ]; then unset "$v"; fi

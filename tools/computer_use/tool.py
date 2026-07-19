@@ -39,6 +39,8 @@ For captures / actions with `capture_after=True`:
 from __future__ import annotations
 
 import base64
+import copy
+import hashlib
 import json
 import logging
 import os
@@ -46,6 +48,7 @@ import re
 import struct
 import sys
 import threading
+import uuid
 from typing import Any, Dict, List, Optional, Tuple
 
 from tools.computer_use.backend import (
@@ -241,6 +244,9 @@ def handle_computer_use(args: Dict[str, Any], **kwargs) -> Any:
     Returns either a JSON string (text-only) or a dict marked `_multimodal`
     (image + summary) which run_agent.py wraps into the tool message.
     """
+    # Freeze the invocation before approval. The exact deep-copied arguments
+    # shown to the user are the arguments dispatched after approval.
+    args = copy.deepcopy(args)
     action = (args.get("action") or "").strip().lower()
     if not action:
         return json.dumps({"error": "missing `action`"})
@@ -290,30 +296,78 @@ def handle_computer_use(args: Dict[str, Any], **kwargs) -> Any:
 
 def _request_approval(action: str, args: Dict[str, Any]) -> Optional[str]:
     """Return None if approved, or a JSON error string if denied."""
-    global _session_auto_approve, _always_allow
-    if _session_auto_approve:
-        return None
-    if action in _always_allow:
-        return None
     cb = _approval_callback
-    if cb is None:
-        # No CLI approval wired — default allow. Gateway approval is handled
-        # one layer out via the normal tool-approval infra.
-        return None
     summary = _summarize_action(action, args)
-    try:
-        verdict = cb(action, args, summary)
-    except Exception as e:
-        logger.warning("approval callback failed: %s", e)
-        verdict = "deny"
-    if verdict == "approve_once":
+
+    # A directly-wired CLI callback is a trusted keyboard/UI channel. Session
+    # and permanent answers deliberately authorize only this frozen invocation:
+    # every later mutation must surface a fresh structured approval.
+    if cb is not None:
+        try:
+            verdict = cb(action, copy.deepcopy(args), summary)
+        except Exception as e:
+            logger.warning("approval callback failed: %s", e)
+            verdict = "deny"
+        if verdict in {"approve_once", "approve_session", "always_approve"}:
+            return None
+        return json.dumps({"error": "denied by user", "action": action})
+
+    # Gateway/desktop uses the canonical approval broker. A unique key prevents
+    # session/permanent decisions (including a prior spoken "yes" in chat) from
+    # authorizing a later action. The broker blocks until the visual/keyboard
+    # decision resolves and executes these same in-memory arguments afterward.
+    from tools.approval import is_approval_bypass_active, request_tool_approval
+
+    if is_approval_bypass_active():
+        return json.dumps({
+            "error": "computer_use mutation requires explicit approval",
+            "action": action,
+            "hint": "YOLO/automatic approval does not apply to computer-use mutations.",
+        })
+
+    from gateway.session_context import get_session_env
+
+    session_id = (
+        get_session_env("HERMES_UI_SESSION_ID", "")
+        or get_session_env("HERMES_SESSION_ID", "")
+        or get_session_env("HERMES_SESSION_KEY", "")
+        or "local-cli"
+    )
+    action_id = uuid.uuid4().hex
+    redacted_args = _redact_approval_args(args)
+    canonical_args = json.dumps(redacted_args, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+    args_digest = hashlib.sha256(canonical_args.encode("utf-8")).hexdigest()
+    structured_args = json.dumps(redacted_args, ensure_ascii=False, sort_keys=True, indent=2)
+
+    result = request_tool_approval(
+        "computer_use",
+        (
+            f"Computer-use mutation\n"
+            f"Action ID: {action_id}\n"
+            f"Conversation: {session_id}\n"
+            f"Tool: computer_use\n"
+            f"Arguments digest: {args_digest}\n"
+            f"Arguments (redacted):\n{structured_args}"
+        ),
+        rule_key=f"computer_use:{session_id}:{action_id}:{args_digest}",
+    )
+    if result.get("approved") is True:
         return None
-    if verdict == "approve_session" or verdict == "always_approve":
-        _always_allow.add(action)
-        if verdict == "always_approve":
-            _session_auto_approve = True
-        return None
-    return json.dumps({"error": "denied by user", "action": action})
+    return json.dumps({
+        "error": result.get("message") or "computer_use mutation was not approved",
+        "action": action,
+        "approval_required": True,
+    })
+
+
+def _redact_approval_args(value: Any, key: str = "") -> Any:
+    if re.search(r"(password|passcode|secret|token|api[_-]?key|credential|authorization|cookie)", key, re.I):
+        return "[REDACTED]"
+    if isinstance(value, dict):
+        return {str(k): _redact_approval_args(v, str(k)) for k, v in sorted(value.items())}
+    if isinstance(value, (list, tuple)):
+        return [_redact_approval_args(item) for item in value]
+    return value
 
 
 def _summarize_action(action: str, args: Dict[str, Any]) -> str:

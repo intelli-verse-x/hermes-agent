@@ -157,3 +157,60 @@ describe('PendingToolApproval', () => {
     })
   })
 })
+
+describe('adaptive cloud approval', () => {
+  it('renders bounded handoff disclosure and submits frozen identifiers', async () => {
+    const request = mockGateway()
+    $activeSessionId.set('sess-1')
+    setApprovalRequest({
+      allowPermanent: false,
+      command: 'Cloud escalation · provider/model',
+      description: 'local validation failed',
+      sessionId: 'sess-1',
+      approvalKind: 'adaptive-cloud',
+      requestId: 'request-1',
+      actionId: 'action-1',
+      frozenDigest: 'digest-1',
+      provider: 'provider/model',
+      reason: 'local-validation-failed',
+      disclosure: 'Only bounded recent context is sent.',
+      handoffMetadata: { messageCount: 3, estimatedTokens: 420, toolResultCount: 1 }
+    })
+    render(<PendingApprovalFallback />)
+
+    expect(screen.getByText(/Provider: provider\/model/)).toBeTruthy()
+    expect(screen.getByText(/approximately 420 tokens/)).toBeTruthy()
+    expect(screen.queryByRole('button', { name: /More approval options/ })).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: /Run/ }))
+    await waitFor(() => {
+      expect(request).toHaveBeenCalledWith('approval.respond', {
+        choice: 'once',
+        request_id: 'request-1',
+        action_id: 'action-1',
+        frozen_digest: 'digest-1',
+        session_id: 'sess-1'
+      })
+    })
+  })
+
+  it('keeps a stale adaptive approval visible when the backend rejects its binding', async () => {
+    const request = vi.fn().mockResolvedValue({ resolved: 0 })
+    $gateway.set({ request } as unknown as HermesGateway)
+    $activeSessionId.set('sess-1')
+    setApprovalRequest({
+      allowPermanent: false,
+      command: 'Cloud escalation',
+      description: 'fallback',
+      sessionId: 'sess-1',
+      approvalKind: 'adaptive-cloud',
+      requestId: 'stale-request',
+      actionId: 'stale-action',
+      frozenDigest: 'stale-digest'
+    })
+    render(<PendingApprovalFallback />)
+
+    fireEvent.click(screen.getByRole('button', { name: /Run/ }))
+    await waitFor(() => expect(request).toHaveBeenCalledOnce())
+    expect($approvalRequest.get()?.requestId).toBe('stale-request')
+  })
+})

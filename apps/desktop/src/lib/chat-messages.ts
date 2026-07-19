@@ -66,6 +66,12 @@ export type GatewayEventPayload = {
   description?: string
   // False when a tirith content-security warning forbids a permanent allow.
   allow_permanent?: boolean
+  action_id?: string
+  approval_kind?: string
+  disclosure?: string
+  frozen_digest?: string
+  handoff_metadata?: Record<string, unknown>
+  reason?: string
   // secret.request (skill credential capture)
   env_var?: string
   prompt?: string

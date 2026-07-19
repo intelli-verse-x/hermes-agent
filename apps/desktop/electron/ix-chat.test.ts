@@ -101,9 +101,9 @@ test('gate: nonces are single-use and unknown nonces are rejected', () => {
   // double-confirm is rejected
   assert.equal(gate.confirm(nonce), false)
 
-  assert.deepEqual(gate.redeem('stripe_create_refund'), { amount: 5 })
+  assert.deepEqual(gate.redeem('stripe_create_refund', { amount: 5 }), { amount: 5 })
   // single-use: a second redeem finds nothing
-  assert.equal(gate.redeem('stripe_create_refund'), null)
+  assert.equal(gate.redeem('stripe_create_refund', { amount: 5 }), null)
 })
 
 test('gate: deny drops the pending write', () => {
@@ -112,7 +112,7 @@ test('gate: deny drops the pending write', () => {
 
   assert.equal(gate.deny(nonce), true)
   assert.equal(gate.confirm(nonce), false)
-  assert.equal(gate.redeem('nakama_delete_user'), null)
+  assert.equal(gate.redeem('nakama_delete_user', { id: 'u1' }), null)
 })
 
 test('gate: approvals expire', () => {
@@ -123,7 +123,7 @@ test('gate: approvals expire', () => {
 
   assert.equal(gate.confirm(nonce), true)
   clock += 11 * 60_000 // past the 10-minute TTL
-  assert.equal(gate.redeem('nakama_delete_user'), null)
+  assert.equal(gate.redeem('nakama_delete_user', { id: 'u1' }), null)
 })
 
 test('gate: redeem is scoped to the requested tool', () => {
@@ -132,8 +132,24 @@ test('gate: redeem is scoped to the requested tool', () => {
 
   gate.confirm(nonce)
   // approving a refund must not authorize a different write
-  assert.equal(gate.redeem('nakama_delete_user'), null)
-  assert.deepEqual(gate.redeem('stripe_create_refund'), { amount: 5 })
+  assert.equal(gate.redeem('nakama_delete_user', { id: 'u1' }), null)
+  assert.deepEqual(gate.redeem('stripe_create_refund', { amount: 5 }), { amount: 5 })
+})
+
+test('gate: approval is bound to conversation and canonical arguments', () => {
+  const gate = createWriteGate()
+  const nonce = gate.request('computer_use', { action: 'click', coordinate: [10, 20] }, 'conversation-a')
+
+  assert.equal(gate.confirm(nonce, 'conversation-b'), false)
+  assert.equal(gate.confirm(nonce, 'conversation-a'), true)
+  assert.equal(
+    gate.redeem('computer_use', { action: 'click', coordinate: [99, 99] }, 'conversation-a'),
+    null
+  )
+  assert.equal(
+    gate.redeem('computer_use', { coordinate: [10, 20], action: 'click' }, 'conversation-a')?.action,
+    'click'
+  )
 })
 
 /* ── executor flow ───────────────────────────────────────────────────────── */
@@ -196,7 +212,7 @@ test('executor: unapproved writes are refused with a confirmation card', async (
   assert.equal(events[0].nonce, result.nonce)
 })
 
-test('executor: confirmed writes execute with the FROZEN args', async () => {
+test('executor: confirmed writes require the exact frozen arguments', async () => {
   const gate = createWriteGate()
   const { emit } = collectEvents()
   const executedArgs: Record<string, unknown>[] = []
@@ -219,8 +235,8 @@ test('executor: confirmed writes execute with the FROZEN args', async () => {
   // 2. user clicks Confirm in the UI
   assert.equal(gate.confirm(first.nonce as string), true)
 
-  // 3. model re-issues the call — but with TAMPERED args
-  const second = await executeGatedToolCall({
+  // 3. A tampered re-issue cannot redeem the approval.
+  const tampered = await executeGatedToolCall({
     name: 'stripe_create_refund',
     args: { charge: 'ch_1', amount: 500_000 },
     gate,
@@ -228,9 +244,20 @@ test('executor: confirmed writes execute with the FROZEN args', async () => {
     emit
   })
 
-  assert.equal(second.status, 'approved')
+  assert.equal(tampered.status, 'gated')
+  assert.equal(executedArgs.length, 0)
+
+  // 4. The exact canonical arguments redeem and execute once.
+  const approved = await executeGatedToolCall({
+    name: 'stripe_create_refund',
+    args: { amount: 500, charge: 'ch_1' },
+    gate,
+    callGatewayTool,
+    emit
+  })
+
+  assert.equal(approved.status, 'approved')
   assert.equal(executedArgs.length, 1)
-  // execution used the args the USER approved, not the re-issued ones
   assert.deepEqual(executedArgs[0], { charge: 'ch_1', amount: 500 })
 })
 
@@ -287,9 +314,10 @@ test('executor: gateway errors are reported, not thrown', async () => {
 
 /* ── helpers ─────────────────────────────────────────────────────────────── */
 
-test('summarizeArgs truncates and survives unserializable args', () => {
-  assert.equal(summarizeArgs({ a: 1 }), '{"a":1}')
-  assert.ok(summarizeArgs({ blob: 'x'.repeat(1000) }).length <= 301)
+test('summarizeArgs is complete, canonical, redacted, and survives unserializable args', () => {
+  assert.equal(summarizeArgs({ a: 1 }), '{\n  "a": 1\n}')
+  assert.match(summarizeArgs({ blob: 'x'.repeat(1000) }), /x{1000}/)
+  assert.doesNotMatch(summarizeArgs({ apiKey: 'secret-value' }), /secret-value/)
 
   const circular: Record<string, unknown> = {}
 

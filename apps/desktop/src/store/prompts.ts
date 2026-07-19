@@ -65,6 +65,44 @@ function keyedPromptStore<T extends KeyedPrompt>(): PromptStore<T> {
   }
 }
 
+function queuedPromptStore<T extends KeyedPrompt>(): PromptStore<T> {
+  const $all = atom<Record<string, T[]>>({})
+
+  return {
+    $active: computed([$all, $activeSessionId], (all, activeId) => all[keyFor(activeId)]?.[0] ?? null),
+    reset: () => $all.set({}),
+    set: request => {
+      const key = keyFor(request.sessionId)
+      const current = $all.get()
+      $all.set({ ...current, [key]: [...(current[key] ?? []), request] })
+    },
+    clear(sessionId, requestId) {
+      const all = $all.get()
+      const keys = sessionId !== undefined ? [keyFor(sessionId)] : Object.keys(all)
+      const next = { ...all }
+
+      for (const key of keys) {
+        const queue = next[key] ?? []
+
+        const index = requestId
+          ? queue.findIndex(value => (value as { requestId?: string }).requestId === requestId)
+          : 0
+
+        if (index < 0) {continue}
+        const remaining = queue.filter((_, candidate) => candidate !== index)
+
+        if (remaining.length) {
+          next[key] = remaining
+        } else {
+          delete next[key]
+        }
+      }
+
+      $all.set(next)
+    }
+  }
+}
+
 // Approval is session-keyed on the backend (one in-flight approval per session,
 // resolved via approval.respond {choice, session_id}). It carries no request_id,
 // unlike sudo/secret which are _block()-style request/response.
@@ -73,6 +111,19 @@ export interface ApprovalRequest extends KeyedPrompt {
   allowPermanent?: boolean
   command: string
   description: string
+  requestId?: string
+  actionId?: string
+  frozenDigest?: string
+  approvalKind?: 'adaptive-cloud'
+  provider?: string
+  reason?: string
+  disclosure?: string
+  handoffMetadata?: {
+    messageCount?: number
+    characterCount?: number
+    estimatedTokens?: number
+    toolResultCount?: number
+  }
 }
 
 export interface SudoRequest extends KeyedPrompt {
@@ -85,7 +136,7 @@ export interface SecretRequest extends KeyedPrompt {
   requestId: string
 }
 
-const approval = keyedPromptStore<ApprovalRequest>()
+const approval = queuedPromptStore<ApprovalRequest>()
 const sudo = keyedPromptStore<SudoRequest>()
 const secret = keyedPromptStore<SecretRequest>()
 const $approvalInlineAnchorCount = atom(0)

@@ -28,6 +28,8 @@ import crypto from 'node:crypto'
 import fs from 'node:fs'
 import path from 'node:path'
 
+import { compactCloudHandoff, decideInitialRoute, evaluateLocalOutcome } from './adaptive-routing'
+
 /* ── Models (must stay within the LiteLLM key's allowlist — same list the
       portals expose via admin-chat-models.ts / copilot-skills.mjs) ─────────── */
 
@@ -150,22 +152,89 @@ export function classifyToolAccess(toolName, args?: Record<string, unknown>): 'r
 const CONFIRM_TTL_MS = 10 * 60_000
 
 interface PendingWrite {
+  actionId: string
+  argsDigest: string
   tool: string
   /** Args FROZEN at request time — execution uses these, never re-issued args. */
   args: Record<string, unknown>
+  sessionId: string
   exp: number
   approved: boolean
 }
 
 export interface IxWriteGate {
   /** Register an unapproved write; returns the nonce for the renderer card. */
-  request: (tool: string, args: Record<string, unknown>) => string
+  request: (tool: string, args: Record<string, unknown>, sessionId?: string) => string
   /** UI Confirm button (via IPC). False for unknown/expired/used nonces. */
-  confirm: (nonce: string) => boolean
+  confirm: (nonce: string, sessionId?: string) => boolean
   /** UI Cancel button — drops the pending write. */
-  deny: (nonce: string) => boolean
+  deny: (nonce: string, sessionId?: string) => boolean
   /** Consume an approval for `tool`; returns the frozen args or null. */
-  redeem: (tool: string) => Record<string, unknown> | null
+  redeem: (tool: string, args?: Record<string, unknown>, sessionId?: string) => Record<string, unknown> | null
+}
+
+export interface IxEscalationGate {
+  request: (sessionId: string, reason: string) => { nonce: string; approval: Promise<boolean> }
+  resolve: (sessionId: string, nonce: string, approved: boolean) => boolean
+}
+
+export function createEscalationGate(
+  now: () => number = Date.now,
+  ttlMs = CONFIRM_TTL_MS
+): IxEscalationGate {
+  const pending = new Map<
+    string,
+    {
+      sessionId: string
+      exp: number
+      settled: boolean
+      resolve: (approved: boolean) => void
+    }
+  >()
+
+  return {
+    request(sessionId, _reason) {
+      const nonce = crypto.randomBytes(16).toString('hex')
+      let settle!: (approved: boolean) => void
+
+      const approval = new Promise<boolean>(resolve => {
+        settle = resolve
+      })
+
+      const entry = {
+        sessionId,
+        exp: now() + ttlMs,
+        settled: false,
+        resolve: settle
+      }
+
+      pending.set(nonce, entry)
+      setTimeout(() => {
+        const current = pending.get(nonce)
+
+        if (current === entry && !current.settled) {
+          current.settled = true
+          pending.delete(nonce)
+          current.resolve(false)
+        }
+      }, ttlMs).unref?.()
+
+      return { nonce, approval }
+    },
+    resolve(sessionId, nonce, approved) {
+      const entry = pending.get(nonce)
+
+      if (!entry || entry.settled || entry.sessionId !== sessionId || entry.exp <= now()) {
+        return false
+      }
+
+      entry.settled = true
+      pending.delete(nonce)
+      entry.resolve(approved)
+
+      return true
+    }
+  }
 }
 
 export function createWriteGate(now: () => number = Date.now): IxWriteGate {
@@ -180,20 +249,29 @@ export function createWriteGate(now: () => number = Date.now): IxWriteGate {
   }
 
   return {
-    request(tool, args) {
+    request(tool, args, sessionId = '') {
       prune()
 
       const nonce = crypto.randomBytes(16).toString('hex')
-      pending.set(nonce, { tool, args: args ?? {}, exp: now() + CONFIRM_TTL_MS, approved: false })
+      const frozenArgs = cloneApprovalArgs(args ?? {})
+      pending.set(nonce, {
+        actionId: nonce,
+        args: frozenArgs,
+        argsDigest: approvalArgsDigest(frozenArgs),
+        approved: false,
+        exp: now() + CONFIRM_TTL_MS,
+        sessionId,
+        tool
+      })
 
       return nonce
     },
-    confirm(nonce) {
+    confirm(nonce, sessionId = '') {
       prune()
 
       const entry = pending.get(nonce)
 
-      if (!entry || entry.approved) {
+      if (!entry || entry.approved || entry.sessionId !== sessionId) {
         return false
       }
 
@@ -201,17 +279,25 @@ export function createWriteGate(now: () => number = Date.now): IxWriteGate {
 
       return true
     },
-    deny(nonce) {
-      return pending.delete(nonce)
+    deny(nonce, sessionId = '') {
+      const entry = pending.get(nonce)
+
+      return Boolean(entry && entry.sessionId === sessionId && pending.delete(nonce))
     },
-    redeem(tool) {
+    redeem(tool, args = {}, sessionId = '') {
       prune()
+      const digest = approvalArgsDigest(args)
 
       for (const [nonce, entry] of pending) {
-        if (entry.approved && entry.tool === tool) {
+        if (
+          entry.approved &&
+          entry.tool === tool &&
+          entry.sessionId === sessionId &&
+          entry.argsDigest === digest
+        ) {
           pending.delete(nonce) // single-use
 
-          return entry.args
+          return cloneApprovalArgs(entry.args)
         }
       }
 
@@ -220,17 +306,41 @@ export function createWriteGate(now: () => number = Date.now): IxWriteGate {
   }
 }
 
-/** Compact one-line arg summary for the confirm card, ~300 chars max. */
-export function summarizeArgs(args: Record<string, unknown>): string {
-  let s: string
+function cloneApprovalArgs(args: Record<string, unknown>): Record<string, unknown> {
+  return JSON.parse(JSON.stringify(args ?? {})) as Record<string, unknown>
+}
 
-  try {
-    s = JSON.stringify(args) ?? '{}'
-  } catch {
-    s = '(unserializable arguments)'
+function canonicalizeApprovalValue(value: unknown, key = ''): unknown {
+  if (/(?:password|passcode|secret|token|api[_-]?key|credential|authorization|cookie)/i.test(key)) {
+    return '[REDACTED]'
   }
 
-  return s.length > 300 ? `${s.slice(0, 300)}…` : s
+  if (Array.isArray(value)) {
+    return value.map(item => canonicalizeApprovalValue(item))
+  }
+
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>)
+        .sort(([left], [right]) => left.localeCompare(right))
+        .map(([childKey, child]) => [childKey, canonicalizeApprovalValue(child, childKey)])
+    )
+  }
+
+  return value
+}
+
+export function approvalArgsDigest(args: Record<string, unknown>): string {
+  return crypto.createHash('sha256').update(JSON.stringify(canonicalizeApprovalValue(args))).digest('hex')
+}
+
+/** Complete redacted structured arguments for the confirm card. */
+export function summarizeArgs(args: Record<string, unknown>): string {
+  try {
+    return JSON.stringify(canonicalizeApprovalValue(args), null, 2) ?? '{}'
+  } catch {
+    return '(unserializable arguments)'
+  }
 }
 
 /** The tool result the MODEL sees instead of an executed write (no nonce). */
@@ -269,6 +379,7 @@ export interface ExecuteToolCallOptions {
   gate: IxWriteGate
   callGatewayTool: (name: string, args: Record<string, unknown>) => Promise<string>
   emit: (event: IxChatEvent) => void
+  sessionId?: string
 }
 
 /**
@@ -289,21 +400,23 @@ export async function executeGatedToolCall({
   args,
   gate,
   callGatewayTool,
-  emit
+  emit,
+  sessionId = ''
 }: ExecuteToolCallOptions): Promise<GatedToolCallResult> {
   let effectiveArgs = args ?? {}
   let approvedWrite = false
 
   if (classifyToolAccess(name, effectiveArgs) === 'write') {
-    const approved = gate.redeem(name)
+    const approved = gate.redeem(name, effectiveArgs, sessionId)
 
     if (!approved) {
-      const nonce = gate.request(name, effectiveArgs)
+      const nonce = gate.request(name, effectiveArgs, sessionId)
 
       emit({
         type: 'confirmation-required',
         nonce,
         tool: name,
+        argsDigest: approvalArgsDigest(effectiveArgs),
         argsSummary: summarizeArgs(effectiveArgs)
       })
 
@@ -435,6 +548,7 @@ export async function streamChatCompletion({
       model,
       messages,
       stream: true,
+      stream_options: { include_usage: true },
       ...(tools.length ? { tools, tool_choice: 'auto' } : {})
     }),
     signal: AbortSignal.timeout(180_000)
@@ -452,6 +566,8 @@ export async function streamChatCompletion({
 
   let text = ''
   let finishReason = ''
+  let inputTokens = 0
+  let outputTokens = 0
   const toolCalls: Array<{ id: string; name: string; arguments: string }> = []
 
   const decoder = new TextDecoder()
@@ -495,6 +611,11 @@ export async function streamChatCompletion({
 
       const choice = chunk?.choices?.[0]
 
+      if (chunk?.usage) {
+        inputTokens = Number(chunk.usage.prompt_tokens) || inputTokens
+        outputTokens = Number(chunk.usage.completion_tokens) || outputTokens
+      }
+
       if (!choice) {
         continue
       }
@@ -534,7 +655,7 @@ export async function streamChatCompletion({
     }
   }
 
-  return { text, finishReason, toolCalls: toolCalls.filter(tc => tc.name) }
+  return { text, finishReason, inputTokens, outputTokens, toolCalls: toolCalls.filter(tc => tc.name) }
 }
 
 /* ── System prompt ──────────────────────────────────────────────────────────
@@ -591,6 +712,7 @@ STYLE: Be concise. Prefer bullet lists. Render launch URLs as markdown links.`
 
 export interface IxChatDisplayItem {
   kind: 'assistant' | 'confirm' | 'tool' | 'user'
+  inputModality?: 'text' | 'voice'
   text?: string
   // tool items
   name?: string
@@ -663,18 +785,93 @@ export function newIxChatConversation(model: string, skills: Array<{ name: strin
   } as IxChatConversation
 }
 
+export function compactIxCloudHandoff(messages: any[], maxCharacters = 12_000): any[] {
+  const recent = messages.slice(-12)
+
+  const relevantToolCallIds = recent
+    .filter(message => message?.role === 'tool' && typeof message.tool_call_id === 'string')
+    .map(message => message.tool_call_id)
+
+  const relevant = new Set(relevantToolCallIds)
+
+  const transcript = messages.map(message => ({
+    role: message.role,
+    content: typeof message.content === 'string' ? message.content : '',
+    toolCallId:
+      message.role === 'tool'
+        ? message.tool_call_id
+        : message.role === 'assistant'
+          ? message.tool_calls?.find((call: any) => relevant.has(call.id))?.id
+          : undefined
+  }))
+
+  const compacted = compactCloudHandoff(transcript, relevantToolCallIds, {
+    maxCharacters: Math.floor(maxCharacters / 2),
+    maxTokens: Math.floor(maxCharacters / 8)
+  })
+
+  let metadataBudget =
+    maxCharacters - compacted.messages.reduce((total, message) => total + message.content.length, 0)
+
+  return compacted.messages.map(compact => {
+    const source =
+      compact.role === 'tool'
+        ? messages.find(message => message.role === 'tool' && message.tool_call_id === compact.toolCallId)
+        : compact.role === 'assistant' && compact.toolCallId
+          ? messages.find(message => message.role === 'assistant' && message.tool_calls?.some((call: any) => call.id === compact.toolCallId))
+          : messages.findLast(message => message.role === compact.role)
+
+    const retainedCalls = Array.isArray(source?.tool_calls)
+      ? source.tool_calls.filter((call: any) => relevant.has(call.id))
+      : []
+
+    const toolCalls = retainedCalls.map((call: any) => {
+      const args = typeof call.function?.arguments === 'string' ? call.function.arguments : '{}'
+      const boundedArgs = args.length <= metadataBudget ? args : '{"truncated":true}'
+      metadataBudget = Math.max(0, metadataBudget - boundedArgs.length)
+
+      return {
+        ...call,
+        function: { ...call.function, arguments: boundedArgs }
+      }
+    })
+
+    return {
+      ...source,
+      content: compact.content,
+      ...(Array.isArray(source?.tool_calls) ? { tool_calls: toolCalls.length ? toolCalls : undefined } : {})
+    }
+  })
+}
+
 /* ── The turn loop ──────────────────────────────────────────────────────────
  * One user message → up to IX_CHAT_MAX_STEPS completion+tools rounds. All
  * I/O is injected so tests can drive the loop with fakes. */
 
 export interface RunChatTurnOptions {
   conversation: IxChatConversation
+  inputModality?: 'text' | 'voice'
+  sensitivity?: 'confidential' | 'internal' | 'public'
   userText: string
   litellm: { baseUrl: string; apiKey: string }
+  localAi?: {
+    mode: 'local-first' | 'local-only' | 'cloud-only'
+    available: boolean
+    endpoint?: string
+    apiKey?: string
+    modelId?: string
+    maxContextTokens: number
+    recordRoute?: (input: {
+      cloudEscalation?: boolean
+      tokensAvoided?: number
+      measurement?: 'runtime-reported' | 'estimated'
+    }) => Promise<void>
+  }
   /** OpenAI function specs from the gateway's tools/list (may be empty). */
   toolSpecs: Array<{ name: string; description?: string; inputSchema?: Record<string, unknown> }>
   callGatewayTool: (name: string, args: Record<string, unknown>) => Promise<string>
   gate: IxWriteGate
+  escalationGate?: IxEscalationGate
   emit: (event: IxChatEvent) => void
   fetchImpl?: typeof fetch
   maxSteps?: number
@@ -682,18 +879,35 @@ export interface RunChatTurnOptions {
   extraSystemBlocks?: string[]
 }
 
+const RESTRICTED_VOICE_INPUTS = [
+  /^\s*\/yolo\b/i,
+  /\b(?:approve|allow)\s+(?:for\s+)?(?:this\s+)?session\b/i,
+  /\b(?:always|permanently)\s+(?:approve|allow)\b/i,
+  /\b(?:approve once|confirm action|structured approval|grant approval)\b/i,
+  /\b(?:my\s+)?(?:password|passcode|one[- ]time password|otp|verification code|api key|secret|credential)\s*(?:is|:)\s*\S+/i,
+  /\b(?:grant|revoke|change|modify|enable|disable)\s+(?:[a-z-]+\s+){0,3}(?:permission|permissions|access|role|roles)\b/i
+]
+
 export async function runIxChatTurn({
   conversation,
+  inputModality = 'text',
+  sensitivity: trustedSensitivity,
   userText,
   litellm,
+  localAi,
   toolSpecs,
   callGatewayTool,
   gate,
+  escalationGate,
   emit,
   fetchImpl = fetch,
   maxSteps = IX_CHAT_MAX_STEPS,
   extraSystemBlocks = []
 }: RunChatTurnOptions) {
+  if (inputModality === 'voice' && RESTRICTED_VOICE_INPUTS.some(pattern => pattern.test(userText))) {
+    throw new Error('Voice input cannot authorize approvals, credentials, or permission changes.')
+  }
+
   const skillBlocks = conversation.skills
     .filter(skill => skill.content)
     .map(
@@ -714,25 +928,182 @@ export async function runIxChatTurn({
     }
   }))
 
+  const turnDisplayStart = conversation.display.length
   conversation.modelMessages.push({ role: 'user', content: userText })
-  conversation.display.push({ kind: 'user', text: userText, at: Date.now() })
+  conversation.display.push({ kind: 'user', inputModality, text: userText, at: Date.now() })
 
   if (!conversation.title) {
     conversation.title = userText.slice(0, 60)
   }
 
+  const requireCloudApproval = async (reason: string): Promise<void> => {
+    if (localAi?.mode !== 'local-first') {
+      return
+    }
+
+    if (!escalationGate) {
+      throw new Error(`Cloud fallback requires explicit approval (${reason}).`)
+    }
+
+    const { nonce, approval } = escalationGate.request(conversation.id, reason)
+    emit({
+      type: 'confirmation-required',
+      nonce,
+      tool: 'Cloud fallback',
+      argsSummary:
+        `${reason}. The bounded recent conversation and required tool results will be sent to the configured cloud provider.`
+    })
+    const approved = await approval
+
+    if (!approved) {
+      throw new Error(`Cloud fallback was not approved (${reason}).`)
+    }
+  }
+
   for (let step = 0; step < maxSteps; step++) {
     emit({ type: 'step', step })
+    const messages = [{ role: 'system' as const, content: system }, ...conversation.modelMessages]
 
-    const { text, toolCalls } = await streamChatCompletion({
-      baseUrl: litellm.baseUrl,
-      apiKey: litellm.apiKey,
-      model: conversation.model,
-      messages: [{ role: 'system', content: system }, ...conversation.modelMessages],
-      tools,
-      onTextDelta: delta => emit({ type: 'text-delta', delta }),
-      fetchImpl
+    const sensitivity = trustedSensitivity === 'confidential' ||
+      /^\s*(?:\[sensitive\]|sensitive:|local-only:)/i.test(userText)
+      ? ('confidential' as const)
+      : ('internal' as const)
+
+    const request = {
+      modality: 'text' as const,
+      estimatedContextTokens: Math.ceil(JSON.stringify(messages).length / 4),
+      requiredTools: tools.map(tool => tool.function.name),
+      sensitivity,
+      explicitFrontier: /\b(?:frontier|highest[- ]quality|best available|use (?:the )?cloud)\b/i.test(userText)
+    }
+
+    const initialRoute = decideInitialRoute(localAi?.mode ?? 'cloud-only', request, {
+      available: Boolean(localAi?.available && localAi.endpoint && localAi.modelId),
+      modalities: ['text'],
+      maxContextTokens: localAi?.maxContextTokens ?? 0,
+      tools: tools.map(tool => tool.function.name)
     })
+
+    if (initialRoute.route === 'blocked') {
+      throw new Error(
+        initialRoute.reason === 'sensitive-cloud-blocked'
+          ? 'This request is marked sensitive and cannot be sent to cloud inference.'
+          : `Local-only mode cannot complete this request (${initialRoute.reason}).`
+      )
+    }
+
+    if (initialRoute.route === 'cloud') {
+      await requireCloudApproval(initialRoute.reason)
+    }
+
+    let usedLocal = initialRoute.route === 'local'
+    let bufferedLocalText = ''
+    let completion
+
+    try {
+      completion = await streamChatCompletion({
+        baseUrl: usedLocal ? localAi!.endpoint! : litellm.baseUrl,
+        apiKey: usedLocal ? localAi!.apiKey || 'no-key-required' : litellm.apiKey,
+        model: usedLocal ? localAi!.modelId! : conversation.model,
+        messages,
+        tools,
+        onTextDelta: delta => {
+          if (usedLocal) {bufferedLocalText += delta}
+          else {emit({ type: 'text-delta', delta })}
+        },
+        fetchImpl
+      })
+    } catch (error) {
+      if (!usedLocal) {throw error}
+
+      const fallback = evaluateLocalOutcome(localAi!.mode, {
+        transportOk: false,
+        malformedToolJson: false,
+        truncated: false,
+        repeatedToolFailures: 0,
+        validationPassed: true,
+        responseText: '',
+        refused: false,
+        explicitCloudRetry: false
+      })
+
+      if (fallback.route !== 'cloud') {throw error}
+
+      if (sensitivity === 'confidential') {
+        throw new Error(`Sensitive input cannot use cloud fallback (${fallback.reason}).`)
+      }
+
+      await requireCloudApproval(fallback.reason)
+      usedLocal = false
+      await localAi?.recordRoute?.({ cloudEscalation: true })
+      completion = await streamChatCompletion({
+        baseUrl: litellm.baseUrl,
+        apiKey: litellm.apiKey,
+        model: conversation.model,
+        messages: compactIxCloudHandoff(messages),
+        tools,
+        onTextDelta: delta => emit({ type: 'text-delta', delta }),
+        fetchImpl
+      })
+    }
+
+    if (usedLocal) {
+      const malformedToolJson = completion.toolCalls.some(call => {
+        try {
+          JSON.parse(call.arguments || '{}')
+
+          return false
+        } catch {
+          return true
+        }
+      })
+
+      const localOutcome = evaluateLocalOutcome(localAi!.mode, {
+        transportOk: true,
+        malformedToolJson,
+        truncated: completion.finishReason === 'length',
+        repeatedToolFailures: conversation.display
+          .slice(turnDisplayStart)
+          .filter(item => item.kind === 'tool' && item.status === 'error').length,
+        validationPassed: true,
+        responseText: completion.text || (completion.toolCalls.length ? '__tool_call__' : ''),
+        refused: /^\s*(?:i (?:cannot|can't|won't)|sorry,? i (?:cannot|can't))/i.test(completion.text),
+        explicitCloudRetry: false
+      })
+
+      if (localOutcome.route === 'cloud') {
+        if (sensitivity === 'confidential') {
+          throw new Error(`Sensitive input cannot use cloud fallback (${localOutcome.reason}).`)
+        }
+
+        await requireCloudApproval(localOutcome.reason)
+        usedLocal = false
+        bufferedLocalText = ''
+        await localAi?.recordRoute?.({ cloudEscalation: true })
+        completion = await streamChatCompletion({
+          baseUrl: litellm.baseUrl,
+          apiKey: litellm.apiKey,
+          model: conversation.model,
+          messages: compactIxCloudHandoff(messages),
+          tools,
+          onTextDelta: delta => emit({ type: 'text-delta', delta }),
+          fetchImpl
+        })
+      } else if (localOutcome.route === 'blocked') {
+        throw new Error(`Local output failed validation and cloud fallback is disabled (${localOutcome.reason}).`)
+      } else {
+        emit({ type: 'text-delta', delta: bufferedLocalText })
+        const runtimeReportedTokens = completion.inputTokens + completion.outputTokens
+        await localAi?.recordRoute?.({
+          tokensAvoided:
+            runtimeReportedTokens ||
+            request.estimatedContextTokens + Math.ceil(completion.text.length / 4),
+          measurement: runtimeReportedTokens ? 'runtime-reported' : 'estimated'
+        })
+      }
+    }
+
+    const { text, toolCalls } = completion
 
     conversation.modelMessages.push({
       role: 'assistant',
@@ -774,7 +1145,14 @@ export async function runIxChatTurn({
       emit({ type: 'tool-call', name: call.name, argsSummary: args ? summarizeArgs(args) : call.arguments })
 
       const result: GatedToolCallResult = args
-        ? await executeGatedToolCall({ name: call.name, args, gate, callGatewayTool, emit })
+        ? await executeGatedToolCall({
+            name: call.name,
+            args,
+            gate,
+            callGatewayTool,
+            emit,
+            sessionId: conversation.id
+          })
         : { text: 'Tool error: could not parse the tool call arguments as JSON', status: 'error' }
 
       conversation.modelMessages.push({ role: 'tool', content: result.text, tool_call_id: callId })

@@ -1,0 +1,99 @@
+name: desktop-adaptive-local-ai
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/desktop-adaptive-local-ai-ci.yml"
+      - ".github/workflows/desktop-release.yml"
+      - "agent/adaptive_local_client.py"
+      - "apps/desktop/**"
+      - "run_agent.py"
+      - "skills/desktop-voice-actions/**"
+      - "skills/local-first-inference/**"
+      - "tests/test_adaptive_local_client.py"
+      - "tests/tools/test_computer_use.py"
+      - "tests/tools/test_voice_privacy.py"
+      - "tests/tui_gateway/test_voice_attestation.py"
+      - "tools/approval.py"
+      - "tools/computer_use/**"
+      - "tools/transcription_tools.py"
+      - "tools/tts_tool.py"
+      - "tools/voice_privacy.py"
+      - "tui_gateway/server.py"
+  workflow_dispatch: {}
+
+concurrency:
+  group: desktop-adaptive-local-ai-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate-package:
+    name: ${{ matrix.brand }} / ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest, ubuntu-22.04]
+        brand: [ix-agency, quizverse]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    env:
+      DESKTOP_BRAND: ${{ matrix.brand }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - uses: astral-sh/setup-uv@v6
+
+      - name: Install Linux package and smoke dependencies
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y rpm xvfb
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate Local AI, routing, voice, and approvals
+        working-directory: apps/desktop
+        run: |
+          npm run typecheck
+          npm run test:local-ai
+          npm run test:governed-voice
+          npx vitest run --environment jsdom \
+            src/components/local-ai-setup-overlay.test.tsx \
+            src/components/assistant-ui/tool/approval.test.tsx \
+            src/store/prompts.test.ts \
+            src/store/local-ai.test.ts
+
+      - name: Validate Python routing and governance
+        run: >-
+          uv run --with pytest pytest -q
+          tests/test_adaptive_local_client.py
+          tests/tools/test_voice_privacy.py
+          tests/tools/test_computer_use.py::TestGovernedApproval
+          tests/tui_gateway/test_voice_attestation.py
+
+      - name: Build branded renderer and Electron bundles
+        working-directory: apps/desktop
+        run: npm run build
+
+      - name: Assert brand separation
+        working-directory: apps/desktop
+        run: npm run check:brand-separation
+
+      - name: Package without publishing
+        working-directory: apps/desktop
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"
+        run: npm run builder -- --publish never
+
+      - name: Verify packaged resources and release artifacts
+        working-directory: apps/desktop
+        env:
+          HERMES_DESKTOP_SKIP_BUILD: "1"
+        run: |
+          node scripts/test-desktop.mjs all
+          npm run verify:platform-artifacts

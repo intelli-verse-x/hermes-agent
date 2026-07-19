@@ -110,13 +110,8 @@ function expectedNativeDepPaths() {
 }
 
 function ensurePlatformBuilds() {
-  if (PLATFORM === 'darwin') return
-  if (PLATFORM === 'win32') return
-  die(
-    `Desktop bundle validation is only wired for darwin / win32 today; platform=${PLATFORM} ` +
-      `is not yet supported. The thin-installer story for Linux ships in Phase 2 alongside ` +
-      `install.sh's stage protocol.`
-  )
+  if (PLATFORM === 'darwin' || PLATFORM === 'win32' || PLATFORM === 'linux') return
+  die(`Desktop bundle validation is not supported for platform=${PLATFORM}`)
 }
 
 function ensurePackagedApp() {
@@ -129,10 +124,10 @@ function ensurePackagedApp() {
 
 function resolveDmgPath() {
   if (!exists(RELEASE_ROOT)) {
-    return path.join(RELEASE_ROOT, `Hermes-${PACKAGE_JSON.version}-${ARCH}.dmg`)
+    return path.join(RELEASE_ROOT, `${BRAND.artifactPrefix}-${PACKAGE_JSON.version}-mac-${ARCH}.dmg`)
   }
 
-  const prefix = `Hermes-${PACKAGE_JSON.version}`
+  const prefix = `${BRAND.artifactPrefix}-${PACKAGE_JSON.version}`
   const candidates = fs
     .readdirSync(RELEASE_ROOT)
     .filter(name => name.endsWith('.dmg'))
@@ -146,7 +141,7 @@ function resolveDmgPath() {
 
   return candidates.length > 0
     ? path.join(RELEASE_ROOT, candidates[0])
-    : path.join(RELEASE_ROOT, `Hermes-${PACKAGE_JSON.version}-${ARCH}.dmg`)
+    : path.join(RELEASE_ROOT, `${BRAND.artifactPrefix}-${PACKAGE_JSON.version}-mac-${ARCH}.dmg`)
 }
 
 function resolveNsisPath() {
@@ -326,6 +321,17 @@ function validateBundle() {
   }
   if (!stamp.branch || typeof stamp.branch !== 'string') {
     die(`install-stamp.json is missing the branch field: ${JSON.stringify(stamp)}`)
+  }
+
+  const localAiResources = [
+    path.join(APP.resourcesPath, 'local-ai', 'local-ai-model-catalog.v1.json'),
+    path.join(APP.resourcesPath, 'local-ai', 'local-ai-runtime-catalog.v1.json'),
+    path.join(APP.resourcesPath, 'hermes-skills', 'local-first-inference', 'SKILL.md')
+  ]
+  for (const resourcePath of localAiResources) {
+    if (!exists(resourcePath)) {
+      die(`Missing Adaptive Local AI packaged resource: ${resourcePath}`)
+    }
   }
 
   // Positive assertion: node-pty native deps shipped

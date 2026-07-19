@@ -6,7 +6,14 @@ import { notify, notifyError } from '@/store/notifications'
 
 import { useMicRecorder } from './use-mic-recorder'
 
-export type ConversationStatus = 'idle' | 'listening' | 'transcribing' | 'thinking' | 'speaking'
+export type ConversationStatus =
+  | 'idle'
+  | 'listening'
+  | 'transcribing'
+  | 'thinking'
+  | 'awaiting-approval'
+  | 'speaking'
+  | 'error'
 
 interface PendingVoiceResponse {
   id: string
@@ -15,21 +22,27 @@ interface PendingVoiceResponse {
 }
 
 interface VoiceConversationOptions {
+  blocked?: boolean
   busy: boolean
+  continuous?: boolean
   enabled: boolean
   onFatalError?: () => void
   onSubmit: (text: string) => Promise<void> | void
   onTranscribeAudio?: (audio: Blob) => Promise<string>
+  preCaptureCheck?: () => Promise<void> | void
   pendingResponse: () => PendingVoiceResponse | null
   consumePendingResponse: () => void
 }
 
 export function useVoiceConversation({
+  blocked = false,
   busy,
+  continuous = true,
   enabled,
   onFatalError,
   onSubmit,
   onTranscribeAudio,
+  preCaptureCheck,
   pendingResponse,
   consumePendingResponse
 }: VoiceConversationOptions) {
@@ -48,6 +61,7 @@ export function useVoiceConversation({
   const enabledRef = useRef(enabled)
   const mutedRef = useRef(muted)
   const busyRef = useRef(busy)
+  const blockedRef = useRef(blocked)
   const statusRef = useRef<ConversationStatus>('idle')
   const wasEnabledRef = useRef(enabled)
 
@@ -62,6 +76,20 @@ export function useVoiceConversation({
   useEffect(() => {
     busyRef.current = busy
   }, [busy])
+
+  useEffect(() => {
+    blockedRef.current = blocked
+
+    if (blocked) {
+      pendingStartRef.current = false
+      clearTurnTimeout()
+      handle.cancel()
+      stopVoicePlayback()
+      setStatus('awaiting-approval')
+    } else if (statusRef.current === 'awaiting-approval') {
+      setStatus('idle')
+    }
+  }, [blocked, handle])
 
   useEffect(() => {
     statusRef.current = status
@@ -144,7 +172,14 @@ export function useVoiceConversation({
         const result = await handle.stop()
 
         if (!result || (!result.heardSpeech && !forceTranscribe) || !onTranscribeAudio) {
-          if (enabledRef.current && !mutedRef.current && !busyRef.current && statusRef.current !== 'speaking') {
+          if (
+            continuous &&
+            enabledRef.current &&
+            !mutedRef.current &&
+            !busyRef.current &&
+            !blockedRef.current &&
+            statusRef.current !== 'speaking'
+          ) {
             pendingStartRef.current = true
           }
 
@@ -157,7 +192,7 @@ export function useVoiceConversation({
           const transcript = (await onTranscribeAudio(result.audio)).trim()
 
           if (!transcript) {
-            if (enabledRef.current) {
+            if (continuous && enabledRef.current && !blockedRef.current) {
               pendingStartRef.current = true
             }
 
@@ -173,23 +208,23 @@ export function useVoiceConversation({
         } catch (error) {
           notifyError(error, voiceCopy.transcriptionFailed)
 
-          if (enabledRef.current && !mutedRef.current && !busyRef.current) {
+          if (continuous && enabledRef.current && !mutedRef.current && !busyRef.current && !blockedRef.current) {
             pendingStartRef.current = true
           }
 
-          setStatus('idle')
+          setStatus('error')
         }
       } finally {
         turnClosingRef.current = false
       }
     },
-    [handle, onSubmit, onTranscribeAudio, voiceCopy.transcriptionFailed]
+    [continuous, handle, onSubmit, onTranscribeAudio, voiceCopy.transcriptionFailed]
   )
 
   const startListening = useCallback(async () => {
     pendingStartRef.current = false
 
-    if (!enabledRef.current || mutedRef.current || busyRef.current) {
+    if (!enabledRef.current || mutedRef.current || busyRef.current || blockedRef.current) {
       return
     }
 
@@ -198,6 +233,7 @@ export function useVoiceConversation({
     }
 
     try {
+      await preCaptureCheck?.()
       // VAD tuning mirrors `tools.voice_mode` defaults so the browser loop matches the CLI.
       await handle.start({
         silenceLevel: 0.075,
@@ -215,10 +251,10 @@ export function useVoiceConversation({
     } catch (error) {
       notifyError(error, voiceCopy.couldNotStartSession)
       pendingStartRef.current = false
-      setStatus('idle')
+      setStatus('error')
       onFatalError?.()
     }
-  }, [handle, handleTurn, onFatalError, voiceCopy.couldNotStartSession, voiceCopy.microphoneFailed])
+  }, [handle, handleTurn, onFatalError, preCaptureCheck, voiceCopy.couldNotStartSession, voiceCopy.microphoneFailed])
 
   const speak = useCallback(
     async (text: string) => {
@@ -229,7 +265,7 @@ export function useVoiceConversation({
       } catch (error) {
         notifyError(error, voiceCopy.playbackFailed)
       } finally {
-        if (enabledRef.current) {
+        if (continuous && enabledRef.current && !blockedRef.current) {
           pendingStartRef.current = true
           setStatus('idle')
         } else {
@@ -237,7 +273,7 @@ export function useVoiceConversation({
         }
       }
     },
-    [voiceCopy.playbackFailed]
+    [continuous, voiceCopy.playbackFailed]
   )
 
   const start = useCallback(async () => {
@@ -256,7 +292,7 @@ export function useVoiceConversation({
     awaitingSpokenResponseRef.current = false
     resetSpeechBuffer()
     consumePendingResponse()
-    pendingStartRef.current = true
+      pendingStartRef.current = !blockedRef.current
     await startListening()
   }, [
     consumePendingResponse,
@@ -283,6 +319,10 @@ export function useVoiceConversation({
   const stopTurn = useCallback(() => {
     if (statusRef.current === 'listening') {
       void handleTurn(true)
+    } else if (statusRef.current === 'speaking') {
+      stopVoicePlayback()
+      pendingStartRef.current = false
+      setStatus('idle')
     }
   }, [handleTurn])
 
@@ -294,13 +334,13 @@ export function useVoiceConversation({
         clearTurnTimeout()
         handle.cancel()
         setStatus('idle')
-      } else if (enabledRef.current && !busyRef.current && statusRef.current === 'idle') {
+      } else if (continuous && enabledRef.current && !busyRef.current && !blockedRef.current && statusRef.current === 'idle') {
         pendingStartRef.current = true
       }
 
       return next
     })
-  }, [handle])
+  }, [continuous, handle])
 
   useEffect(() => {
     if (!enabled) {
@@ -309,6 +349,15 @@ export function useVoiceConversation({
 
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.code !== 'Space' || event.repeat || event.metaKey || event.ctrlKey || event.altKey) {
+        return
+      }
+
+      const target = event.target
+
+      if (
+        target instanceof HTMLElement &&
+        (target.isContentEditable || /^(INPUT|TEXTAREA|SELECT|BUTTON)$/.test(target.tagName))
+      ) {
         return
       }
 
@@ -358,7 +407,7 @@ export function useVoiceConversation({
           awaitingSpokenResponseRef.current = false
           consumePendingResponse()
           resetSpeechBuffer()
-          pendingStartRef.current = true
+          pendingStartRef.current = continuous && !blockedRef.current
           setStatus('idle')
 
           return
@@ -368,21 +417,21 @@ export function useVoiceConversation({
       if (!busy && status === 'thinking') {
         awaitingSpokenResponseRef.current = false
         resetSpeechBuffer()
-        pendingStartRef.current = true
+        pendingStartRef.current = continuous && !blockedRef.current
         setStatus('idle')
 
         return
       }
     }
 
-    if (busy || status !== 'idle') {
+    if (busy || blocked || status !== 'idle') {
       return
     }
 
     if (pendingStartRef.current) {
       void startListening()
     }
-  }, [busy, consumePendingResponse, enabled, muted, pendingResponse, speak, startListening, status])
+  }, [blocked, busy, consumePendingResponse, continuous, enabled, muted, pendingResponse, speak, startListening, status])
 
   useEffect(() => {
     if (enabled && !wasEnabledRef.current) {

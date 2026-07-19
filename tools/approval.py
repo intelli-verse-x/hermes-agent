@@ -1462,7 +1462,10 @@ def unregister_gateway_notify(session_key: str) -> None:
 
 def resolve_gateway_approval(session_key: str, choice: str,
                              resolve_all: bool = False,
-                             reason: Optional[str] = None) -> int:
+                             reason: Optional[str] = None,
+                             request_id: Optional[str] = None,
+                             action_id: Optional[str] = None,
+                             frozen_digest: Optional[str] = None) -> int:
     """Called by the gateway's /approve or /deny handler to unblock
     waiting agent thread(s).
 
@@ -1480,10 +1483,27 @@ def resolve_gateway_approval(session_key: str, choice: str,
         queue = _gateway_queues.get(session_key)
         if not queue:
             return 0
+        if (
+            resolve_all
+            and choice != "deny"
+            and any(entry.data.get("approval_kind") == "adaptive-cloud" for entry in queue)
+        ):
+            return 0
         if resolve_all:
             targets = list(queue)
             queue.clear()
         else:
+            candidate = queue[0]
+            payload = candidate.data
+            if payload.get("approval_kind") == "adaptive-cloud" and choice != "deny":
+                if not (request_id and action_id and frozen_digest):
+                    return 0
+            if (
+                (request_id and payload.get("request_id") != request_id)
+                or (action_id and payload.get("action_id") != action_id)
+                or (frozen_digest and payload.get("frozen_digest") != frozen_digest)
+            ):
+                return 0
             targets = [queue.pop(0)]
         if not queue:
             _gateway_queues.pop(session_key, None)
@@ -1494,6 +1514,49 @@ def resolve_gateway_approval(session_key: str, choice: str,
             entry.reason = reason
         entry.event.set()
     return len(targets)
+
+
+def request_cloud_escalation_approval(
+    *,
+    reason: str,
+    provider: str,
+    request_id: str,
+    action_id: str,
+    frozen_digest: str,
+    handoff_metadata: dict,
+) -> Optional[bool]:
+    """Block on the existing gateway approval UI for one frozen cloud handoff.
+
+    Returns ``None`` when no gateway renderer is attached, otherwise ``True``
+    only for an explicit single-use approval. Prompt and response content are
+    deliberately excluded from the payload.
+    """
+    session_key = get_current_session_key(default="")
+    if not session_key:
+        return None
+    with _lock:
+        notify_cb = _gateway_notify_cbs.get(session_key)
+    if notify_cb is None:
+        return None
+    approval_data = {
+        "command": f"Cloud escalation · {provider}",
+        "description": f"{reason}. A bounded handoff will be sent to {provider}.",
+        "pattern_key": f"adaptive_cloud:{action_id}",
+        "pattern_keys": [f"adaptive_cloud:{action_id}"],
+        "allow_permanent": False,
+        "approval_kind": "adaptive-cloud",
+        "request_id": request_id,
+        "action_id": action_id,
+        "frozen_digest": frozen_digest,
+        "provider": provider,
+        "reason": reason,
+        "disclosure": "Only bounded recent context and required tool results are sent.",
+        "handoff_metadata": dict(handoff_metadata),
+    }
+    decision = _await_gateway_decision(
+        session_key, notify_cb, approval_data, surface="adaptive-cloud"
+    )
+    return bool(decision.get("resolved") and decision.get("choice") == "once")
 
 
 def has_blocking_approval(session_key: str) -> bool:

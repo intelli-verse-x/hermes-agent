@@ -20,6 +20,8 @@ import { $threadScrolledUp } from '@/store/thread-scroll'
 import { $autoSpeakReplies } from '@/store/voice-prefs'
 import { useTheme } from '@/themes'
 
+import { consumeDesktopVoiceAttestation } from '../voice-policy'
+
 import { AttachmentList } from './attachments'
 import { COMPOSER_FADE_BACKGROUND, type QueueEditState, slashArgStage } from './composer-utils'
 import { ContextMenu } from './context-menu'
@@ -159,6 +161,27 @@ export function ChatBar({
     onAddUrl
   })
 
+  const dictatedDraftRef = useRef(false)
+
+  const submitWithTrustedModality: ChatBarProps['onSubmit'] = async (value, options) => {
+    const inputModality = options?.inputModality ?? (dictatedDraftRef.current ? 'voice' : 'text')
+
+    const result = await onSubmit(value, {
+      ...options,
+      inputModality,
+      voiceAttestation:
+        inputModality === 'voice'
+          ? (options?.voiceAttestation ?? await consumeDesktopVoiceAttestation())
+          : undefined
+    })
+
+    if (result) {
+      dictatedDraftRef.current = false
+    }
+
+    return result
+  }
+
   // The queue engine — queued turns, in-place editing, the shared drain lock,
   // and bounded auto-drain. Consumes the draft API and writes `queueEditRef`.
   const {
@@ -180,7 +203,7 @@ export function ChatBar({
     focusInput,
     loadIntoComposer,
     onCancel,
-    onSubmit,
+    onSubmit: submitWithTrustedModality,
     queueEditRef,
     queueSessionKey,
     sessionId
@@ -218,7 +241,7 @@ export function ChatBar({
     loadIntoComposer,
     onCancel,
     onSteer,
-    onSubmit,
+    onSubmit: submitWithTrustedModality,
     queueCurrentDraft,
     queueEdit,
     queuedPrompts,
@@ -655,13 +678,17 @@ export function ChatBar({
     voiceConversationActive,
     voiceStatus
   } = useComposerVoice({
+    blocked: awaitingInput,
     busy,
     clearDraft,
     disabled,
     focusInput,
     insertText,
+    markDictatedDraft: () => {
+      dictatedDraftRef.current = true
+    },
     maxRecordingSeconds,
-    onSubmit,
+    onSubmit: submitWithTrustedModality,
     onTranscribeAudio,
     sessionId
   })

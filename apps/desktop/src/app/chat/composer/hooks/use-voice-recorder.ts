@@ -10,6 +10,7 @@ import { useMicRecorder } from './use-mic-recorder'
 interface VoiceRecorderOptions {
   maxRecordingSeconds: number
   onTranscribeAudio?: (audio: Blob) => Promise<string>
+  preStartCheck?: () => Promise<void> | void
   focusInput: () => void
   onTranscript: (text: string) => void
 }
@@ -17,6 +18,7 @@ interface VoiceRecorderOptions {
 export function useVoiceRecorder({
   maxRecordingSeconds,
   onTranscribeAudio,
+  preStartCheck,
   focusInput,
   onTranscript
 }: VoiceRecorderOptions) {
@@ -85,6 +87,7 @@ export function useVoiceRecorder({
     }
 
     try {
+      await preStartCheck?.()
       await handle.start({ onError: error => notifyError(error, voiceCopy.recordingFailed) })
       startedAtRef.current = Date.now()
       setElapsedSeconds(0)
