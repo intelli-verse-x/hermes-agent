@@ -6,11 +6,22 @@ Hermes needs an IDE-grade project surface without embedding an editor in the cha
 
 ## Decision
 
-Build an optional, separately versioned Eclipse Theia product using Open VSX. Launch it as a supervised sibling process connected to one Hermes session over authenticated local IPC. This PR is stacked on Adaptive Local AI only to consume its route-status contract; it is a separate follow-up and must not be merged with that work.
+Consume the existing `intelli-verse-x/theia` fork through coordinated PR
+`intelli-verse-x/theia#1`, pinned to product commit
+`f0837fa5f3ed11295eb50a454511dceaa647d62b` (upstream base
+`3595b053a48a1a4c7171aea0361a25f782140af9`). Launch it as a supervised
+sibling connected to one Hermes session over authenticated local IPC. This PR
+is stacked on Adaptive Local AI only to consume its route-status contract; it is
+a separate follow-up and must not be merged first.
 
 ## Architecture
 
-- `packages/hermes-studio`: Theia 1.73 product, neutral metadata, Open VSX policy, first-party command extension.
+- `intelli-verse-x/theia/examples/hermes-studio`: fork-hosted Theia 1.73
+  product using Open VSX.
+- `intelli-verse-x/theia/packages/hermes-bridge`: first-party typed
+  frontend/backend extension.
+- `packages/hermes-studio`: Hermes-side protocol, trust, manifest, extraction,
+  and supervision contracts only.
 - Protocol v1: handshake, capability negotiation, identity, context, diagnostics, prompt streaming, route disclosure, approval observation, reviewed WorkspaceEdit, reconnect, health.
 - Desktop manager: optional/BYO state, exact launch linkage, fixed IPC allowlist, process supervision, crash budget, signed manifest/checksum/extraction contracts.
 
@@ -30,11 +41,16 @@ Path and endpoint fixtures cover macOS, Windows, and Linux. Managed artifacts ar
 
 ## Scope
 
-Reviewable product and governance foundation, Desktop manager/IPC, extension command contract, tests, documentation, and non-publishing three-platform CI.
+Reviewable cross-repository product and governance foundation, Desktop
+manager/IPC, real local broker handshake, fork-hosted extension, tests,
+documentation, and non-publishing three-platform CI.
 
 ## Out of scope
 
-Editor binaries, publishing, production downloader, Microsoft Marketplace, remote browser deployment, full broker server, direct shell/model execution, and WorkspaceEdit execution. Those require the phase-2 review UI and existing structured approval broker integration.
+Editor binaries, publishing, production downloader, Microsoft Marketplace,
+remote browser deployment, full agent prompt execution, and WorkspaceEdit
+execution. Those require the phase-2 review UI and existing structured approval
+broker integration.
 
 ## Tests
 
@@ -43,7 +59,7 @@ Editor binaries, publishing, production downloader, Microsoft Marketplace, remot
 - route/local-only and voice approval policy;
 - crash budget, signed manifest, artifact hash, archive traversal;
 - first-run consent and fixed IPC allowlist;
-- extension command and brand isolation contracts;
+- fork extension command, source pin, and brand isolation contracts;
 - macOS/Windows/Linux fixtures and source resource budget;
 - Desktop typecheck/lint/build and existing brand separation checks.
 
@@ -53,7 +69,11 @@ Foundation CI does not publish. Phase 2 begins behind an opt-in preference. Mana
 
 ## Risks
 
-Theia/Electron dependency weight, extension compatibility, cross-platform process focus, and protocol drift. Coherent Theia release pins, capability negotiation, budgets, explicit health/version fields, and non-publishing CI reduce these risks.
+The fork has no signed Hermes Studio release yet, so managed download remains
+intentionally unavailable. Theia/Electron dependency weight, extension
+compatibility, cross-platform process focus, and protocol drift remain risks.
+Coherent source pins, capability negotiation, budgets, explicit health/version
+fields, and non-publishing CI reduce them.
 
 ## Follow-ups
 
