@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import type { IxConnectorDraftInput } from '@/global'
+import { PRODUCT_DISPLAY_NAMES } from '@/lib/display-terminology'
 import { cn } from '@/lib/utils'
 import { notify, notifyError } from '@/store/notifications'
 
@@ -23,12 +24,12 @@ import { Field, FieldRow } from './bits'
 export const CONNECTOR_APPS: readonly { id: string; label: string }[] = [
   // Label avoids the other brand's productName literal — the portal id stays `quizverse`.
   { id: 'quizverse', label: 'Quizverse' },
-  { id: 'questx', label: 'QuestX' },
+  { id: 'questx', label: PRODUCT_DISPLAY_NAMES.questx },
   { id: 'intelliverse', label: 'IntelliVerse X' },
   { id: 'toba', label: 'ToBa Tech' },
-  { id: 'contentx', label: 'ContentX Studio' },
+  { id: 'contentx', label: `${PRODUCT_DISPLAY_NAMES.contentx} Studio` },
   { id: 'foundrly', label: 'Foundrly' },
-  { id: 'kioskx', label: 'Kiosk X' }
+  { id: 'kioskx', label: PRODUCT_DISPLAY_NAMES.kioskx }
 ]
 
 export const CONNECTOR_BUNDLES: readonly { id: string; label: string }[] = [

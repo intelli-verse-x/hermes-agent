@@ -86,21 +86,21 @@ export function IxAgencyView(props: React.ComponentProps<'section'>) {
           isolated. Subject identity and consent determine what may continue across approved channels.
         </p>
         <p className="mt-2">
-          Connected operating sequence: approved content → QuestX quest → participant movement → KioskX kiosk → product
+          Connected operating sequence: approved content → Quest quest → participant movement → Kiosk kiosk → product
           handoff → consent-scoped Memory. Each stage still requires its applicable mapping, entitlement, connected
           service, and operator approval; this summary does not claim that a stage has executed.
         </p>
         <ul className="mt-2 grid gap-1 sm:grid-cols-3">
           <li>
-            <strong className="text-foreground">QuestX:</strong> connected per-App setup; kiosk completion approved
+            <strong className="text-foreground">Quest:</strong> connected per-App setup; kiosk completion approved
             pilots.
           </li>
           <li>
-            <strong className="text-foreground">ContentX + Postiz:</strong> publishing from a configured ContentX
+            <strong className="text-foreground">Content + Postiz:</strong> publishing from a configured Content
             workspace to selected connected Postiz channels; Memory automation rolling out.
           </li>
           <li>
-            <strong className="text-foreground">KioskX:</strong> connected deployment; kiosk Worlds approved pilots.
+            <strong className="text-foreground">Kiosk:</strong> connected deployment; kiosk Worlds approved pilots.
           </li>
         </ul>
         <p className="mt-2">

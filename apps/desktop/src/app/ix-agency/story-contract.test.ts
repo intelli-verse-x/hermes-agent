@@ -56,8 +56,8 @@ describe('IVX Agency ecosystem story', () => {
 
   it('uses precise per-engine availability labels', () => {
     expect(indexText).toContain('connected per-App setup')
-    expect(indexText).toContain('ContentX + Postiz:')
-    expect(indexText).toContain('configured ContentX workspace')
+    expect(indexText).toContain('Content + Postiz:')
+    expect(indexText).toContain('configured Content workspace')
     expect(indexText).toContain('selected connected Postiz channels')
     expect(indexText).toContain('Memory automation rolling out')
     expect(indexText).toContain('connected deployment')
@@ -67,7 +67,7 @@ describe('IVX Agency ecosystem story', () => {
   it('states the qualified six-stage connected journey', () => {
     for (const source of [indexText, downloadText]) {
       expect(source).toContain(
-        'approved content → QuestX quest → participant movement → KioskX kiosk → product handoff → consent-scoped Memory'
+        'approved content → Quest quest → participant movement → Kiosk kiosk → product handoff → consent-scoped Memory'
       )
       expect(source).toContain('operator approval')
     }
@@ -75,7 +75,7 @@ describe('IVX Agency ecosystem story', () => {
     const skills = JSON.parse(skillsSource) as { items: Array<{ content: string; id: string }> }
     const skillsText = compact(skills.items.find(item => item.id === 'content-signoff-queue')?.content || '')
 
-    expect(skillsText).toContain('configured ContentX')
+    expect(skillsText).toContain('configured Content')
     expect(skillsText).toContain('selected connected Postiz channel')
     expect(skillsText).toContain('do not claim publication until publish history confirms it')
     expect(skillsSource).not.toContain('auto-publishes')
@@ -327,5 +327,31 @@ describe('IVX Agency ecosystem story', () => {
     expect(portalUrl.searchParams.get('utm_source')).toBe('ivx-agency-download')
     expect(portalUrl.searchParams.get('hop_utm_source')).toBe('ivx-agency-download')
     expect(portalUrl.searchParams.get('attribution_id')).toBe('upstream-attribution-id')
+  })
+
+  it('uses customer display names while preserving stable integration ids', () => {
+    const legacyDisplayName = /\b(?:ContentX|QuestX|KioskX|Content X|Quest X|Kiosk X)\b/
+
+    expect(`${agencySource}\n${downloadSource}`).not.toMatch(legacyDisplayName)
+
+    const connectorSources = `${read('src/app/ix-agency/connector-editor.tsx')}\n${read('electron/ix-connectors.ts')}`
+
+    for (const id of ['contentx', 'questx', 'kioskx']) {
+      expect(connectorSources).toContain(`id: '${id}'`)
+    }
+
+    expect(downloadSource).toContain('router.intelli-verse-x.ai')
+    expect(downloadSource).toContain('property="og:image"')
+    expect(downloadSource).toContain('name="twitter:card" content="summary_large_image"')
+    expect(downloadSource).toContain('"@type": "SoftwareApplication"')
+
+    for (const skill of [
+      'ivx-mcp-game-ops',
+      'ivx-mcp-directory',
+      'ivx-mcp-commerce',
+      'ivx-mcp-agents',
+    ]) {
+      expect(read(`../../skills/${skill}/SKILL.md`), skill).not.toMatch(legacyDisplayName)
+    }
   })
 })

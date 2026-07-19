@@ -205,7 +205,7 @@ if (!fs.existsSync(assetsDir)) {
   const countOccurrences = (haystack, needle) => haystack.split(needle).length - 1
 
   // IX Agency admin skills and connector pickers legitimately name managed apps
-  // (QuizVerse, QuestX, …). Only the QuizVerse build must not leak IX Agency
+  // (QuizVerse, Quest, …). Only the QuizVerse build must not leak IX Agency
   // product-name copy into shared UI.
   if (brandId === 'ix-agency') {
     ok(`skipped "${otherManifest.productName}" product-name scan — IX admin surfaces reference managed apps`)
