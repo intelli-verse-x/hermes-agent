@@ -39,6 +39,26 @@ describe('approval prompt store', () => {
     })
   })
 
+  it('queues concurrent approvals per session in FIFO order', () => {
+    $activeSessionId.set('s1')
+    setApprovalRequest({
+      command: 'first',
+      description: 'first',
+      requestId: 'request-1',
+      sessionId: 's1'
+    })
+    setApprovalRequest({
+      command: 'second',
+      description: 'second',
+      requestId: 'request-2',
+      sessionId: 's1'
+    })
+
+    expect($approvalRequest.get()?.requestId).toBe('request-1')
+    clearApprovalRequest('s1', 'request-1')
+    expect($approvalRequest.get()?.requestId).toBe('request-2')
+  })
+
   it('parks a background session prompt out of the active view', () => {
     setApprovalRequest({ command: 'x', description: 'd', sessionId: 's2' })
 

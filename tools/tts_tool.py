@@ -2176,6 +2176,12 @@ def text_to_speech_tool(
 
     tts_config = _load_tts_config()
     provider = _get_provider(tts_config)
+    from tools.voice_privacy import enforce_local_tts_provider
+
+    try:
+        enforce_local_tts_provider(tts_config, provider)
+    except PermissionError as exc:
+        return tool_error(str(exc), success=False, provider=provider, policy_blocked=True)
 
     # User-declared command provider (type: command under tts.providers.<name>)
     # resolves BEFORE the built-in dispatch. Built-in names short-circuit here

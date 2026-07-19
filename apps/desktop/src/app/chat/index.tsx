@@ -90,7 +90,12 @@ interface ChatViewProps extends Omit<React.ComponentProps<'div'>, 'onSubmit'> {
   onSteer: (text: string) => Promise<boolean> | boolean
   onSubmit: (
     text: string,
-    options?: { attachments?: ComposerAttachment[]; fromQueue?: boolean }
+    options?: {
+      attachments?: ComposerAttachment[]
+      fromQueue?: boolean
+      inputModality?: 'text' | 'voice'
+      voiceAttestation?: string
+    }
   ) => Promise<boolean> | boolean
   onThreadMessagesChange: (messages: readonly ThreadMessage[]) => void
   onEdit: (message: AppendMessage) => Promise<void>

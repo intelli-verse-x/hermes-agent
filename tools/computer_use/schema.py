@@ -48,8 +48,10 @@ COMPUTER_USE_SCHEMA: Dict[str, Any] = {
                 ],
                 "description": (
                     "Which action to perform. `capture` is free (no side "
-                    "effects). All other actions require approval unless "
-                    "auto-approved. Use `set_value` for select/popup elements "
+                    "effects). Every other action requires a fresh structured "
+                    "visual/keyboard approval before execution. Spoken "
+                    "confirmation and automatic approval never authorize it. "
+                    "Use `set_value` for select/popup elements "
                     "and sliders — it selects the matching option directly "
                     "without opening the native menu (no focus steal)."
                 ),

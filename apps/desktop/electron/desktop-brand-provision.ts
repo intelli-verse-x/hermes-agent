@@ -13,7 +13,10 @@ export interface DesktopBrandProvisionInput {
   hermesHome: string
   brandId: string
   productName: string
+  sharedSkillsRoot?: string
 }
+
+const SHARED_DESKTOP_SKILLS = ['desktop-voice-actions', 'local-first-inference']
 
 function yamlQuote(value: string): string {
   return `"${value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`
@@ -46,10 +49,11 @@ You are ${productName}, an intelligent AI assistant. You help the user learn, bu
 }
 
 /** Ensure the active brand skin + SOUL identity exist under HERMES_HOME. Idempotent. */
-export function provisionDesktopBrand({ hermesHome, brandId, productName }: DesktopBrandProvisionInput): {
+export function provisionDesktopBrand({ hermesHome, brandId, productName, sharedSkillsRoot }: DesktopBrandProvisionInput): {
   skinPath: string
   soulPath: string
   configTouched: boolean
+  sharedSkillCount: number
 } {
   const home = path.resolve(hermesHome)
   const skinName = `${brandId}-desktop`
@@ -57,9 +61,25 @@ export function provisionDesktopBrand({ hermesHome, brandId, productName }: Desk
   const skinPath = path.join(skinsDir, `${skinName}.yaml`)
   const soulPath = path.join(home, 'SOUL.md')
   const configPath = path.join(home, 'config.yaml')
+  let sharedSkillCount = 0
 
   fs.mkdirSync(skinsDir, { recursive: true })
   fs.writeFileSync(skinPath, skinYaml(productName), 'utf8')
+
+  if (sharedSkillsRoot) {
+    for (const skill of SHARED_DESKTOP_SKILLS) {
+      const source = path.join(sharedSkillsRoot, skill)
+
+      if (!fs.existsSync(path.join(source, 'SKILL.md'))) {
+        continue
+      }
+
+      const destination = path.join(home, 'skills', skill)
+      fs.mkdirSync(destination, { recursive: true })
+      fs.cpSync(source, destination, { recursive: true, force: true })
+      sharedSkillCount += 1
+    }
+  }
 
   if (!fs.existsSync(soulPath) || fs.statSync(soulPath).size === 0) {
     fs.writeFileSync(soulPath, soulMd(productName), 'utf8')
@@ -90,5 +110,5 @@ export function provisionDesktopBrand({ hermesHome, brandId, productName }: Desk
     configTouched = true
   }
 
-  return { skinPath, soulPath, configTouched }
+  return { skinPath, soulPath, configTouched, sharedSkillCount }
 }

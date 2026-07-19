@@ -1,5 +1,8 @@
 import { atom } from 'nanostores'
 
+import { consumeDesktopVoiceAttestation } from '../chat/voice-policy'
+import { assertVoiceSubmissionAllowed } from '../chat/voice-submission-policy'
+
 import { createTutorSocket, tutorFetch, type TutorSocket } from './tutor-api'
 
 export type TutorMode = 'chat' | 'deep_question' | 'deep_research' | 'deep_solve' | 'mastery_path' | 'visualize'
@@ -315,11 +318,19 @@ async function connect() {
 
 export async function sendTutorMessage(
   content: string,
-  options: { config?: Record<string, unknown>; mode?: TutorMode } = {}
+  options: { config?: Record<string, unknown>; inputModality?: 'text' | 'voice'; mode?: TutorMode } = {}
 ) {
   const text = content.trim()
 
   if (!text || $tutorStreaming.get()) {return}
+
+  if (options.inputModality === 'voice') {
+    assertVoiceSubmissionAllowed(text)
+  }
+
+  const voiceAttestation =
+    options.inputModality === 'voice' ? await consumeDesktopVoiceAttestation() : undefined
+
   const mode = options.mode ?? $tutorMode.get()
 
   const defaultConfig = mode === 'deep_question'
@@ -340,6 +351,8 @@ export async function sendTutorMessage(
     content: text,
     knowledge_bases: [],
     language: 'en',
+    input_modality: options.inputModality ?? 'text',
+    voice_attestation: voiceAttestation,
     persona: '',
     session_id: $tutorSessionId.get(),
     tools: [],

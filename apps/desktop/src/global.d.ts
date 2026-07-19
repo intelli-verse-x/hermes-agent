@@ -1,3 +1,4 @@
+import type { LocalAiRendererBridge } from './store/local-ai'
 import type {
   PetOverlayBounds,
   PetOverlayControl,
@@ -14,6 +15,9 @@ declare global {
       // the window's backend; pass a named profile to lazily spawn/reuse that
       // profile's backend from the pool.
       getConnection: (profile?: string | null) => Promise<HermesConnection>
+      voice?: {
+        consumeCaptureAttestation: () => Promise<string>
+      }
       // Reconnect-after-wake recovery: liveness-probe the cached PRIMARY backend
       // and drop it if a remote one has gone unreachable, so the next
       // getConnection() rebuilds a reachable descriptor instead of the renderer
@@ -181,6 +185,7 @@ declare global {
       onBootstrapEvent: (callback: (payload: DesktopBootstrapEvent) => void) => () => void
       getVersion: () => Promise<DesktopVersionInfo>
       getRemoteDisplayReason?: () => Promise<string | null>
+      localAi: LocalAiRendererBridge
       updates: {
         check: () => Promise<DesktopUpdateStatus>
         apply: (opts?: DesktopUpdateApplyOptions) => Promise<DesktopUpdateApplyResult>
@@ -538,6 +543,7 @@ export interface IxChatConversationMeta {
 
 export interface IxChatDisplayItem {
   kind: 'assistant' | 'confirm' | 'tool' | 'user'
+  inputModality?: 'text' | 'voice'
   text?: string
   name?: string
   argsSummary?: string
@@ -558,6 +564,8 @@ export interface IxChatConversationDetail {
 
 export interface IxChatSendInput {
   conversationId?: null | string
+  /** Trusted renderer metadata; never concatenated into user text. */
+  inputModality?: 'text' | 'voice'
   text: string
   model?: string
   skills?: { name: string; content: string }[]

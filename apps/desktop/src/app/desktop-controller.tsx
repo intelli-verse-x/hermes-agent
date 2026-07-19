@@ -6,6 +6,7 @@ import { Navigate, Route, Routes, useLocation, useNavigate, useParams } from 're
 import { BootFailureOverlay } from '@/components/boot-failure-overlay'
 import { DesktopInstallOverlay } from '@/components/desktop-install-overlay'
 import { GatewayConnectingOverlay } from '@/components/gateway-connecting-overlay'
+import { LocalAiSetupOverlay } from '@/components/local-ai-setup-overlay'
 import { DesktopOnboardingOverlay } from '@/components/onboarding'
 import { Pane, PaneMain } from '@/components/pane-shell'
 import { RemoteDisplayBanner } from '@/components/remote-display-banner'
@@ -1057,6 +1058,7 @@ export function DesktopController() {
     <>
       <RemoteDisplayBanner />
       {!isSecondaryWindow() && <DesktopInstallOverlay />}
+      {!isSecondaryWindow() && <LocalAiSetupOverlay enabled={gatewayState === 'open'} />}
       {!isSecondaryWindow() && (
         <DesktopOnboardingOverlay
           enabled={gatewayState === 'open'}

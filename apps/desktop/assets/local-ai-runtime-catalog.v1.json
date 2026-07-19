@@ -1,0 +1,87 @@
+{
+  "schemaVersion": 1,
+  "runtime": "llama.cpp",
+  "revision": "b10066",
+  "assets": [
+    {
+      "platform": "darwin",
+      "architecture": "arm64",
+      "acceleration": "metal",
+      "archive": "tar.gz",
+      "executable": "llama-server",
+      "url": "https://github.com/ggml-org/llama.cpp/releases/download/b10066/llama-b10066-bin-macos-arm64.tar.gz",
+      "sizeBytes": 10598666,
+      "sha256": "52db287b6f39dfab93cc0dd1953c13d2108ca12c2817431c79a169ed3da57597"
+    },
+    {
+      "platform": "darwin",
+      "architecture": "x64",
+      "acceleration": "cpu",
+      "archive": "tar.gz",
+      "executable": "llama-server",
+      "url": "https://github.com/ggml-org/llama.cpp/releases/download/b10066/llama-b10066-bin-macos-x64.tar.gz",
+      "sizeBytes": 10874185,
+      "sha256": "2cd0c72e8ecc42bcb7190eaacaaf60d32037d6ee8bfb63ebcab820c5f4dec73d"
+    },
+    {
+      "platform": "linux",
+      "architecture": "arm64",
+      "acceleration": "cpu",
+      "archive": "tar.gz",
+      "executable": "llama-server",
+      "url": "https://github.com/ggml-org/llama.cpp/releases/download/b10066/llama-b10066-bin-ubuntu-arm64.tar.gz",
+      "sizeBytes": 12974198,
+      "sha256": "bb049c4cd03ebcd4fb3c86a8e48152abc717a9a9dfe7d9da35f814d136075b0b"
+    },
+    {
+      "platform": "linux",
+      "architecture": "x64",
+      "acceleration": "vulkan",
+      "archive": "tar.gz",
+      "executable": "llama-server",
+      "url": "https://github.com/ggml-org/llama.cpp/releases/download/b10066/llama-b10066-bin-ubuntu-vulkan-x64.tar.gz",
+      "sizeBytes": 32029550,
+      "sha256": "37831256be31aacf8ffe5bfc0a88040ef6f0224c220777b28fd77d4198a0b902"
+    },
+    {
+      "platform": "linux",
+      "architecture": "x64",
+      "acceleration": "cpu",
+      "archive": "tar.gz",
+      "executable": "llama-server",
+      "url": "https://github.com/ggml-org/llama.cpp/releases/download/b10066/llama-b10066-bin-ubuntu-x64.tar.gz",
+      "sizeBytes": 16066486,
+      "sha256": "8387ddb55db54ea0b12e38182b73284df6b0d1b847f3d53e6111c2102c5da331"
+    },
+    {
+      "platform": "win32",
+      "architecture": "arm64",
+      "acceleration": "cpu",
+      "archive": "zip",
+      "executable": "llama-server.exe",
+      "url": "https://github.com/ggml-org/llama.cpp/releases/download/b10066/llama-b10066-bin-win-cpu-arm64.zip",
+      "sizeBytes": 11856952,
+      "sha256": "e31261bae601f814ab50fb3b6ce02eb1f85872645b7bbe7fc19e466c1a5212dd"
+    },
+    {
+      "platform": "win32",
+      "architecture": "x64",
+      "acceleration": "vulkan",
+      "archive": "zip",
+      "executable": "llama-server.exe",
+      "url": "https://github.com/ggml-org/llama.cpp/releases/download/b10066/llama-b10066-bin-win-vulkan-x64.zip",
+      "sizeBytes": 33271537,
+      "sha256": "57cb5dd3143b2814b8d1d14587867628bfb126536abfa7085ca9560c4919d998"
+    },
+    {
+      "platform": "win32",
+      "architecture": "x64",
+      "acceleration": "cpu",
+      "archive": "zip",
+      "executable": "llama-server.exe",
+      "url": "https://github.com/ggml-org/llama.cpp/releases/download/b10066/llama-b10066-bin-win-cpu-x64.zip",
+      "sizeBytes": 18007237,
+      "sha256": "c4edaaf7f06652e57dd5cf302e719bbc761117e823b6bb3fa34b89945fb32b5f"
+    }
+  ]
+}

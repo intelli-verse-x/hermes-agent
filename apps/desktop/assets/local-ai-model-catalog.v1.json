@@ -1,0 +1,57 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-07-18T00:00:00.000Z",
+  "models": [
+    {
+      "id": "qwen2.5-coder-7b-instruct-q4-k-m",
+      "displayName": "Qwen2.5 Coder 7B",
+      "revision": "13fb94bfda8c8cf22497dc57b78f391a9acb426a",
+      "capabilities": ["chat", "completion", "tools"],
+      "contextTokens": 32768,
+      "memoryBytes": 7516192768,
+      "minimumDiskBytes": 6442450944,
+      "accelerations": ["metal", "cuda", "rocm", "vulkan", "cpu"],
+      "qualityRank": 70,
+      "artifact": {
+        "url": "https://huggingface.co/Qwen/Qwen2.5-Coder-7B-Instruct-GGUF/resolve/13fb94bfda8c8cf22497dc57b78f391a9acb426a/qwen2.5-coder-7b-instruct-q4_k_m.gguf",
+        "sha256": "509287f78cb4d4cf6b3843734733b914b2c158e43e22a7f4bf5e963800894d3c",
+        "sizeBytes": 4683073536,
+        "filename": "qwen2.5-coder-7b-instruct-q4_k_m.gguf"
+      }
+    },
+    {
+      "id": "qwen3-14b-q4-k-m",
+      "displayName": "Qwen3 14B",
+      "revision": "530227a7d994db8eca5ab5ced2fb692b614357fd",
+      "capabilities": ["chat", "completion", "tools"],
+      "contextTokens": 65536,
+      "memoryBytes": 13958643712,
+      "minimumDiskBytes": 11811160064,
+      "accelerations": ["metal", "cuda", "rocm", "vulkan", "cpu"],
+      "qualityRank": 85,
+      "artifact": {
+        "url": "https://huggingface.co/Qwen/Qwen3-14B-GGUF/resolve/530227a7d994db8eca5ab5ced2fb692b614357fd/Qwen3-14B-Q4_K_M.gguf",
+        "sha256": "500a8806e85ee9c83f3ae08420295592451379b4f8cf2d0f41c15dffeb6b81f0",
+        "sizeBytes": 9001752960,
+        "filename": "Qwen3-14B-Q4_K_M.gguf"
+      }
+    },
+    {
+      "id": "qwen3-30b-a3b-q4-k-m",
+      "displayName": "Qwen3 30B A3B",
+      "revision": "e4d4bafdfb96a411a163846265362aceb0b9c63a",
+      "capabilities": ["chat", "completion", "tools"],
+      "contextTokens": 65536,
+      "memoryBytes": 25769803776,
+      "minimumDiskBytes": 22548578304,
+      "accelerations": ["metal", "cuda", "rocm", "vulkan", "cpu"],
+      "qualityRank": 100,
+      "artifact": {
+        "url": "https://huggingface.co/Qwen/Qwen3-30B-A3B-GGUF/resolve/e4d4bafdfb96a411a163846265362aceb0b9c63a/Qwen3-30B-A3B-Q4_K_M.gguf",
+        "sha256": "0d003f6662faee786ed5da3e31b29c978de5ae5d275c8794c606a7f3c01aa8f5",
+        "sizeBytes": 18556685824,
+        "filename": "Qwen3-30B-A3B-Q4_K_M.gguf"
+      }
+    }
+  ]
+}

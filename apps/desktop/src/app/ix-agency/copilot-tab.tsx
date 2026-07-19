@@ -11,6 +11,8 @@ import { openExternalLink } from '@/lib/external-link'
 import { cn } from '@/lib/utils'
 import { notifyError } from '@/store/notifications'
 
+import { DesktopVoiceControls, useDesktopVoiceActions } from '../chat/desktop-voice-actions'
+
 import { $ixPendingSkill } from './copilot-store'
 import { LoginPane } from './login-pane'
 import { $ixSync, orgSkillCatalog } from './sync-store'
@@ -145,10 +147,12 @@ function ConfirmCard({
         <Codicon className="text-amber-500" name="shield" size="0.875rem" />
         <span className="font-medium">Write action requires your confirmation</span>
       </div>
-      <div className="mt-1.5 break-all">
+      <div className="mt-1.5">
         <code className="font-mono text-[0.7rem]">{item.name}</code>
         {item.argsSummary && (
-          <code className="ml-1 font-mono text-[0.68rem] text-muted-foreground">{item.argsSummary}</code>
+          <pre className="mt-1 max-h-64 overflow-auto rounded bg-(--ui-bg-quaternary) p-2 font-mono text-[0.68rem] text-muted-foreground whitespace-pre-wrap break-all">
+            {item.argsSummary}
+          </pre>
         )}
       </div>
       {state === 'pending' && item.nonce ? (
@@ -220,6 +224,7 @@ export function CopilotTab() {
   const scrollRef = useRef<HTMLDivElement | null>(null)
   const conversationIdRef = useRef<null | string>(null)
   const busyRef = useRef(false)
+  const lastSpokenRef = useRef<string | null>(null)
 
   conversationIdRef.current = conversationId
   busyRef.current = busy
@@ -377,7 +382,7 @@ export function CopilotTab() {
   )
 
   const send = useCallback(
-    async (text: string) => {
+    async (text: string, metadata: { input_modality?: 'text' | 'voice' } = {}) => {
       if (!bridge?.chatSend || !text.trim() || busy) {
         return
       }
@@ -403,6 +408,7 @@ export function CopilotTab() {
         const result = await bridge.chatSend({
           conversationId: conversationIdRef.current,
           text: text.trim(),
+          inputModality: metadata.input_modality ?? 'text',
           model,
           skills
         })
@@ -430,6 +436,31 @@ export function CopilotTab() {
     },
     [activeSkillIds, bridge, busy, model, refreshConversations, skillCatalog]
   )
+
+  const pendingConfirmation = items.some(item => item.kind === 'confirm' && item.state === 'pending')
+
+  const voice = useDesktopVoiceActions({
+    blocked: pendingConfirmation,
+    busy,
+    consumePendingResponse: () => {
+      const last = items.findLast(item => item.kind === 'assistant' && item.text)
+      lastSpokenRef.current = last ? `${last.at}:${last.text}` : null
+    },
+    onSubmit: (text, metadata) => send(text, metadata),
+    pendingResponse: () => {
+      if (streamingText) {
+        return { id: `stream:${conversationId ?? 'new'}`, pending: busy, text: streamingText }
+      }
+
+      const last = items.findLast(item => item.kind === 'assistant' && item.text)
+
+      if (!last) {return null}
+
+      const id = `${last.at}:${last.text}`
+
+      return id !== lastSpokenRef.current ? { id, pending: false, text: last.text ?? '' } : null
+    }
+  })
 
   const decide = useCallback(
     async (nonce: string, approve: boolean) => {
@@ -626,6 +657,7 @@ export function CopilotTab() {
               value={draft}
             />
             <div className="flex items-center gap-2">
+              <DesktopVoiceControls className="min-w-0 flex-1" controller={voice} />
               <select
                 className="h-6 rounded border border-(--ui-border-primary) bg-(--ui-bg-quinary) px-1.5 text-[0.7rem]"
                 onChange={event => setModel(event.target.value)}
@@ -637,7 +669,7 @@ export function CopilotTab() {
                   </option>
                 ))}
               </select>
-              <span className="min-w-0 flex-1 truncate text-[0.65rem] text-muted-foreground/60">
+              <span className="min-w-0 truncate text-[0.65rem] text-muted-foreground/60">
                 Writes require the Confirm button — the model cannot approve itself.
               </span>
               <Button disabled={busy || !draft.trim()} onClick={() => void send(draft)} size="sm">

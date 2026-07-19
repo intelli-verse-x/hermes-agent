@@ -15,6 +15,7 @@ import { clearNotifications, notify, notifyError } from '@/store/notifications'
 import { requestDesktopOnboarding } from '@/store/onboarding'
 import { setAwaitingResponse, setBusy, setMessages } from '@/store/session'
 
+import { assertVoiceSubmissionAllowed } from '../../../chat/voice-submission-policy'
 import type { ClientSessionState } from '../../../types'
 
 import {
@@ -66,6 +67,11 @@ export function useSubmitPrompt(deps: SubmitPromptDeps) {
   return useCallback(
     async (rawText: string, options?: SubmitTextOptions) => {
       const visibleText = rawText.trim()
+
+      if (options?.inputModality === 'voice') {
+        assertVoiceSubmissionAllowed(visibleText)
+      }
+
       const usingComposerAttachments = !options?.attachments
 
       // Drop undefined/null holes a session switch or draft restore can leave in
@@ -283,7 +289,16 @@ export function useSubmitPrompt(deps: SubmitPromptDeps) {
 
         try {
           await withSessionBusyRetry(() =>
-            requestGateway('prompt.submit', { session_id: sessionId, text }, PROMPT_SUBMIT_REQUEST_TIMEOUT_MS)
+            requestGateway(
+              'prompt.submit',
+              {
+                input_modality: options?.inputModality ?? 'text',
+                session_id: sessionId,
+                text,
+                voice_attestation: options?.voiceAttestation
+              },
+              PROMPT_SUBMIT_REQUEST_TIMEOUT_MS
+            )
           )
         } catch (firstErr) {
           if (
@@ -305,7 +320,16 @@ export function useSubmitPrompt(deps: SubmitPromptDeps) {
             if (recoveredId) {
               activeSessionIdRef.current = recoveredId
               await withSessionBusyRetry(() =>
-                requestGateway('prompt.submit', { session_id: recoveredId, text }, PROMPT_SUBMIT_REQUEST_TIMEOUT_MS)
+                requestGateway(
+                  'prompt.submit',
+                  {
+                    input_modality: options?.inputModality ?? 'text',
+                    session_id: recoveredId,
+                    text,
+                    voice_attestation: options?.voiceAttestation
+                  },
+                  PROMPT_SUBMIT_REQUEST_TIMEOUT_MS
+                )
               )
             } else {
               submitErr = firstErr

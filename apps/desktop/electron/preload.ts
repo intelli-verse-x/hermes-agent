@@ -7,6 +7,21 @@ import { contextBridge, ipcRenderer, webUtils } from 'electron'
 // check-brand-separation.mjs asserts that on the bundle.
 import { IS_IX_AGENCY_BRAND, IS_QUIZVERSE_BRAND } from './brand-gates'
 
+let voiceCaptureToken = ''
+ipcRenderer.on('hermes:voice:capture-authorized', (_event, token) => {
+  voiceCaptureToken = typeof token === 'string' ? token : ''
+})
+
+async function consumeVoiceCaptureAttestation(): Promise<string> {
+  if (!voiceCaptureToken) {
+    throw new Error('No current approved microphone capture.')
+  }
+
+  voiceCaptureToken = ''
+
+  return ipcRenderer.invoke('hermes:voice:consume-capture-attestation')
+}
+
 contextBridge.exposeInMainWorld('hermesDesktop', {
   getConnection: profile => ipcRenderer.invoke('hermes:connection', profile),
   revalidateConnection: () => ipcRenderer.invoke('hermes:connection:revalidate'),
@@ -14,6 +29,9 @@ contextBridge.exposeInMainWorld('hermesDesktop', {
   getGatewayWsUrl: profile => ipcRenderer.invoke('hermes:gateway:ws-url', profile),
   openSessionWindow: (sessionId, opts) => ipcRenderer.invoke('hermes:window:openSession', sessionId, opts),
   openNewSessionWindow: () => ipcRenderer.invoke('hermes:window:openNewSession'),
+  voice: {
+    consumeCaptureAttestation: consumeVoiceCaptureAttestation
+  },
   petOverlay: {
     // Main renderer → main process: window lifecycle + drag. `request` is
     // `{ bounds, screen }`; resolves with the screen bounds it actually used.
@@ -231,6 +249,26 @@ contextBridge.exposeInMainWorld('hermesDesktop', {
   },
   getVersion: () => ipcRenderer.invoke('hermes:version'),
   getRemoteDisplayReason: () => ipcRenderer.invoke('hermes:get-remote-display-reason'),
+  localAi: {
+    getStatus: () => ipcRenderer.invoke('hermes:local-ai:status'),
+    getRecommendation: () => ipcRenderer.invoke('hermes:local-ai:recommendation'),
+    setMode: mode => ipcRenderer.invoke('hermes:local-ai:mode', mode),
+    setTelemetryEnabled: enabled => ipcRenderer.invoke('hermes:local-ai:telemetry', enabled),
+    install: input => ipcRenderer.invoke('hermes:local-ai:install', input),
+    cancel: () => ipcRenderer.invoke('hermes:local-ai:cancel'),
+    retry: () => ipcRenderer.invoke('hermes:local-ai:retry'),
+    verify: () => ipcRenderer.invoke('hermes:local-ai:verify'),
+    repair: () => ipcRenderer.invoke('hermes:local-ai:repair'),
+    changeModel: modelId => ipcRenderer.invoke('hermes:local-ai:change-model', modelId),
+    reinstall: () => ipcRenderer.invoke('hermes:local-ai:reinstall'),
+    uninstall: () => ipcRenderer.invoke('hermes:local-ai:uninstall'),
+    onProgress: callback => {
+      const listener = (_event, payload) => callback(payload)
+      ipcRenderer.on('hermes:local-ai:progress', listener)
+
+      return () => ipcRenderer.removeListener('hermes:local-ai:progress', listener)
+    }
+  },
   uninstall: {
     summary: () => ipcRenderer.invoke('hermes:uninstall:summary'),
     run: mode => ipcRenderer.invoke('hermes:uninstall:run', { mode })
@@ -292,7 +330,13 @@ contextBridge.exposeInMainWorld('hermesDesktop', {
           chatModels: () => ipcRenderer.invoke('hermes:ix-agency:chat:models'),
           chatList: () => ipcRenderer.invoke('hermes:ix-agency:chat:list'),
           chatGet: conversationId => ipcRenderer.invoke('hermes:ix-agency:chat:get', conversationId),
-          chatSend: payload => ipcRenderer.invoke('hermes:ix-agency:chat:send', payload),
+          chatSend: async payload => {
+            const governedPayload = payload?.inputModality === 'voice'
+              ? { ...payload, voiceCaptureToken: await consumeVoiceCaptureAttestation() }
+              : payload
+
+            return ipcRenderer.invoke('hermes:ix-agency:chat:send', governedPayload)
+          },
           chatConfirm: payload => ipcRenderer.invoke('hermes:ix-agency:chat:confirm', payload),
           onChatEvent: callback => {
             const listener = (_event, payload) => callback(payload)

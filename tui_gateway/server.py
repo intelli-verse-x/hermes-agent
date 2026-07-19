@@ -1,13 +1,17 @@
 import atexit
+import base64
 import concurrent.futures
 import contextlib
 import contextvars
 import copy
 import inspect
+import hashlib
+import hmac
 import json
 import logging
 import os
 import queue
+import re
 import subprocess
 import sys
 import threading
@@ -8414,9 +8418,64 @@ def _(rid, params: dict) -> dict:
 # ── Methods: prompt ──────────────────────────────────────────────────
 
 
+_VOICE_RESTRICTED_INPUTS = (
+    (re.compile(r"^\s*/yolo\b", re.I), "voice cannot enable automatic approval"),
+    (re.compile(r"\b(?:approve|allow)\s+(?:for\s+)?(?:this\s+)?session\b", re.I), "voice cannot grant session approval"),
+    (re.compile(r"\b(?:always|permanently)\s+(?:approve|allow)\b", re.I), "voice cannot grant permanent approval"),
+    (re.compile(r"\b(?:approve once|confirm action|structured approval|grant approval)\b", re.I), "use the structured confirmation control"),
+    (
+        re.compile(
+            r"\b(?:my\s+)?(?:password|passcode|one[- ]time password|otp|verification code|api key|secret|credential)\s*(?:is|:)\s*\S+",
+            re.I,
+        ),
+        "secrets and credentials require protected keyboard input",
+    ),
+    (
+        re.compile(
+            r"\b(?:grant|revoke|change|modify|enable|disable)\s+(?:[a-z-]+\s+){0,3}(?:permission|permissions|access|role|roles)\b",
+            re.I,
+        ),
+        "voice cannot authorize permission changes",
+    ),
+)
+_USED_VOICE_ATTESTATIONS: set[str] = set()
+
+
+def _verify_voice_attestation(token: Any) -> bool:
+    if not isinstance(token, str) or not token or token in _USED_VOICE_ATTESTATIONS:
+        return False
+    key = os.environ.get("HERMES_DESKTOP_VOICE_ATTESTATION_KEY", "").encode("utf-8")
+    try:
+        payload, supplied = token.split(".", 1)
+        expected = hmac.new(key, payload.encode("ascii"), hashlib.sha256).digest()
+        supplied_bytes = base64.urlsafe_b64decode(supplied + "=" * (-len(supplied) % 4))
+        value = json.loads(base64.urlsafe_b64decode(payload + "=" * (-len(payload) % 4)))
+    except (ValueError, TypeError, json.JSONDecodeError):
+        return False
+    if not key or not hmac.compare_digest(expected, supplied_bytes):
+        return False
+    if not isinstance(value.get("exp"), (int, float)) or value["exp"] <= time.time() * 1000:
+        return False
+    _USED_VOICE_ATTESTATIONS.add(token)
+
+    return True
+
+
+def _voice_input_block_reason(text: str) -> Optional[str]:
+    for pattern, reason in _VOICE_RESTRICTED_INPUTS:
+        if pattern.search(text):
+            return reason
+    return None
+
+
 @method("prompt.submit")
 def _(rid, params: dict) -> dict:
     sid, text = params.get("session_id", ""), params.get("text", "")
+    input_modality = "voice" if params.get("input_modality") == "voice" else "text"
+    if input_modality == "voice" and not _verify_voice_attestation(params.get("voice_attestation")):
+        return _err(rid, 4031, "voice input requires a current approved microphone capture attestation")
+    if input_modality == "voice" and (reason := _voice_input_block_reason(str(text))):
+        return _err(rid, 4031, reason)
     truncate_user_ordinal = params.get("truncate_before_user_ordinal")
     session, err = _sess_nowait(params, rid)
     if err:
@@ -10208,6 +10267,9 @@ def _(rid, params: dict) -> dict:
                     session["session_key"],
                     params.get("choice", "deny"),
                     resolve_all=params.get("all", False),
+                    request_id=params.get("request_id"),
+                    action_id=params.get("action_id"),
+                    frozen_digest=params.get("frozen_digest"),
                 )
             },
         )

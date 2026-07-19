@@ -114,6 +114,7 @@ import {
 } from './ix-agency'
 import { applyIxProvisionToSettings, fetchIxDesktopProvision } from './ix-auto-provision'
 import {
+  createEscalationGate,
   createWriteGate,
   DEFAULT_IX_CHAT_MODEL,
   IX_CHAT_MODELS,
@@ -170,6 +171,8 @@ import {
   releaseNotesText
 } from './ix-updater'
 import { createLinkTitleWindow, guardLinkTitleSession, readLinkTitleWindowTitle } from './link-title-window'
+import { LocalAiController } from './local-ai'
+import { isApprovedMicrophoneRequestContext, isApprovedRendererUrl } from './mic-permissions'
 import { serializeJsonBody, setJsonRequestHeaders } from './oauth-net-request'
 import {
   beginQuizverseOAuth,
@@ -277,6 +280,8 @@ const IS_WSL = isWslEnvironment()
 // build SDK, so gate Tahoe workarounds on Darwin instead.
 const DARWIN_MAJOR = IS_MAC ? Number.parseInt(os.release(), 10) || 0 : 0
 const APP_ROOT = app.getAppPath()
+process.env.HERMES_LOCAL_AI_STATE_PATH = path.join(app.getPath('userData'), 'local-ai', 'controller.json')
+process.env.HERMES_DESKTOP_VOICE_ATTESTATION_KEY = crypto.randomBytes(32).toString('base64url')
 
 // Preload must be plain JS — Electron's sandbox can't run .ts, and tsx's
 // ESM loader is broken on Electron 40's Node (ERR_INVALID_RETURN_PROPERTY_VALUE).
@@ -513,11 +518,15 @@ function ensureDesktopBrandProvision(targetHermesHome = effectiveDesktopHermesHo
     const result = provisionDesktopBrand({
       hermesHome: effectiveHermesHome,
       brandId: BRAND.id,
-      productName: BRAND.productName
+      productName: BRAND.productName,
+      sharedSkillsRoot: IS_PACKAGED
+        ? path.join(process.resourcesPath, 'hermes-skills')
+        : path.join(SOURCE_REPO_ROOT, 'skills')
     })
 
     rememberLog(
-      `[brand] provisioned skin at ${result.skinPath}${result.configTouched ? ' (config updated)' : ''}`
+      `[brand] provisioned skin at ${result.skinPath}${result.configTouched ? ' (config updated)' : ''}; ` +
+      `${result.sharedSkillCount} shared skills`
     )
   } catch (error) {
     rememberLog(`[brand] provision failed: ${error instanceof Error ? error.message : String(error)}`)
@@ -1028,6 +1037,24 @@ function registerMediaProtocol() {
 let mainWindow = null
 let hermesProcess = null
 let connectionPromise = null
+let localAiController: LocalAiController | null = null
+
+function getLocalAiController() {
+  if (!localAiController) {
+    localAiController = new LocalAiController({
+      dataRoot: path.join(app.getPath('userData'), 'local-ai'),
+      assetsRoot: IS_PACKAGED ? path.join(process.resourcesPath, 'local-ai') : path.join(APP_ROOT, 'assets'),
+      emit: progress => {
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.send('hermes:local-ai:progress', progress)
+        }
+      }
+    })
+  }
+
+  return localAiController
+}
+
 // Additional per-profile backends, keyed by profile name. The PRIMARY backend
 // (the desktop's launch profile) stays managed by hermesProcess +
 // connectionPromise + startHermes(); this pool only holds EXTRA profile
@@ -5201,51 +5228,123 @@ function installContextMenu(window) {
 // We therefore treat an audio-capture request as allowed whenever it's the
 // 'media'/'audioCapture' permission AND mediaTypes either includes 'audio' OR
 // is empty/absent (the Windows case). Video is still denied.
-function isAudioCapturePermission(permission, details) {
-  if (permission === 'audioCapture') {
-    return true
-  }
+const voiceCaptureAttestations = new Map<number, { expiresAt: number; token: string }>()
+const usedVoiceAttestations = new Set<string>()
+const VOICE_CAPTURE_PENDING_TTL_MS = 12 * 60_000
 
-  if (permission !== 'media') {
+function signVoiceCaptureAttestation(webContentsId: number): string {
+  const payload = Buffer.from(
+    JSON.stringify({ exp: Date.now() + 10 * 60_000, nonce: crypto.randomBytes(16).toString('hex'), webContentsId })
+  ).toString('base64url')
+
+  const signature = crypto
+    .createHmac('sha256', process.env.HERMES_DESKTOP_VOICE_ATTESTATION_KEY)
+    .update(payload)
+    .digest('base64url')
+
+  return `${payload}.${signature}`
+}
+
+function verifyVoiceCaptureAttestation(token: string, webContentsId: number): boolean {
+  if (!token || usedVoiceAttestations.has(token)) {
     return false
   }
 
-  const mediaTypes = details?.mediaTypes
+  const [payload, suppliedSignature] = token.split('.')
 
-  if (!Array.isArray(mediaTypes) || mediaTypes.length === 0) {
-    // Windows: mediaTypes is often empty for a mic request. Don't deny on
-    // missing metadata. (A video request would carry mediaTypes:['video'].)
-    return true
+  if (!payload || !suppliedSignature) {
+    return false
   }
 
-  return mediaTypes.includes('audio') && !mediaTypes.includes('video')
+  const expectedSignature = crypto
+    .createHmac('sha256', process.env.HERMES_DESKTOP_VOICE_ATTESTATION_KEY)
+    .update(payload)
+    .digest('base64url')
+
+  if (
+    suppliedSignature.length !== expectedSignature.length ||
+    !crypto.timingSafeEqual(Buffer.from(suppliedSignature), Buffer.from(expectedSignature))
+  ) {
+    return false
+  }
+
+  try {
+    const value = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'))
+
+    if (value.webContentsId !== webContentsId || !Number.isFinite(value.exp) || value.exp <= Date.now()) {
+      return false
+    }
+  } catch {
+    return false
+  }
+
+  usedVoiceAttestations.add(token)
+
+  return true
+}
+
+function isApprovedMicrophoneRequest(webContents, permission, details, origin = '', issueAttestation = false) {
+  const preferences = webContents?.getLastWebPreferences?.()
+  const approvedWindow = BrowserWindow.fromWebContents(webContents)
+
+  const trustedPreload =
+    typeof preferences?.preload === 'string' &&
+    path.resolve(preferences.preload) === path.resolve(PRELOAD_PATH)
+
+  const source = details?.requestingUrl || details?.securityOrigin || origin || webContents?.getURL?.()
+
+  const locations = {
+    developmentOrigin: DEV_SERVER || null,
+    packagedRendererPaths: [pathToFileURL(resolveRendererIndex()).toString()]
+  }
+
+  const approved = isApprovedMicrophoneRequestContext(
+    {
+      details,
+      hasApprovedWindow: Boolean(approvedWindow && !approvedWindow.isDestroyed()),
+      pageUrl: webContents?.getURL?.(),
+      permission,
+      requestingUrl: source,
+      trustedPreload
+    },
+    locations
+  )
+
+  if (approved && issueAttestation) {
+    const token = crypto.randomBytes(24).toString('base64url')
+    voiceCaptureAttestations.set(webContents.id, { expiresAt: Date.now() + VOICE_CAPTURE_PENDING_TTL_MS, token })
+    webContents.send('hermes:voice:capture-authorized', token)
+  }
+
+  return approved
 }
 
 function installMediaPermissions() {
   // Async request handler: the prompt-style path (most platforms).
-  session.defaultSession.setPermissionRequestHandler((_webContents, permission, callback, details) => {
-    callback(isAudioCapturePermission(permission, details))
+  session.defaultSession.setPermissionRequestHandler((webContents, permission, callback, details) => {
+    callback(isApprovedMicrophoneRequest(webContents, permission, details, '', true))
   })
 
   // Synchronous check handler: Chromium consults this for getUserMedia on
   // Windows in addition to (or instead of) the request handler. Without it,
   // the check defaults to false and the mic is denied before the request
   // handler ever runs.
-  session.defaultSession.setPermissionCheckHandler((_webContents, permission, _origin, details) => {
-    if (permission === 'media' || permission === ('audioCapture' as any) /* todo: is this needed? */) {
-      // details.mediaType is a single string here (not the mediaTypes array).
-      const mediaType = details?.mediaType
-
-      if (mediaType === 'video') {
-        return false
-      }
-
-      return true
-    }
-
-    return false
+  session.defaultSession.setPermissionCheckHandler((webContents, permission, origin, details) => {
+    return isApprovedMicrophoneRequest(webContents, permission, details, origin)
   })
 }
+
+ipcMain.handle('hermes:voice:consume-capture-attestation', event => {
+  const pending = voiceCaptureAttestations.get(event.sender.id)
+
+  voiceCaptureAttestations.delete(event.sender.id)
+
+  if (!pending || pending.expiresAt <= Date.now()) {
+    throw new Error('No current approved microphone capture.')
+  }
+
+  return signVoiceCaptureAttestation(event.sender.id)
+})
 
 // ---------------------------------------------------------------------------
 // OAuth remote-gateway auth.
@@ -6822,7 +6921,12 @@ function wireCommonWindowHandlers(win) {
     return { action: 'deny' }
   })
   win.webContents.on('will-navigate', (event, url) => {
-    if ((DEV_SERVER && url.startsWith(DEV_SERVER)) || (!DEV_SERVER && url.startsWith('file:'))) {
+    if (
+      isApprovedRendererUrl(url, {
+        developmentOrigin: DEV_SERVER || null,
+        packagedRendererPaths: [pathToFileURL(resolveRendererIndex()).toString()]
+      })
+    ) {
       return
     }
 
@@ -7540,12 +7644,30 @@ ipcMain.on('hermes:previewShortcutActive', (_event, active) => {
   previewShortcutActive = Boolean(active)
 })
 
-ipcMain.handle('hermes:requestMicrophoneAccess', async () => {
-  if (!IS_MAC || typeof systemPreferences.askForMediaAccess !== 'function') {
-    return true
+ipcMain.handle('hermes:requestMicrophoneAccess', async event => {
+  if (IS_MAC && typeof systemPreferences.askForMediaAccess === 'function') {
+    const permitted = await systemPreferences.askForMediaAccess('microphone')
+
+    if (!permitted) {
+      return false
+    }
   }
 
-  return systemPreferences.askForMediaAccess('microphone')
+  // This IPC is called immediately before every getUserMedia attempt, including
+  // cached grants and the Windows check-only path. Re-validate the exact app
+  // renderer and mint one pending attestation per recording turn; the generic
+  // permission check handler deliberately remains non-minting.
+  return isApprovedMicrophoneRequest(
+    event.sender,
+    'media',
+    {
+      isMainFrame: true,
+      mediaTypes: ['audio'],
+      requestingUrl: event.sender.getURL()
+    },
+    '',
+    true
+  )
 })
 
 // Re-route remote-profile session requests to the owning remote backend. Returns
@@ -8841,6 +8963,7 @@ ixIpcHandle('hermes:ix-agency:skills:publish', async (_event, input) => {
 const IX_CHAT_STORE_PATH = path.join(app.getPath('userData'), 'ix-agency-chats.json')
 
 const ixChatGate = createWriteGate()
+const ixEscalationGate = createEscalationGate()
 
 const ixChatRunning = new Set<string>()
 
@@ -8932,9 +9055,18 @@ ixIpcHandle('hermes:ix-agency:chat:send', async (event, input) => {
   }
 
   const text = typeof input?.text === 'string' ? input.text.trim() : ''
+  const inputModality = input?.inputModality === 'voice' ? 'voice' : 'text'
 
   if (!text) {
     throw new Error('Empty message.')
+  }
+
+  if (inputModality === 'voice') {
+    const supplied = typeof input?.voiceCaptureToken === 'string' ? input.voiceCaptureToken : ''
+
+    if (!verifyVoiceCaptureAttestation(supplied, event.sender.id)) {
+      throw new Error('Voice submission is missing a current approved microphone capture attestation.')
+    }
   }
 
   const { models, defaultModel } = ixChatModelList(settings)
@@ -9024,11 +9156,17 @@ ixIpcHandle('hermes:ix-agency:chat:send', async (event, input) => {
   try {
     await runIxChatTurn({
       conversation,
+      inputModality,
       userText: text,
       litellm: { baseUrl: settings.litellmUrl, apiKey: settings.litellmKey },
+      localAi: {
+        ...(await getLocalAiController().getInferenceTarget()),
+        recordRoute: input => getLocalAiController().recordRoute(input)
+      },
       toolSpecs,
       callGatewayTool,
       gate: ixChatGate,
+      escalationGate: ixEscalationGate,
       emit,
       extraSystemBlocks
     })
@@ -9049,7 +9187,11 @@ ixIpcHandle('hermes:ix-agency:chat:confirm', async (_event, input) => {
   const approve = Boolean(input?.approve)
   const conversationId = typeof input?.conversationId === 'string' ? input.conversationId : ''
 
-  const ok = approve ? ixChatGate.confirm(nonce) : ixChatGate.deny(nonce)
+  const escalationResolved = ixEscalationGate.resolve(conversationId, nonce, approve)
+
+  const ok =
+    escalationResolved ||
+    (approve ? ixChatGate.confirm(nonce, conversationId) : ixChatGate.deny(nonce, conversationId))
 
   // Reflect the decision in the persisted transcript so reloads render it.
   const store = readIxChatStore(IX_CHAT_STORE_PATH)
@@ -11507,6 +11649,28 @@ ipcMain.handle('hermes:version', async () => ({
   hermesRoot: resolveUpdateRoot()
 }))
 
+ipcMain.handle('hermes:local-ai:status', () => getLocalAiController().getStatus())
+ipcMain.handle('hermes:local-ai:recommendation', () => getLocalAiController().getRecommendation())
+ipcMain.handle('hermes:local-ai:mode', (_event, mode) => getLocalAiController().setMode(String(mode)))
+ipcMain.handle('hermes:local-ai:telemetry', (_event, enabled) =>
+  getLocalAiController().setTelemetryEnabled(Boolean(enabled))
+)
+ipcMain.handle('hermes:local-ai:install', (_event, input) =>
+  getLocalAiController().install({
+    mode: input?.mode === 'local-only' ? 'local-only' : 'local-first',
+    modelId: String(input?.modelId || '')
+  })
+)
+ipcMain.handle('hermes:local-ai:cancel', () => getLocalAiController().cancel())
+ipcMain.handle('hermes:local-ai:retry', () => getLocalAiController().retry())
+ipcMain.handle('hermes:local-ai:verify', () => getLocalAiController().verify())
+ipcMain.handle('hermes:local-ai:repair', () => getLocalAiController().repair())
+ipcMain.handle('hermes:local-ai:change-model', (_event, modelId) =>
+  getLocalAiController().changeModel(typeof modelId === 'string' && modelId ? modelId : undefined)
+)
+ipcMain.handle('hermes:local-ai:reinstall', () => getLocalAiController().reinstall())
+ipcMain.handle('hermes:local-ai:uninstall', () => getLocalAiController().uninstall())
+
 // ===========================================================================
 // Uninstall — remove the Chat GUI (and optionally the agent / user data).
 // ===========================================================================
@@ -11946,6 +12110,7 @@ app.on('before-quit', () => {
     disposeTerminalSession(id)
   }
 
+  void localAiController?.shutdown()
   stopBackendChild(hermesProcess)
   stopAllPoolBackends()
 })

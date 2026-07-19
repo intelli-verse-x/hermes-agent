@@ -1655,6 +1655,18 @@ def transcribe_audio(file_path: str, model: Optional[str] = None) -> Dict[str, A
         }
 
     provider = _get_provider(stt_config)
+    from tools.voice_privacy import enforce_local_stt_provider
+
+    try:
+        enforce_local_stt_provider(stt_config, provider)
+    except PermissionError as exc:
+        return {
+            "success": False,
+            "transcript": "",
+            "error": str(exc),
+            "provider": provider,
+            "policy_blocked": True,
+        }
 
     if provider == "local":
         local_cfg = stt_config.get("local", {})

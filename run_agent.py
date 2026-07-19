@@ -4100,7 +4100,9 @@ class AIAgent:
             and self._api_kwargs_have_image_parts(api_kwargs or {})
         ):
             request_kwargs["default_headers"] = self._copilot_headers_for_request(is_vision=True)
-        return self._create_openai_client(request_kwargs, reason=reason, shared=False)
+        client = self._create_openai_client(request_kwargs, reason=reason, shared=False)
+        from agent.adaptive_local_client import maybe_wrap_client
+        return maybe_wrap_client(client, api_mode=self.api_mode, provider=self.provider)
 
     def _close_request_openai_client(self, client: Any, *, reason: str) -> None:
         self._close_openai_client(client, reason=reason, shared=False)

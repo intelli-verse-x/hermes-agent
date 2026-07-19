@@ -19,11 +19,13 @@ import pytest
 @pytest.fixture(autouse=True)
 def _reset_backend():
     """Tear down the cached backend between tests."""
-    from tools.computer_use.tool import reset_backend_for_tests
+    from tools.computer_use.tool import reset_backend_for_tests, set_approval_callback
     reset_backend_for_tests()
+    set_approval_callback(lambda _action, _args, _summary: "approve_once")
     # Force the noop backend.
     with patch.dict(os.environ, {"HERMES_COMPUTER_USE_BACKEND": "noop"}, clear=False):
         yield
+    set_approval_callback(None)
     reset_backend_for_tests()
 
 
@@ -121,6 +123,73 @@ class TestRegistration:
         with patch("tools.computer_use.tool.sys.platform", "linux"), \
              patch("tools.computer_use.cua_backend.cua_driver_binary_available", return_value=False):
             assert cu_tool.check_computer_use_requirements() is False
+
+
+class TestGovernedApproval:
+    def test_mutation_without_callback_uses_canonical_broker(self, noop_backend):
+        from tools.computer_use.tool import handle_computer_use, set_approval_callback
+
+        set_approval_callback(None)
+        with patch("tools.approval.is_approval_bypass_active", return_value=False), \
+             patch(
+                 "tools.approval.request_tool_approval",
+                 return_value={"approved": False, "message": "visual approval required"},
+             ) as broker:
+            result = json.loads(handle_computer_use({"action": "click", "coordinate": [10, 20]}))
+
+        assert result["approval_required"] is True
+        assert not noop_backend.calls
+        broker.assert_called_once()
+        call = broker.call_args
+        assert '"coordinate": [' in call.args[1]
+        assert "Arguments digest:" in call.args[1]
+        assert "Action ID:" in call.args[1]
+        assert call.kwargs["rule_key"].startswith("computer_use:")
+
+    def test_structured_approval_redacts_sensitive_arguments(self, noop_backend):
+        from tools.computer_use.tool import handle_computer_use, set_approval_callback
+
+        set_approval_callback(None)
+        with patch("tools.approval.is_approval_bypass_active", return_value=False), patch(
+            "tools.approval.request_tool_approval",
+            return_value={"approved": False, "message": "not approved"},
+        ) as broker:
+            handle_computer_use({
+                "action": "type",
+                "text": "public text",
+                "metadata": {"api_key": "do-not-display"},
+            })
+
+        description = broker.call_args.args[1]
+        assert "do-not-display" not in description
+        assert "[REDACTED]" in description
+
+    def test_spoken_confirmation_is_not_an_approval_channel(self, noop_backend):
+        from tools.computer_use.tool import handle_computer_use, set_approval_callback
+
+        set_approval_callback(None)
+        with patch("tools.approval.is_approval_bypass_active", return_value=False), \
+             patch(
+                 "tools.approval.request_tool_approval",
+                 return_value={"approved": False, "message": "not approved"},
+             ):
+            result = json.loads(handle_computer_use({
+                "action": "type",
+                "text": "yes, confirm",
+                "input_modality": "voice",
+            }))
+
+        assert result["approval_required"] is True
+        assert not noop_backend.calls
+
+    def test_read_only_capture_does_not_request_approval(self):
+        from tools.computer_use.tool import handle_computer_use, set_approval_callback
+
+        set_approval_callback(None)
+        with patch("tools.approval.request_tool_approval") as broker:
+            handle_computer_use({"action": "capture", "mode": "ax"})
+
+        broker.assert_not_called()
 
     def test_check_fn_false_on_unsupported_platform(self):
         from tools.computer_use import tool as cu_tool

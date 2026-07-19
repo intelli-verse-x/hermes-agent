@@ -469,6 +469,17 @@ export function useGatewayEventHandler(deps: GatewayEventDeps) {
           allowPermanent: payload?.allow_permanent !== false,
           command,
           description,
+          requestId: typeof payload?.request_id === 'string' ? payload.request_id : undefined,
+          actionId: typeof payload?.action_id === 'string' ? payload.action_id : undefined,
+          frozenDigest: typeof payload?.frozen_digest === 'string' ? payload.frozen_digest : undefined,
+          approvalKind: payload?.approval_kind === 'adaptive-cloud' ? 'adaptive-cloud' : undefined,
+          provider: typeof payload?.provider === 'string' ? payload.provider : undefined,
+          reason: typeof payload?.reason === 'string' ? payload.reason : undefined,
+          disclosure: typeof payload?.disclosure === 'string' ? payload.disclosure : undefined,
+          handoffMetadata:
+            payload?.handoff_metadata && typeof payload.handoff_metadata === 'object'
+              ? payload.handoff_metadata
+              : undefined,
           sessionId: sessionId ?? null
         })
 
@@ -477,10 +488,13 @@ export function useGatewayEventHandler(deps: GatewayEventDeps) {
         }
 
         dispatchNativeNotification({
-          actions: [
-            { id: 'approve', text: translateNow('notifications.native.approveAction') },
-            { id: 'reject', text: translateNow('notifications.native.rejectAction') }
-          ],
+          actions:
+            payload?.approval_kind === 'adaptive-cloud'
+              ? undefined
+              : [
+                  { id: 'approve', text: translateNow('notifications.native.approveAction') },
+                  { id: 'reject', text: translateNow('notifications.native.rejectAction') }
+                ],
           body: command || description,
           kind: 'approval',
           sessionId,

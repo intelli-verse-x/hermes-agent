@@ -6,6 +6,8 @@ import { Button } from '@/components/ui/button'
 import { Codicon } from '@/components/ui/codicon'
 import { cn } from '@/lib/utils'
 
+import { DesktopVoiceControls, useDesktopVoiceActions } from '../chat/desktop-voice-actions'
+
 import { playRpc } from './play-store'
 import { tutorFetch, tutorStream } from './tutor-api'
 import {
@@ -431,6 +433,7 @@ function TutorChat() {
   const [researchDepth, setResearchDepth] = useState('standard')
   const [researchMode, setResearchMode] = useState('report')
   const [showBank, setShowBank] = useState(false)
+  const lastSpokenRef = useRef<string | null>(null)
 
   const availableModes = capabilities.checked && !capabilities.masteryMode
     ? MODES.filter(item => item.id !== 'mastery_path')
@@ -442,6 +445,27 @@ function TutorChat() {
 
     return disposeTutorChat
   }, [])
+
+  const pendingTutorInput = messages.some(message => Boolean(message.askUser))
+
+  const voice = useDesktopVoiceActions({
+    blocked: pendingTutorInput,
+    busy: streaming,
+    consumePendingResponse: () => {
+      lastSpokenRef.current = messages.findLast(message => message.role === 'assistant' && message.content)?.id ?? null
+    },
+    onSubmit: (text, metadata) =>
+      sendTutorMessage(text, mode === 'deep_research'
+        ? { config: { depth: researchDepth, mode: researchMode }, inputModality: metadata.input_modality, mode }
+        : { inputModality: metadata.input_modality, mode }),
+    pendingResponse: () => {
+      const last = messages.findLast(message => message.role === 'assistant' && message.content)
+
+      return last && last.id !== lastSpokenRef.current
+        ? { id: last.id, pending: streaming, text: last.content }
+        : null
+    }
+  })
 
   return (
     <div className="flex h-full min-h-0">
@@ -561,7 +585,7 @@ function TutorChat() {
           ))}
         </div>
         <form
-          className="flex gap-2 border-t border-(--ui-border-primary) p-3"
+          className="grid gap-2 border-t border-(--ui-border-primary) p-3"
           onSubmit={event => {
             event.preventDefault()
             void sendTutorMessage(draft, mode === 'deep_research'
@@ -570,21 +594,24 @@ function TutorChat() {
             setDraft('')
           }}
         >
-          <textarea
-            className="min-h-10 flex-1 resize-none rounded-lg border border-(--ui-border-primary) bg-black/10 px-3 py-2 text-sm outline-none focus:border-violet-400/50"
-            disabled={streaming}
-            onChange={event => setDraft(event.target.value)}
-            placeholder={`Ask TutorX in ${MODES.find(item => item.id === mode)?.label} mode…`}
-            value={draft}
-          />
-          {streaming ? (
-            <Button onClick={cancelTutorTurn} type="button" variant="secondary">Cancel</Button>
-          ) : (
-            <Button disabled={!draft.trim()} type="submit">Send</Button>
-          )}
-          <Button onClick={regenerateTutorTurn} type="button" variant="ghost">
-            <Codicon name="refresh" />
-          </Button>
+          <div className="flex gap-2">
+            <textarea
+              className="min-h-10 flex-1 resize-none rounded-lg border border-(--ui-border-primary) bg-black/10 px-3 py-2 text-sm outline-none focus:border-violet-400/50"
+              disabled={streaming}
+              onChange={event => setDraft(event.target.value)}
+              placeholder={`Ask TutorX in ${MODES.find(item => item.id === mode)?.label} mode…`}
+              value={draft}
+            />
+            {streaming ? (
+              <Button onClick={cancelTutorTurn} type="button" variant="secondary">Cancel</Button>
+            ) : (
+              <Button disabled={!draft.trim()} type="submit">Send</Button>
+            )}
+            <Button onClick={regenerateTutorTurn} type="button" variant="ghost">
+              <Codicon name="refresh" />
+            </Button>
+          </div>
+          <DesktopVoiceControls controller={voice} />
         </form>
           </>
         )}

@@ -8,6 +8,7 @@ import { notifyError } from '@/store/notifications'
 import { $messages } from '@/store/session'
 import { $autoSpeakReplies, setAutoSpeakReplies } from '@/store/voice-prefs'
 
+import { grantCloudAudioConsent, inspectDesktopVoiceRoute } from '../../voice-policy'
 import { onComposerVoiceToggleRequest } from '../focus'
 import type { ChatBarProps } from '../types'
 
@@ -16,11 +17,13 @@ import { useVoiceConversation } from './use-voice-conversation'
 import { useVoiceRecorder } from './use-voice-recorder'
 
 interface UseComposerVoiceArgs {
+  blocked: boolean
   busy: boolean
   clearDraft: () => void
   disabled: boolean
   focusInput: () => void
   insertText: (text: string) => void
+  markDictatedDraft: () => void
   maxRecordingSeconds: number
   onSubmit: ChatBarProps['onSubmit']
   onTranscribeAudio: ChatBarProps['onTranscribeAudio']
@@ -34,11 +37,13 @@ interface UseComposerVoiceArgs {
  * so it lifts cleanly out of ChatBar.
  */
 export function useComposerVoice({
+  blocked,
   busy,
   clearDraft,
   disabled,
   focusInput,
   insertText,
+  markDictatedDraft,
   maxRecordingSeconds,
   onSubmit,
   onTranscribeAudio,
@@ -47,13 +52,6 @@ export function useComposerVoice({
   const { t } = useI18n()
   const [voiceConversationActive, setVoiceConversationActive] = useState(false)
   const lastSpokenIdRef = useRef<string | null>(null)
-
-  const { dictate, voiceActivityState, voiceStatus } = useVoiceRecorder({
-    focusInput,
-    maxRecordingSeconds,
-    onTranscript: insertText,
-    onTranscribeAudio
-  })
 
   const pendingResponse = () => {
     const messages = $messages.get()
@@ -93,17 +91,50 @@ export function useComposerVoice({
     triggerHaptic('submit')
     resetBrowseState(sessionId)
     clearDraft()
-    await onSubmit(text)
+    await onSubmit(text, { inputModality: 'voice' })
   }
 
+  const preCaptureCheck = async () => {
+    let route = await inspectDesktopVoiceRoute()
+
+    if (!route.allowed && route.usesCloudAudio && !route.localOnly) {
+      const approved = window.confirm(
+        `${route.disclosure}\n\nAudio will be processed by configured cloud speech providers. ` +
+        'This consent is separate from cloud inference. Continue?'
+      )
+
+      if (approved) {
+        grantCloudAudioConsent()
+        route = await inspectDesktopVoiceRoute()
+      }
+    }
+
+    if (!route.allowed) {
+      throw new Error(route.reason)
+    }
+  }
+
+  const { dictate, voiceActivityState, voiceStatus } = useVoiceRecorder({
+    focusInput,
+    maxRecordingSeconds,
+    onTranscript: text => {
+      markDictatedDraft()
+      insertText(text)
+    },
+    onTranscribeAudio,
+    preStartCheck: preCaptureCheck
+  })
+
   const conversation = useVoiceConversation({
+    blocked,
     busy,
     consumePendingResponse,
     enabled: voiceConversationActive,
     onFatalError: () => setVoiceConversationActive(false),
     onSubmit: submitVoiceTurn,
     onTranscribeAudio,
-    pendingResponse
+    pendingResponse,
+    preCaptureCheck
   })
 
   // The `composer.voice` hotkey (Ctrl+B) toggles the conversation. Starting

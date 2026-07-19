@@ -129,10 +129,18 @@ const ApprovalBar: FC<{ request: ApprovalRequest; surface: 'floating' | 'inline'
       setSubmitting(choice)
 
       try {
-        await gateway.request<{ resolved?: boolean }>('approval.respond', {
+        const result = await gateway.request<{ resolved?: boolean | number }>('approval.respond', {
           choice,
+          ...(request.requestId ? { request_id: request.requestId } : {}),
+          ...(request.actionId ? { action_id: request.actionId } : {}),
+          ...(request.frozenDigest ? { frozen_digest: request.frozenDigest } : {}),
           session_id: request.sessionId ?? undefined
         })
+
+        if (!result.resolved) {
+          throw new Error('This approval is stale or no longer matches the pending action.')
+        }
+
         triggerHaptic(choice === 'deny' ? 'cancel' : 'submit')
         clearApprovalRequest(request.sessionId)
       } catch (error) {
@@ -140,7 +148,16 @@ const ApprovalBar: FC<{ request: ApprovalRequest; surface: 'floating' | 'inline'
         setSubmitting(null)
       }
     },
-    [busy, copy.gatewayDisconnected, copy.sendFailed, gateway, request.sessionId]
+    [
+      busy,
+      copy.gatewayDisconnected,
+      copy.sendFailed,
+      gateway,
+      request.actionId,
+      request.frozenDigest,
+      request.requestId,
+      request.sessionId
+    ]
   )
 
   // ⌘/Ctrl+Enter → Run, Esc → Reject.
@@ -183,8 +200,10 @@ const ApprovalBar: FC<{ request: ApprovalRequest; surface: 'floating' | 'inline'
             {submitting === 'once' ? <Loader2 className="size-3 animate-spin" /> : copy.run}
             {submitting !== 'once' && <span className="text-[0.625rem] text-primary/60">{isMac ? '⌘⏎' : 'Ctrl⏎'}</span>}
           </Button>
-          <span aria-hidden className="w-px self-stretch bg-primary/20" />
-          <DropdownMenu>
+          {request.approvalKind !== 'adaptive-cloud' && (
+            <>
+              <span aria-hidden className="w-px self-stretch bg-primary/20" />
+              <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
                 aria-label={copy.moreOptions}
@@ -214,7 +233,9 @@ const ApprovalBar: FC<{ request: ApprovalRequest; surface: 'floating' | 'inline'
                 {copy.reject}
               </DropdownMenuItem>
             </DropdownMenuContent>
-          </DropdownMenu>
+              </DropdownMenu>
+            </>
+          )}
         </div>
 
         <Button
@@ -241,6 +262,19 @@ const ApprovalBar: FC<{ request: ApprovalRequest; surface: 'floating' | 'inline'
           </Button>
         )}
       </div>
+      {request.approvalKind === 'adaptive-cloud' && (
+        <div aria-live="polite" className="mt-2 max-w-xl text-xs leading-relaxed text-muted-foreground">
+          <p>
+            Provider: {request.provider} · Reason: {request.reason}
+          </p>
+          <p>{request.disclosure}</p>
+          <p>
+            Bounded handoff: {request.handoffMetadata?.messageCount ?? 0} messages · approximately{' '}
+            {request.handoffMetadata?.estimatedTokens ?? 0} tokens ·{' '}
+            {request.handoffMetadata?.toolResultCount ?? 0} tool results.
+          </p>
+        </div>
+      )}
 
       {showCommand && hasCommand && (
         <pre className="mt-1.5 max-h-40 overflow-auto whitespace-pre-wrap break-words rounded-md border border-(--ui-stroke-tertiary) bg-(--ui-chat-surface-background) px-2.5 py-1.5 font-mono text-xs leading-snug text-foreground">
