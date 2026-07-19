@@ -225,6 +225,7 @@ import {
   SESSION_WINDOW_MIN_HEIGHT,
   SESSION_WINDOW_MIN_WIDTH
 } from './session-windows'
+import { DesktopStudioManager } from './studio-manager'
 import { nativeOverlayWidth as computeNativeOverlayWidth, macTitleBarOverlayHeight } from './titlebar-overlay-width'
 import { resolveBehindCount, shouldCountCommits } from './update-count'
 import { readLiveUpdateMarker, writeUpdateMarker } from './update-marker'
@@ -252,6 +253,7 @@ import { isPackagedInstallPath as isPackagedInstallPathUnderRoots } from './work
 import { readWslWindowsClipboardImage } from './wsl-clipboard-image'
 
 const USER_DATA_OVERRIDE = process.env.HERMES_DESKTOP_USER_DATA_DIR
+const studioManager = new DesktopStudioManager()
 
 if (USER_DATA_OVERRIDE) {
   const resolvedUserData = path.resolve(USER_DATA_OVERRIDE)
@@ -8101,6 +8103,29 @@ ipcMain.handle('hermes:setting:defaultProjectDir:get', async () => ({
 }))
 
 ipcMain.handle('hermes:workspace:sanitize', async (_event, cwd) => sanitizeWorkspaceCwd(cwd))
+
+ipcMain.handle('hermes:studio:status', async () => studioManager.status())
+
+ipcMain.handle('hermes:studio:choose-external', async () => {
+  const result = await dialog.showOpenDialog({
+    title: 'Use installed Theia-compatible editor',
+    properties: ['openFile']
+  })
+
+  if (result.canceled || !result.filePaths[0]) {
+    return { canceled: true, status: studioManager.status() }
+  }
+
+  return { canceled: false, status: studioManager.useExternal(result.filePaths[0]) }
+})
+
+ipcMain.handle('hermes:studio:install-consent', async (_event, version) =>
+  studioManager.managedInstallConsent(String(version ?? ''))
+)
+
+ipcMain.handle('hermes:studio:launch', async (_event, input) => studioManager.launch(input))
+ipcMain.handle('hermes:studio:focus', async () => studioManager.focus())
+ipcMain.handle('hermes:studio:stop', async () => studioManager.stop())
 
 ipcMain.handle('hermes:setting:defaultProjectDir:set', async (_event, dir) => {
   const next = typeof dir === 'string' && dir.trim() ? dir.trim() : null

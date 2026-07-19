@@ -57,6 +57,7 @@ import {
 import { $bindings } from '@/store/keybinds'
 import { openPetGenerate } from '@/store/pet-generate'
 import { requestStartWorkSession } from '@/store/projects'
+import { $activeSessionId, $currentCwd } from '@/store/session'
 import { runGatewayRestart } from '@/store/system-actions'
 import { applyBackendUpdate } from '@/store/updates'
 import { luminance } from '@/themes/color'
@@ -294,6 +295,8 @@ export function CommandPalette() {
   const pendingPage = useStore($commandPalettePage)
   const bindings = useStore($bindings)
   const worktrees = useStore($repoWorktrees)
+  const activeSessionId = useStore($activeSessionId)
+  const currentCwd = useStore($currentCwd)
   const navigate = useNavigate()
   const { availableThemes, resolvedMode, setMode, setTheme, themeName } = useTheme()
   const [search, setSearch] = useState('')
@@ -316,6 +319,12 @@ export function CommandPalette() {
   const archivedQuery = useQuery({
     queryKey: ['command-palette', 'archived'],
     queryFn: () => listAllProfileSessions(200, 0, 'only'),
+    enabled: open
+  })
+
+  const studioQuery = useQuery({
+    queryKey: ['command-palette', 'studio-status'],
+    queryFn: () => window.hermesDesktop.studio.status(),
     enabled: open
   })
 
@@ -469,6 +478,66 @@ export function CommandPalette() {
         heading: cc.commandCenter,
         items: [
           {
+            icon: Monitor,
+            id: 'studio-open-project',
+            keywords: ['studio', 'ide', 'theia', 'editor', 'open project'],
+            label:
+              studioQuery.data?.state === 'running'
+                ? `Focus Hermes Studio (${studioQuery.data.version ?? 'external'})`
+                : 'Open Project in Hermes Studio',
+            run: () => {
+              if (studioQuery.data?.state === 'running') {
+                void window.hermesDesktop.studio.focus()
+
+                return
+              }
+
+              if (!activeSessionId || !currentCwd) {
+                window.alert('Start a Hermes session with a project workspace first.')
+
+                return
+              }
+
+              void window.hermesDesktop.studio
+                .launch({
+                  workspacePath: currentCwd,
+                  sessionId: activeSessionId,
+                  windowId: 'main'
+                })
+                .then(() => studioQuery.refetch())
+                .catch(error => window.alert(String(error)))
+            }
+          },
+          {
+            icon: Download,
+            id: 'studio-install',
+            keywords: ['studio', 'install', 'theia', 'open source', 'open vsx'],
+            label: 'Install Hermes Studio…',
+            run: () => {
+              const accepted = window.confirm(
+                'Hermes Studio is optional and separately updated. Platform: Eclipse Theia (EPL-2.0), extensions: Open VSX. The download size and disk requirement will be shown before a future managed download. No provider secrets enter the editor and no download starts now. Continue?'
+              )
+
+              if (accepted) {
+                void window.hermesDesktop.studio.consentInstall('0.1.0')
+              }
+            }
+          },
+          {
+            icon: Monitor,
+            id: 'studio-use-installed',
+            keywords: ['studio', 'theia', 'external', 'bring your own', 'editor'],
+            label: 'Use installed Theia-compatible editor…',
+            run: () => void window.hermesDesktop.studio.chooseExternal().then(() => studioQuery.refetch())
+          },
+          {
+            icon: MessageCircle,
+            id: 'studio-chat-only',
+            keywords: ['studio', 'chat only', 'disable', 'optional'],
+            label: 'Hermes Studio: Chat only',
+            run: () => void window.hermesDesktop.studio.stop().then(() => studioQuery.refetch())
+          },
+          {
             icon: Archive,
             id: 'cc-sessions',
             keywords: ['command center', 'sessions', 'pin'],
@@ -561,7 +630,7 @@ export function CommandPalette() {
         ]
       }
     ]
-  }, [go, settingsSectionLabel, t, worktrees])
+  }, [activeSessionId, currentCwd, go, settingsSectionLabel, studioQuery, t, worktrees])
 
   // The long, granular lists (settings fields, API keys, MCP servers, archived
   // chats) only surface once the user types — otherwise they'd bury the

@@ -93,6 +93,14 @@ declare global {
         pickDefaultProjectDir: () => Promise<{ canceled: boolean; dir: null | string }>
         setDefaultProjectDir: (dir: null | string) => Promise<{ dir: null | string }>
       }
+      studio: {
+        status: () => Promise<DesktopStudioStatus>
+        chooseExternal: () => Promise<{ canceled: boolean; status: DesktopStudioStatus }>
+        consentInstall: (version: string) => Promise<{ consented: true; version: string }>
+        launch: (input: { workspacePath: string; sessionId: string; windowId: string }) => Promise<DesktopStudioStatus>
+        focus: () => Promise<DesktopStudioStatus>
+        stop: () => Promise<DesktopStudioStatus>
+      }
       zoom?: {
         get: () => Promise<{ level: number; percent: number }>
         setPercent: (percent: number) => void
@@ -325,7 +333,10 @@ declare global {
         authStatus: () => Promise<QuizverseAuthStatus>
         onAuthEvent: (callback: (event: QuizverseAuthEvent) => void) => () => void
         productRequest: (input: QuizverseProductRequest) => Promise<QuizverseProductResponse>
-        productStream: (input: QuizverseProductRequest, onChunk: (chunk: string) => void) => Promise<QuizverseProductResponse>
+        productStream: (
+          input: QuizverseProductRequest,
+          onChunk: (chunk: string) => void
+        ) => Promise<QuizverseProductResponse>
         productCancel: (streamId: string) => Promise<void>
         mcpStatus: () => Promise<QuizverseMcpStatus>
         onPlayRealtimeEvent: (callback: (event: QuizversePlayRealtimeEvent) => void) => () => void
@@ -727,6 +738,18 @@ export interface DesktopVersionInfo {
   nodeVersion: string
   platform: string
   hermesRoot: string
+}
+
+export interface DesktopStudioStatus {
+  state: 'absent' | 'available' | 'running' | 'degraded' | 'stopped'
+  mode: 'absent' | 'bring-your-own' | 'managed'
+  version: string | null
+  executable: string | null
+  workspacePath: string | null
+  sessionId: string | null
+  windowId: string | null
+  pid: number | null
+  detail: string
 }
 
 export type DesktopUninstallMode = 'full' | 'gui' | 'lite'
