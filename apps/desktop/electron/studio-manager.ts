@@ -49,6 +49,7 @@ export class DesktopStudioBroker {
     await new Promise<void>((resolve, reject) => {
       this.#server = net.createServer(socket => {
         let buffer = ''
+        let authenticated = false
         socket.setEncoding('utf8')
         socket.on('data', chunk => {
           buffer += chunk
@@ -59,53 +60,100 @@ export class DesktopStudioBroker {
             if (newline < 0) {
               break
             }
+
             const raw = buffer.slice(0, newline)
             buffer = buffer.slice(newline + 1)
 
             try {
               const request = JSON.parse(raw)
               const requestId = String(request.requestId ?? '')
-              const supplied = Buffer.from(String(request.token ?? ''))
-              const actual = Buffer.from(this.token)
-              const identity = request.payload?.identity
 
               if (
                 request.protocolVersion !== 1 ||
                 !requestId ||
                 this.#seen.has(requestId) ||
-                Date.now() > Number(request.expiresAt) ||
-                supplied.length !== actual.length ||
-                !timingSafeEqual(supplied, actual) ||
-                identity?.sessionId !== expected.sessionId ||
-                identity?.windowId !== expected.windowId ||
-                path.resolve(identity?.workspaceCanonicalPath ?? '') !== path.resolve(expected.workspacePath)
+                Date.now() > Number(request.expiresAt)
               ) {
-                throw new Error('Studio broker authentication or identity failed')
+                throw new Error('Studio broker request expired or replayed')
               }
 
               this.#seen.add(requestId)
               const localOnly = process.env.HERMES_LOCAL_ONLY === '1'
-              socket.write(
-                `${JSON.stringify({
+
+              const route = {
+                route: localOnly ? 'local' : (process.env.HERMES_STUDIO_ROUTE ?? 'offline'),
+                localOnly,
+                detail: localOnly
+                  ? 'Adaptive Local AI; cloud fallback disabled.'
+                  : 'Route supplied by Hermes Desktop.'
+              }
+
+              const send = (payload: Record<string, unknown>) => {
+                socket.write(`${JSON.stringify({ protocolVersion: 1, requestId, payload })}\n`)
+              }
+
+              if (!authenticated) {
+                const supplied = Buffer.from(String(request.token ?? ''))
+                const actual = Buffer.from(this.token)
+                const identity = request.payload?.identity
+
+                if (
+                  request.payload?.kind !== 'handshake' ||
+                  supplied.length !== actual.length ||
+                  !timingSafeEqual(supplied, actual) ||
+                  identity?.sessionId !== expected.sessionId ||
+                  identity?.windowId !== expected.windowId ||
+                  path.resolve(identity?.workspaceCanonicalPath ?? '') !== path.resolve(expected.workspacePath)
+                ) {
+                  throw new Error('Studio broker authentication or identity failed')
+                }
+
+                authenticated = true
+                send({
+                  connected: true,
+                  compatible: true,
                   protocolVersion: 1,
-                  requestId,
-                  payload: {
-                    connected: true,
-                    compatible: true,
-                    protocolVersion: 1,
-                    identity,
-                    route: {
-                      route: localOnly ? 'local' : (process.env.HERMES_STUDIO_ROUTE ?? 'offline'),
-                      localOnly,
-                      detail: localOnly
-                        ? 'Adaptive Local AI; cloud fallback disabled.'
-                        : 'Route supplied by Hermes Desktop.'
-                    },
-                    trust: 'restricted',
-                    detail: 'Authenticated Hermes Desktop broker connected.'
-                  }
-                })}\n`
-              )
+                  identity,
+                  route,
+                  trust: 'restricted',
+                  detail: 'Authenticated Hermes Desktop broker connected.'
+                })
+
+                continue
+              }
+
+              if (request.payload?.kind === 'prompt-submit') {
+                if (
+                  request.payload.modality === 'voice' &&
+                  /^(approve|confirm|yes)$/i.test(String(request.payload.text ?? '').trim())
+                ) {
+                  send({ kind: 'prompt-event', type: 'error', text: 'Voice cannot approve Hermes actions.' })
+
+                  continue
+                }
+
+                send({ kind: 'prompt-event', type: 'accepted', route })
+
+                continue
+              }
+
+              if (request.payload?.kind === 'workspace-edit-review') {
+                send({
+                  kind: 'prompt-event',
+                  type: 'error',
+                  text: 'Workspace edit review is unavailable while the workspace is restricted.'
+                })
+
+                continue
+              }
+
+              if (request.payload?.kind === 'health') {
+                send({ kind: 'health', state: 'ready', protocolVersion: 1 })
+
+                continue
+              }
+
+              throw new Error('Studio broker capability is not allowed')
             } catch (error) {
               socket.destroy(error as Error)
             }
@@ -117,6 +165,7 @@ export class DesktopStudioBroker {
         if (process.platform !== 'win32') {
           fs.chmodSync(this.endpoint, 0o600)
         }
+
         resolve()
       })
     })
@@ -156,6 +205,7 @@ export class DesktopStudioManager {
     if (!path.isAbsolute(executable) || !fs.existsSync(executable)) {
       throw new Error('Choose an existing absolute editor executable')
     }
+
     this.#status = {
       ...this.#status,
       state: 'available',
@@ -185,6 +235,7 @@ export class DesktopStudioManager {
     if (!input.sessionId?.trim() || !input.windowId?.trim()) {
       throw new Error('Session and window linkage are required')
     }
+
     const workspacePath = path.resolve(input.workspacePath)
 
     if (!path.isAbsolute(input.workspacePath) || !fs.existsSync(workspacePath)) {
@@ -220,6 +271,7 @@ export class DesktopStudioManager {
       if (code && code !== 0) {
         this.#crashes.push(now)
       }
+
       this.#status = {
         ...this.#status,
         state: code && this.#crashes.length > 3 ? 'degraded' : 'stopped',
