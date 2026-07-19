@@ -48,47 +48,100 @@ test('Studio launch requires exact linkage and canonical workspace', async () =>
   )
 })
 
-test('real local broker authenticates and returns linked route status', async () => {
+test('real broker handles context prompt and reconnect after authentication', async () => {
   const workspacePath = process.cwd()
   const expected = { workspacePath, sessionId: 'session-real', windowId: 'window-real' }
   const broker = new DesktopStudioBroker()
   await broker.start(expected)
 
+  const handshake = (requestId: string) => ({
+    protocolVersion: 1,
+    requestId,
+    issuedAt: Date.now(),
+    expiresAt: Date.now() + 10_000,
+    token: broker.token,
+    payload: {
+      kind: 'handshake',
+      identity: {
+        sessionId: expected.sessionId,
+        windowId: expected.windowId,
+        workspaceCanonicalPath: workspacePath
+      }
+    }
+  })
+
   try {
-    const response = await new Promise<{
-      payload: { connected: boolean; identity: { sessionId: string }; trust: string }
-    }>((resolve, reject) => {
+    const responses = await new Promise<Array<{ payload: Record<string, unknown> }>>((resolve, reject) => {
       const socket = net.createConnection(broker.endpoint)
+      const received: Array<{ payload: Record<string, unknown> }> = []
+      let buffer = ''
       socket.setEncoding('utf8')
       socket.once('error', reject)
       socket.once('connect', () => {
-        socket.write(
-          `${JSON.stringify({
-            protocolVersion: 1,
-            requestId: 'request-real-0001',
-            issuedAt: Date.now(),
-            expiresAt: Date.now() + 10_000,
-            token: broker.token,
-            payload: {
-              kind: 'handshake',
-              identity: {
-                sessionId: expected.sessionId,
-                windowId: expected.windowId,
-                workspaceCanonicalPath: workspacePath
-              }
-            }
-          })}\n`
-        )
+        socket.write(`${JSON.stringify(handshake('request-real-0001'))}\n`)
       })
+      socket.on('data', data => {
+        buffer += data.toString()
+
+        for (;;) {
+          const newline = buffer.indexOf('\n')
+
+          if (newline < 0) {break}
+          received.push(JSON.parse(buffer.slice(0, newline)))
+          buffer = buffer.slice(newline + 1)
+
+          if (received.length === 1) {
+            socket.write(`${JSON.stringify({
+              protocolVersion: 1,
+              requestId: 'request-real-0002',
+              issuedAt: Date.now(),
+              expiresAt: Date.now() + 10_000,
+              payload: {
+                kind: 'prompt-submit',
+                modality: 'text',
+                text: 'Review this selection',
+                context: { uri: 'file:///workspace/a.ts', text: 'const answer = 42' }
+              }
+            })}\n`)
+          } else if (received.length === 2) {
+            socket.write(`${JSON.stringify({
+              protocolVersion: 1,
+              requestId: 'request-real-0004',
+              issuedAt: Date.now(),
+              expiresAt: Date.now() + 10_000,
+              payload: {
+                kind: 'workspace-edit-review',
+                editId: 'edit-1',
+                reviewDigest: 'digest',
+                accepted: true
+              }
+            })}\n`)
+          } else {
+            socket.end()
+            resolve(received)
+          }
+        }
+      })
+    })
+
+    assert.equal(responses[0].payload.connected, true)
+    assert.equal((responses[0].payload.identity as { sessionId: string }).sessionId, expected.sessionId)
+    assert.equal(responses[0].payload.trust, 'restricted')
+    assert.equal(responses[1].payload.type, 'accepted')
+    assert.equal(responses[2].payload.type, 'error')
+
+    const reconnect = await new Promise<{ payload: { connected: boolean } }>((resolve, reject) => {
+      const socket = net.createConnection(broker.endpoint)
+      socket.setEncoding('utf8')
+      socket.once('error', reject)
+      socket.once('connect', () => socket.write(`${JSON.stringify(handshake('request-real-0003'))}\n`))
       socket.once('data', data => {
         socket.end()
         resolve(JSON.parse(data.toString()))
       })
     })
 
-    assert.equal(response.payload.connected, true)
-    assert.equal(response.payload.identity.sessionId, expected.sessionId)
-    assert.equal(response.payload.trust, 'restricted')
+    assert.equal(reconnect.payload.connected, true)
   } finally {
     broker.stop()
   }
