@@ -423,7 +423,8 @@ def test_routing_telemetry_is_aggregate_only_and_mode_0600(monkeypatch, tmp_path
 
     telemetry_path = tmp_path / "adaptive-routing.jsonl"
     event = json.loads(telemetry_path.read_text(encoding="utf-8"))
-    assert os.stat(telemetry_path).st_mode & 0o777 == 0o600
+    if os.name != "nt":
+        assert os.stat(telemetry_path).st_mode & 0o777 == 0o600
     assert event["inputTokens"] == 12
     assert event["outputTokens"] == 4
     assert "content" not in event
