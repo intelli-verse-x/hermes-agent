@@ -11,6 +11,8 @@
   "scripts": {
     "typecheck": "tsc --allowJs --checkJs --noEmit --strict false --types node --typeRoots ../../node_modules/@types --module nodenext --moduleResolution nodenext --target es2022 server.mjs relay.mjs contracts.mjs response-contracts.mjs quiz-fetch-contracts.mjs",
     "lint": "eslint --config ../../apps/desktop/eslint.config.mjs server.mjs relay.mjs contracts.mjs response-contracts.mjs quiz-fetch-contracts.mjs",
+    "check": "npm run typecheck && npm run lint && npm run test",
+    "fix": "npm run lint -- --fix",
     "test": "node --test test/*.test.mjs"
   },
   "engines": {

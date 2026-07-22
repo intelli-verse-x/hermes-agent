@@ -1,3 +1,9 @@
+import {
+  BRAND_PRODUCT_NAME,
+  type MockBackendFixture,
+  setupMockBackend,
+  waitForAppReady,
+} from './fixtures'
 /**
  * E2E smoke tests for the dev-mode desktop app.
  *
@@ -12,12 +18,6 @@
  *   npm exec playwright test e2e/boot.spec.ts --reporter=list
  */
 import { expect, test } from './test'
-
-import {
-  type MockBackendFixture,
-  setupMockBackend,
-  waitForAppReady,
-} from './fixtures'
 import { expectVisualSnapshot } from './visual-snapshot'
 
 let fixture: MockBackendFixture | null = null
@@ -32,9 +32,9 @@ test.afterAll(async () => {
 })
 
 test.describe('dev-mode boot with mock backend', () => {
-  test('window opens with Hermes title', async () => {
+  test('window opens with the brand title', async () => {
     const title = await fixture!.page.title()
-    expect(title).toContain('Hermes')
+    expect(title).toContain(BRAND_PRODUCT_NAME)
   })
 
   test('renderer mounts and shows DOM content', async () => {

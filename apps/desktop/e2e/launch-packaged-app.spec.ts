@@ -1,11 +1,11 @@
-import { expect, test } from './test'
-
 import {
+  BRAND_PRODUCT_NAME,
   PACKAGED_BINARY_PATH,
   type PackagedAppFixture,
   packagedBinaryExists,
   setupPackagedApp,
 } from './fixtures'
+import { expect, test } from './test'
 import { expectVisualSnapshot } from './visual-snapshot'
 
 /**
@@ -34,9 +34,9 @@ test.afterAll(async () => {
   fixture = null
 })
 
-test('window opens with the Hermes title', async () => {
+test('window opens with the brand title', async () => {
   const title = await fixture!.page.title()
-  expect(title).toContain('Hermes')
+  expect(title).toContain(BRAND_PRODUCT_NAME)
 })
 
 test('renderer loads and shows DOM content', async () => {

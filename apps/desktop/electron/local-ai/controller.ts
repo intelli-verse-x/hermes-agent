@@ -355,6 +355,22 @@ export class LocalAiController extends EventEmitter {
     await writeJsonAtomic(this.statePath, this.state)
   }
 
+  /**
+   * True when the baked model catalog asset exists. Builds that don't stage
+   * the local-ai resources (dev bundles, e2e sandboxes, non-provisioned
+   * installs) simply don't support local AI — that's an "unavailable" state,
+   * not an error to surface at boot.
+   */
+  private async assetsPresent(): Promise<boolean> {
+    try {
+      await fs.access(path.join(this.options.assetsRoot, 'local-ai-model-catalog.v1.json'))
+
+      return true
+    } catch {
+      return false
+    }
+  }
+
   private async catalogs(): Promise<{ models: ModelCatalog; runtime: RuntimeCatalog }> {
     let models = validateCatalog(
       await readJson(path.join(this.options.assetsRoot, 'local-ai-model-catalog.v1.json'))
@@ -428,6 +444,8 @@ export class LocalAiController extends EventEmitter {
     await this.initialize()
 
     if (this.state.mode === 'cloud-only') {return null}
+
+    if (!(await this.assetsPresent())) {return null}
     const { hardware, model, acceleration } = await this.recommendationFor()
 
     return {
@@ -504,11 +522,16 @@ export class LocalAiController extends EventEmitter {
       (runtimeSnapshot?.state === 'ready' || this.state.endpointMode === 'existing')
 
     const cloudFallbacks = this.state.cloudEscalations + routed.cloudEscalations
+    // No baked catalog → this build can't set up local AI. Report it as
+    // unavailable (setupRequired false) so the first-boot setup overlay
+    // doesn't block the app; an existing verified install keeps working.
+    const supported = (await this.assetsPresent()) || Boolean(this.state.mode)
 
     return {
-      available: true,
+      available: supported,
       setupRequired:
-        this.state.mode === null || (this.state.mode !== 'cloud-only' && !readinessVerified),
+        supported &&
+        (this.state.mode === null || (this.state.mode !== 'cloud-only' && !readinessVerified)),
       mode: this.state.mode,
       runtime: {
         state: !installed

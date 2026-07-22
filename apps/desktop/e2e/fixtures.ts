@@ -34,6 +34,17 @@ const DESKTOP_ROOT = path.resolve(import.meta.dirname, '..')
 const REPO_ROOT = path.resolve(DESKTOP_ROOT, '..', '..')
 const RELEASE_ROOT = path.join(DESKTOP_ROOT, 'release')
 
+// The active desktop brand (fork ships branded builds — see
+// scripts/apply-brand.mjs). Specs must assert against the brand's product
+// name, not a hardcoded "Hermes".
+const BRAND_ID = (process.env.DESKTOP_BRAND || '').trim() || 'ix-agency'
+
+const BRAND_MANIFEST = JSON.parse(
+  fs.readFileSync(path.join(DESKTOP_ROOT, 'brands', `${BRAND_ID}.json`), 'utf8')
+) as { executableName: string; productName: string }
+
+export const BRAND_PRODUCT_NAME = BRAND_MANIFEST.productName
+
 // ─── Credential stripping (matches launch.spec.ts) ──────────────────────
 
 const CREDENTIAL_SUFFIXES: string[] = [
@@ -454,16 +465,23 @@ providers:
  */
 function resolvePackagedBinaryPath(): string {
   if (process.platform === 'win32') {
-    return path.join(RELEASE_ROOT, 'win-unpacked', 'Hermes.exe')
+    return path.join(RELEASE_ROOT, 'win-unpacked', `${BRAND_PRODUCT_NAME}.exe`)
   }
 
   if (process.platform === 'darwin') {
     const arch = process.arch === 'arm64' ? 'arm64' : 'x64'
 
-    return path.join(RELEASE_ROOT, `mac-${arch}`, 'Hermes.app', 'Contents', 'MacOS', 'Hermes')
+    return path.join(
+      RELEASE_ROOT,
+      `mac-${arch}`,
+      `${BRAND_PRODUCT_NAME}.app`,
+      'Contents',
+      'MacOS',
+      BRAND_PRODUCT_NAME
+    )
   }
 
-  return path.join(RELEASE_ROOT, 'linux-unpacked', 'hermes')
+  return path.join(RELEASE_ROOT, 'linux-unpacked', BRAND_MANIFEST.executableName)
 }
 
 export const PACKAGED_BINARY_PATH = resolvePackagedBinaryPath()
@@ -577,6 +595,7 @@ export async function waitForAppReady(fixture: MockBackendFixture | NoProviderFi
       // `position: fixed; inset: 0`. If the hit element or an ancestor
       // is a full-viewport fixed overlay, we're still covered.
       let node: Element | null = el
+
       while (node) {
         const cs = window.getComputedStyle(node)
 
