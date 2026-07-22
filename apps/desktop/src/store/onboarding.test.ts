@@ -284,9 +284,7 @@ describe('OAuth onboarding', () => {
         return { ok: true, status: 'approved' }
       }
 
-      // The store requests /api/model/options?include_unconfigured=1 here, so
-      // match on the path prefix rather than the bare route.
-      if (path === '/api/model/options' || path.startsWith('/api/model/options?')) {
+      if (path.startsWith('/api/model/options')) {
         return {
           providers: [
             {

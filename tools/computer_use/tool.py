@@ -142,9 +142,10 @@ def _is_blocked_type(text: str) -> Optional[str]:
 # Per-process cached backend; lazily instantiated on first call.
 _backend_lock = threading.Lock()
 _backend: Optional[ComputerUseBackend] = None
-# Session-scoped approval state.
-_session_auto_approve = False
-_always_allow: set = set()  # action names the user unlocked for the session
+# NOTE (fork governance): upstream caches approve_session / always_approve
+# unlocks per session here (#67052). This fork deliberately persists nothing —
+# every destructive computer_use invocation requires a fresh approval, so no
+# unlock cache exists to scope or leak.
 
 
 def _get_backend() -> ComputerUseBackend:
@@ -173,7 +174,7 @@ def _get_backend() -> ComputerUseBackend:
 
 def reset_backend_for_tests() -> None:  # pragma: no cover
     """Test helper — tear down the cached backend."""
-    global _backend, _session_auto_approve, _always_allow
+    global _backend
     with _backend_lock:
         if _backend is not None:
             try:
@@ -181,8 +182,6 @@ def reset_backend_for_tests() -> None:  # pragma: no cover
             except Exception:
                 pass
         _backend = None
-    _session_auto_approve = False
-    _always_allow = set()
 
 
 class _NoopBackend(ComputerUseBackend):  # pragma: no cover
@@ -196,8 +195,17 @@ class _NoopBackend(ComputerUseBackend):  # pragma: no cover
     def stop(self) -> None: self._started = False
     def is_available(self) -> bool: return True
 
-    def capture(self, mode: str = "som", app: Optional[str] = None) -> CaptureResult:
-        self.calls.append(("capture", {"mode": mode, "app": app}))
+    def capture(
+        self,
+        mode: str = "som",
+        app: Optional[str] = None,
+        pid: Optional[int] = None,
+        window_id: Optional[int] = None,
+    ) -> CaptureResult:
+        self.calls.append((
+            "capture",
+            {"mode": mode, "app": app, "pid": pid, "window_id": window_id},
+        ))
         return CaptureResult(mode=mode, width=1024, height=768, png_b64=None,
                              elements=[], app=app or "", window_title="")
 
@@ -213,16 +221,20 @@ class _NoopBackend(ComputerUseBackend):  # pragma: no cover
         self.calls.append(("scroll", kw))
         return ActionResult(ok=True, action="scroll")
 
-    def type_text(self, text: str) -> ActionResult:
-        self.calls.append(("type", {"text": text}))
+    def type_text(self, text: str, **kw) -> ActionResult:
+        self.calls.append(("type", {"text": text, **kw}))
         return ActionResult(ok=True, action="type")
 
-    def key(self, keys: str) -> ActionResult:
-        self.calls.append(("key", {"keys": keys}))
+    def key(self, keys: str, **kw) -> ActionResult:
+        self.calls.append(("key", {"keys": keys, **kw}))
         return ActionResult(ok=True, action="key")
 
     def list_apps(self) -> List[Dict[str, Any]]:
         self.calls.append(("list_apps", {}))
+        return []
+
+    def list_windows(self) -> List[Dict[str, Any]]:
+        self.calls.append(("list_windows", {}))
         return []
 
     def focus_app(self, app: str, raise_window: bool = False) -> ActionResult:
@@ -250,6 +262,8 @@ def handle_computer_use(args: Dict[str, Any], **kwargs) -> Any:
     action = (args.get("action") or "").strip().lower()
     if not action:
         return json.dumps({"error": "missing `action`"})
+    # Per-run key for approval-state isolation across concurrent sessions.
+    session_id = str(kwargs.get("session_id") or "")
 
     # Safety: validate actions before approval prompt.
     if action == "type":
@@ -273,7 +287,7 @@ def handle_computer_use(args: Dict[str, Any], **kwargs) -> Any:
 
     # Approval gate (destructive actions only).
     if action in _DESTRUCTIVE_ACTIONS:
-        err = _request_approval(action, args)
+        err = _request_approval(action, args, session_id)
         if err is not None:
             return err
 
@@ -294,8 +308,18 @@ def handle_computer_use(args: Dict[str, Any], **kwargs) -> Any:
         return json.dumps({"error": f"{action} failed: {e}"})
 
 
-def _request_approval(action: str, args: Dict[str, Any]) -> Optional[str]:
-    """Return None if approved, or a JSON error string if denied."""
+def _request_approval(action: str, args: Dict[str, Any],
+                      session_id: str = "") -> Optional[str]:
+    """Return None if approved, or a JSON error string if denied.
+
+    Fork governance (stricter than upstream's session-scoped unlock cache
+    for NousResearch/hermes-agent#67052): approvals are never persisted.
+    A directly-wired CLI callback authorizes only the frozen invocation it
+    was shown; gateway/desktop mutations go through the canonical approval
+    broker with a per-invocation rule key, so a prior "yes" — including
+    approve_session / always_approve — can never silently authorize a later
+    mutation, foreground or background.
+    """
     cb = _approval_callback
     summary = _summarize_action(action, args)
 
@@ -328,7 +352,8 @@ def _request_approval(action: str, args: Dict[str, Any]) -> Optional[str]:
     from gateway.session_context import get_session_env
 
     session_id = (
-        get_session_env("HERMES_UI_SESSION_ID", "")
+        session_id
+        or get_session_env("HERMES_UI_SESSION_ID", "")
         or get_session_env("HERMES_SESSION_ID", "")
         or get_session_env("HERMES_SESSION_KEY", "")
         or "local-cli"
@@ -371,27 +396,29 @@ def _redact_approval_args(value: Any, key: str = "") -> Any:
 
 
 def _summarize_action(action: str, args: Dict[str, Any]) -> str:
+    fg = " [FOREGROUND — briefly raises the window / changes focus]" \
+        if args.get("delivery_mode") == "foreground" else ""
     if action in {"click", "double_click", "right_click", "middle_click"}:
         if args.get("element") is not None:
-            return f"{action} element #{args['element']}"
+            return f"{action} element #{args['element']}{fg}"
         coord = args.get("coordinate")
         if coord:
-            return f"{action} at {tuple(coord)}"
-        return action
+            return f"{action} at {tuple(coord)}{fg}"
+        return action + fg
     if action == "drag":
         src = args.get("from_element") or args.get("from_coordinate")
         dst = args.get("to_element") or args.get("to_coordinate")
-        return f"drag {src} → {dst}"
+        return f"drag {src} → {dst}{fg}"
     if action == "scroll":
-        return f"scroll {args.get('direction', '?')} x{args.get('amount', 3)}"
+        return f"scroll {args.get('direction', '?')} x{args.get('amount', 3)}{fg}"
     if action == "type":
         text = args.get("text", "")
-        return f"type {text[:60]!r}" + ("..." if len(text) > 60 else "")
+        return f"type {text[:60]!r}" + ("..." if len(text) > 60 else "") + fg
     if action == "key":
-        return f"key {args.get('keys', '')!r}"
+        return f"key {args.get('keys', '')!r}{fg}"
     if action == "focus_app":
         return f"focus {args.get('app', '')!r}" + (" (raise)" if args.get("raise_window") else "")
-    return action
+    return action + fg
 
 
 def _dispatch(backend: ComputerUseBackend, action: str, args: Dict[str, Any]) -> Any:
@@ -401,7 +428,13 @@ def _dispatch(backend: ComputerUseBackend, action: str, args: Dict[str, Any]) ->
         mode = str(args.get("mode", "som"))
         if mode not in {"som", "vision", "ax"}:
             return json.dumps({"error": f"bad mode {mode!r}; use som|vision|ax"})
-        cap = backend.capture(mode=mode, app=args.get("app"))
+        capture_kwargs: Dict[str, Any] = {"mode": mode, "app": args.get("app")}
+        if args.get("pid") is not None or args.get("window_id") is not None:
+            capture_kwargs.update({
+                "pid": args.get("pid"),
+                "window_id": args.get("window_id"),
+            })
+        cap = backend.capture(**capture_kwargs)
         return _capture_response(cap, max_elements=_coerce_max_elements(args.get("max_elements")))
 
     if action == "wait":
@@ -413,12 +446,21 @@ def _dispatch(backend: ComputerUseBackend, action: str, args: Dict[str, Any]) ->
         apps = backend.list_apps()
         return json.dumps({"apps": apps, "count": len(apps)})
 
+    if action == "list_windows":
+        windows = backend.list_windows()
+        return json.dumps({"windows": windows, "count": len(windows)})
+
     if action == "focus_app":
         app = args.get("app")
         if not app:
             return json.dumps({"error": "focus_app requires `app`"})
         res = backend.focus_app(app, raise_window=bool(args.get("raise_window")))
         return _maybe_follow_capture(backend, res, capture_after)
+
+    # delivery_mode / bring_to_front thread through every input action so the
+    # model can escalate background → foreground per cua-driver's ladder.
+    delivery_mode = args.get("delivery_mode")
+    bring_to_front = bool(args.get("bring_to_front"))
 
     if action in {"click", "double_click", "right_click", "middle_click"}:
         button = args.get("button")
@@ -438,6 +480,7 @@ def _dispatch(backend: ComputerUseBackend, action: str, args: Dict[str, Any]) ->
             element=element if element is not None else None,
             x=x, y=y, button=button or "left", click_count=click_count,
             modifiers=args.get("modifiers"),
+            delivery_mode=delivery_mode, bring_to_front=bring_to_front,
         )
         return _maybe_follow_capture(backend, res, capture_after)
 
@@ -455,6 +498,7 @@ def _dispatch(backend: ComputerUseBackend, action: str, args: Dict[str, Any]) ->
             to_xy=tuple(args["to_coordinate"]) if args.get("to_coordinate") else None,
             button=args.get("button", "left"),
             modifiers=args.get("modifiers"),
+            delivery_mode=delivery_mode, bring_to_front=bring_to_front,
         )
         return _maybe_follow_capture(backend, res, capture_after)
 
@@ -467,15 +511,18 @@ def _dispatch(backend: ComputerUseBackend, action: str, args: Dict[str, Any]) ->
             x=coord[0] if coord and coord[0] is not None else None,
             y=coord[1] if coord and coord[1] is not None else None,
             modifiers=args.get("modifiers"),
+            delivery_mode=delivery_mode, bring_to_front=bring_to_front,
         )
         return _maybe_follow_capture(backend, res, capture_after)
 
     if action == "type":
-        res = backend.type_text(args.get("text", ""))
+        res = backend.type_text(args.get("text", ""),
+                                delivery_mode=delivery_mode, bring_to_front=bring_to_front)
         return _maybe_follow_capture(backend, res, capture_after)
 
     if action == "key":
-        res = backend.key(args.get("keys", ""))
+        res = backend.key(args.get("keys", ""),
+                          delivery_mode=delivery_mode, bring_to_front=bring_to_front)
         return _maybe_follow_capture(backend, res, capture_after)
 
     if action == "set_value":
@@ -496,6 +543,24 @@ def _text_response(res: ActionResult) -> str:
     payload: Dict[str, Any] = {"ok": res.ok, "action": res.action}
     if res.message:
         payload["message"] = res.message
+    # Surface cua-driver's structured verdict additively so the model can
+    # follow the verify → escalate ladder. Only include fields the driver
+    # actually returned (None = old driver / not carried). ok is transport
+    # success; effect/escalation are the semantic verdict.
+    if res.verified is not None:
+        payload["verified"] = res.verified
+    if res.effect is not None:
+        payload["effect"] = res.effect
+    if res.escalation is not None:
+        payload["escalation"] = res.escalation
+    if res.path is not None:
+        payload["path"] = res.path
+    if res.degraded is not None:
+        payload["degraded"] = res.degraded
+    if res.delivery_mode is not None:
+        payload["delivery_mode"] = res.delivery_mode
+    if res.code is not None:
+        payload["code"] = res.code
     if res.meta:
         payload["meta"] = res.meta
     return json.dumps(payload)
@@ -898,11 +963,16 @@ def _maybe_follow_capture(
     if not res.ok:
         return _text_response(res)
     try:
-        # Preserve the app context established by the preceding capture/focus_app so
-        # that capture_after=True re-captures the same app rather than the frontmost
-        # window (which may have changed if the action caused a focus shift).
-        last_app = getattr(backend, "_last_app", None)
-        cap = backend.capture(mode="som", app=last_app)
+        # Preserve the exact selected window when possible. Linux may expose a
+        # generic app name for several unrelated windows, so app-only recapture
+        # can silently switch targets after a successful action.
+        target = getattr(backend, "_last_target", None) or {}
+        pid = target.get("pid")
+        window_id = target.get("window_id")
+        if pid is not None and window_id is not None:
+            cap = backend.capture(mode="som", pid=pid, window_id=window_id)
+        else:
+            cap = backend.capture(mode="som", app=getattr(backend, "_last_app", None))
     except Exception as e:
         logger.warning("follow-up capture failed: %s", e)
         return _text_response(res)

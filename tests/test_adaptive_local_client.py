@@ -394,7 +394,10 @@ def test_gateway_cloud_approval_expires_fail_closed(monkeypatch):
     session = "expiring-cloud-approval"
     token = approval.set_current_session_key(session)
     approval.register_gateway_notify(session, notices.append)
-    monkeypatch.setattr(approval, "_get_approval_config", lambda: {"gateway_timeout": 0})
+    # Upstream renamed the approval-timeout key (approvals.timeout, read by
+    # _get_approval_timeout) — patching the old gateway_timeout key would fall
+    # back to the 300s default and hang the suite.
+    monkeypatch.setattr(approval, "_get_approval_config", lambda: {"timeout": 0})
     try:
         decision = approval.request_cloud_escalation_approval(
             reason="local-validation-failed",

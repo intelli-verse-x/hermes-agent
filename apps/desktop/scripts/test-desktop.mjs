@@ -110,8 +110,12 @@ function expectedNativeDepPaths() {
 }
 
 function ensurePlatformBuilds() {
-  if (PLATFORM === 'darwin' || PLATFORM === 'win32' || PLATFORM === 'linux') return
-  die(`Desktop bundle validation is not supported for platform=${PLATFORM}`)
+  if (PLATFORM === 'darwin') return
+  if (PLATFORM === 'win32') return
+  if (PLATFORM === 'linux') return
+  die(
+    `Desktop bundle validation is only wired for darwin / win32 / linux; platform=${PLATFORM} is not supported.`
+  )
 }
 
 function ensurePackagedApp() {
