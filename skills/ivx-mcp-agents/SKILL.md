@@ -50,7 +50,7 @@ These are the tools the gateway itself exposes:
 `admin_call_mcp` signature: `{ tileId | mcpUrl, method: "tools/list" |
 "tools/call", tool?, arguments?, token?, appId? }`. Token precedence:
 explicit `token` arg > per-app connector token (`<id>__<appId>`) > platform
-default. Session-handshake servers (Postiz, Grafana, Loki, QuestX,
+default. Session-handshake servers (Postiz, Grafana, Loki, Quest,
 Content Factory) are handled transparently. Pass `appId` to use an app's
 own connected account instead of the platform default.
 

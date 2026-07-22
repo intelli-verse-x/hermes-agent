@@ -1,6 +1,6 @@
 ---
 name: ivx-mcp-commerce
-description: The "Commerce" MCP tiles — Documenso e-signatures is the one MCP-drivable tile; the rest (cashback quests, coupons, gift cards, fraud queue, merch) are admin-portal pages, with the QuestX rewards engine reachable via the game-ops `quests` MCP. Use for contracts and commerce-program admin.
+description: The "Commerce" MCP tiles — Documenso e-signatures is the one MCP-drivable tile; the rest (cashback quests, coupons, gift cards, fraud queue, merch) are admin-portal pages, with the Quest rewards engine reachable via the game-ops `quests` MCP. Use for contracts and commerce-program admin.
 version: 1.0.0
 metadata:
   hermes:
@@ -15,7 +15,7 @@ metadata:
 - Sending a document for e-signature or checking signing status (Documenso).
 - Anything about the cashback/rewards program (quests, offers, coupons,
   gift cards, fraud review) — mostly portal pages, but the underlying
-  QuestX engine has ~120 MCP tools via the `quests` tile (group Game ops).
+  Quest engine has ~120 MCP tools via the `quests` tile (group Game ops).
 
 ## The tiles in this group
 
@@ -43,7 +43,7 @@ Portal-only tiles (no MCP — launch the admin UI):
 | `ivx-token` | IVX token administration |
 | `kiosk`, `platform-user-frontend`, `beta-frontend`, `intelli-verse-x-root` | Customer-facing frontends for QA/preview |
 
-**Programmatic path for the rewards economy:** the QuestX engine behind
+**Programmatic path for the rewards economy:** the Quest engine behind
 these portal pages is `admin_call_mcp { tileId: "questx" }` (~120 tools:
 brands, quests, offers, redemptions, gift cards, staking, coupons, fraud
 checks). See the `ivx-mcp-game-ops` skill.

@@ -556,7 +556,7 @@ TAKING ACTIONS — admin_call_mcp:
   notifuse (email/broadcasts, workspace_id "intelliversex"), postiz (social), telnyx (SMS/voice),
   grafana (metrics/alerts), n8n (workflows), chatwoot (support), twenty (CRM meta-tool:
   get_tool_catalog → learn_tools → execute_tool), aws (costs/EKS), documenso (e-sign),
-  quests (QuestX rewards), content-factory, gastown (coding crew), intelliverse (platform
+  quests (Quest rewards), content-factory, gastown (coding crew), intelliverse (platform
   gateway, ~1300 tools — use tools/list sparingly, prefer asking for a specific area).
 
 DISCOVERY:
