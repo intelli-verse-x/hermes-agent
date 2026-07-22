@@ -123,7 +123,9 @@ export default defineConfig({
               replacement: path.resolve(__dirname, './src/themes/quizverse-theme.stub.ts')
             }
           ]),
+      { find: '@hermes/plugin-sdk', replacement: path.resolve(__dirname, './src/sdk/index.ts') },
       { find: '@', replacement: path.resolve(__dirname, './src') },
+      { find: '@hermes/shared/billing', replacement: path.resolve(__dirname, '../shared/src/billing-types.ts') },
       { find: '@hermes/shared', replacement: path.resolve(__dirname, '../shared/src') },
       { find: 'react', replacement: path.resolve(__dirname, '../../node_modules/react') },
       { find: 'react-dom', replacement: path.resolve(__dirname, '../../node_modules/react-dom') },

@@ -1,3 +1,4 @@
+import fs from 'node:fs'
 import { createRequire } from 'node:module'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -9,15 +10,21 @@ import { normalizeWordsDictionary, withWordsFallback } from './words-dictionary'
 
 const require = createRequire(import.meta.url)
 const webRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../../../../../Quizverse-web-frontend/web')
+const catalogPath = path.join(webRoot, 'lib/words-content/catalog.cjs')
 
-const { buildWordsCatalog } = require(path.join(webRoot, 'lib/words-content/catalog.cjs')) as {
+// This suite validates the ACTUAL published Words artifacts, so it needs the
+// Quizverse-web-frontend checkout as a sibling of this repo. Worktrees and CI
+// runners without that checkout skip instead of failing at module load.
+const catalogAvailable = fs.existsSync(catalogPath)
+
+const { buildWordsCatalog } = (catalogAvailable ? require(catalogPath) : { buildWordsCatalog: () => null }) as {
   buildWordsCatalog: (options?: { publicDir: string }) => {
     datasets: Array<{ items: unknown[]; kind: string; min_items: number; skin: string }>
     manifest: unknown
   }
 }
 
-describe('published Words artifacts through Desktop contracts', () => {
+describe.skipIf(!catalogAvailable)('published Words artifacts through Desktop contracts', () => {
   it('parses the actual web manifest and accepts its authored dictionaries', () => {
     const catalog = buildWordsCatalog({ publicDir: path.join(webRoot, 'public') })
     const manifest = parseWordsContentManifest(catalog.manifest)
