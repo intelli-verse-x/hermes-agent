@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-labelledby="title desc">
+  <title id="title">IVX Agency Desktop</title>
+  <desc id="desc">IVX Agency Desktop installer share image</desc>
+  <rect width="1200" height="630" fill="#0b0d12"/>
+  <circle cx="1040" cy="80" r="280" fill="#312e81"/>
+  <circle cx="90" cy="640" r="310" fill="#4c1d95"/>
+  <text x="90" y="315" font-family="Inter,Arial,sans-serif" font-size="118" font-weight="800" fill="#ffffff">IVX Agency</text>
+  <text x="96" y="395" font-family="Inter,Arial,sans-serif" font-size="42" fill="#cbd5e1">Desktop operator surface</text>
+  <text x="96" y="470" font-family="Inter,Arial,sans-serif" font-size="28" fill="#9aa6bd">Early-access installers for authorized users.</text>
+</svg>

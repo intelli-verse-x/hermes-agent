@@ -1,6 +1,6 @@
 ---
 name: ivx-mcp-game-ops
-description: The "Game ops" MCP tiles — Nakama game backend (players, wallets, flags, configs) and the QuestX rewards economy (~120 tools for brands, quests, offers, redemptions, gift cards, fraud). Use for player lookups, bans, wallet inspection, and rewards-economy operations.
+description: The "Game ops" MCP tiles — Nakama game backend (players, wallets, flags, configs) and the Quest rewards economy (~120 tools for brands, quests, offers, redemptions, gift cards, fraud). Use for player lookups, bans, wallet inspection, and rewards-economy operations.
 version: 1.0.0
 metadata:
   hermes:
@@ -15,7 +15,7 @@ metadata:
 - Player lookups: account, wallet, ban/unban, leaderboard state (Nakama).
 - Feature flags and live configs on the game backend.
 - Rewards economy: brands, quests, offers, redemptions, gift cards,
-  staking, coupons, fraud checks (QuestX).
+  staking, coupons, fraud checks (Quest).
 
 ## The tiles in this group
 
@@ -24,7 +24,7 @@ Registry group `game-ops`. Gateway tileId is what `admin_call_mcp` takes.
 | Tile id | Gateway tileId | What it does | Auth |
 |---|---|---|---|
 | `nakama-console` | `nakama` | Game-ops MCP: player inspect, wallets, flags, configs, generic RPC | Server-side admin auth (`http_key`) baked; no token needed. Endpoint `https://nakama-mcp.intelli-verse-x.ai/`. |
-| `quests` | `questx` | QuestX rewards economy, ~120 tools: brands, quests, offers, redemptions, gift cards, staking, coupons, fraud checks | No token needed. In-cluster only (`quests-api.quests-economy.svc.cluster.local:3002/mcp`, session handshake) — gateway required. |
+| `quests` | `questx` | Quest rewards economy, ~120 tools: brands, quests, offers, redemptions, gift cards, staking, coupons, fraud checks | No token needed. In-cluster only (`quests-api.quests-economy.svc.cluster.local:3002/mcp`, session handshake) — gateway required. |
 
 Apps covered: `intelliverse`, `quizverse`, `questx` (per the tile appIds).
 
@@ -37,7 +37,7 @@ Portal-only tiles (no MCP — launch the UI): `nakama-analytics`
 **Nakama direct attach:** `https://nakama-mcp.intelli-verse-x.ai/` — no
 token needed (admin auth is server-side).
 
-**QuestX is in-cluster only — the gateway is the only path from outside:**
+**Quest is in-cluster only — the gateway is the only path from outside:**
 
 ```
 admin_call_mcp { tileId: "questx", method: "tools/list" }
@@ -45,7 +45,7 @@ admin_call_mcp { tileId: "nakama", method: "tools/call",
                  tool: "<name from tools/list>", arguments: { ... } }
 ```
 
-Neither registry entry enumerates every tool (QuestX has ~120) — start
+Neither registry entry enumerates every tool (Quest has ~120) — start
 with `tools/list` and filter by keyword (brand, quest, redemption, fraud,
 gift, coupon, wallet, player) rather than reading the whole list.
 
@@ -55,12 +55,12 @@ gift, coupon, wallet, player) rather than reading the whole list.
 inspect account + wallet → check recent leaderboard entries. If the user
 then asks for a ban, that's a write — confirm the exact account id first.
 
-**Redemption review.** QuestX: list pending redemptions → pull the
+**Redemption review.** Quest: list pending redemptions → pull the
 conversion + fraud-check detail for the flagged ones → summarize evidence
 per case; the approve/reject click stays with the operator
 (`/admin/gift-card-review` in the portal).
 
-**"Which quests are live?"** QuestX quest-listing tools → cross-reference
+**"Which quests are live?"** Quest quest-listing tools → cross-reference
 offers and brands → table of live quests with reward config.
 
 **Feature-flag check before a live-ops change.** Nakama: read current
@@ -75,4 +75,4 @@ flags/configs → show the diff the user wants → apply only after approval
 - Nakama's generic RPC tool can call any of the 1000+ server RPCs — prefer
   the purpose-built tools; use generic RPC only when you know the exact
   RPC id and payload.
-- Never paste keys into chat; Nakama and QuestX auth is baked server-side.
+- Never paste keys into chat; Nakama and Quest auth is baked server-side.

@@ -28,12 +28,12 @@ export const IX_CONNECTOR_TRANSPORTS: readonly IxConnectorTransport[] = ['remote
 // desktop bundles no registry data, so the ids/labels are pinned here.
 export const IX_CONNECTOR_APPS: readonly { id: string; label: string }[] = [
   { id: 'quizverse', label: 'QuizVerse' },
-  { id: 'questx', label: 'QuestX' },
+  { id: 'questx', label: 'Quest' },
   { id: 'intelliverse', label: 'IntelliVerse X' },
   { id: 'toba', label: 'ToBa Tech' },
-  { id: 'contentx', label: 'ContentX Studio' },
+  { id: 'contentx', label: 'Content Studio' },
   { id: 'foundrly', label: 'Foundrly' },
-  { id: 'kioskx', label: 'Kiosk X' }
+  { id: 'kioskx', label: 'Kiosk' }
 ]
 
 export const IX_CAPABILITY_BUNDLES: readonly { id: string; label: string }[] = [

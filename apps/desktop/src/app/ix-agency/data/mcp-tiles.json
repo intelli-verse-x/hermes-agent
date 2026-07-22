@@ -122,7 +122,7 @@
     {
       "id": "quests",
       "label": "Quests & rewards",
-      "blurb": "QuestX rewards economy — brands, quests, offers, redemptions, gift cards, fraud checks. Also drivable from the admin copilot chat (~120 MCP tools).",
+      "blurb": "Quest rewards economy — brands, quests, offers, redemptions, gift cards, fraud checks. Also drivable from the admin copilot chat (~120 MCP tools).",
       "group": "Game ops",
       "mcpUrl": "http://quests-api.quests-economy.svc.cluster.local:3002/mcp",
       "domain": "quests-api.quests-economy.svc.cluster.local",

@@ -42,7 +42,7 @@ explicit `token` > per-app connector token (`<id>__<appId>`) > platform
 default. `appId` (portal tenant: `quizverse`, `questx`, `intelliverse`,
 `contentx`, `kioskx`, `toba`) selects that app's connected account and is
 forwarded as a tenancy hint to app-aware MCPs (ga4, gsc, …).
-Session-handshake servers (Grafana, Loki, Postiz, QuestX, Content
+Session-handshake servers (Grafana, Loki, Postiz, Quest, Content
 Factory) are handled transparently.
 
 **Dynamic connectors:** new MCP servers and per-app tokens are registered
@@ -81,7 +81,7 @@ Endpoints marked *(in-cluster)* are only reachable via `admin_call_mcp`.
 | `intelliverse-mcp` | Agents | Platform gateway, ~1300 tools (admin/game/user/payment/kube APIs) | `https://mcp.intelli-verse-x.ai/api/mcp` |
 | `documenso` | Commerce | E-signatures & contracts, full document lifecycle | `https://documenso-mcp.intelli-verse-x.ai/` |
 | `nakama-console` | Game ops | Player accounts: inspect, wallets, flags, configs | `https://nakama-mcp.intelli-verse-x.ai/` |
-| `quests` | Game ops | QuestX rewards economy (~120 tools: brands, quests, redemptions, fraud) | `http://quests-api.quests-economy.svc.cluster.local:3002/mcp` *(in-cluster)* |
+| `quests` | Game ops | Quest rewards economy (~120 tools: brands, quests, redemptions, fraud) | `http://quests-api.quests-economy.svc.cluster.local:3002/mcp` *(in-cluster)* |
 | `firecrawl` | Make content | Web scraping/search/crawl/extract (official MCP) | `https://mcp.firecrawl.dev/v2/mcp` |
 | `open-seo` | Make content | SEO research: keywords, SERP, domain overview, rank tracker | `https://seo.toba-tech.ai/mcp` |
 | `qrstudio` | Make content | QR codes, landing pages, scan analytics (31 tools) | `http://qr-mcp.aicart.svc.cluster.local/` *(in-cluster)* |
