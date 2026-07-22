@@ -284,7 +284,8 @@ export async function testIxConnector(
 
   return {
     ok: false,
-    message: body?.message || body?.error || (await readPortalError(res, `Connection test failed (HTTP ${res.status}).`))
+    message:
+      body?.message || body?.error || (await readPortalError(res, `Connection test failed (HTTP ${res.status}).`))
   }
 }
 
@@ -297,7 +298,10 @@ export interface IxConnectorImportResult {
 
 function coerceStringList(value: unknown): string[] {
   if (Array.isArray(value)) {
-    return value.filter((item): item is string => typeof item === 'string').map(item => item.trim()).filter(Boolean)
+    return value
+      .filter((item): item is string => typeof item === 'string')
+      .map(item => item.trim())
+      .filter(Boolean)
   }
 
   if (typeof value === 'string') {

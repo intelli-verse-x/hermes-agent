@@ -122,7 +122,9 @@ test('failed independent context verification never reports readiness', async ()
     fetchImpl: async (input, init) => {
       const body = init?.body ? JSON.parse(String(init.body)) : undefined
 
-      if (String(input).endsWith('/v1/models')) {return jsonResponse({ data: [{ id: 'test-model' }] })}
+      if (String(input).endsWith('/v1/models')) {
+        return jsonResponse({ data: [{ id: 'test-model' }] })
+      }
 
       if (body?.tools) {
         return jsonResponse({

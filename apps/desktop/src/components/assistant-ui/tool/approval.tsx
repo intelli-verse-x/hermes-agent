@@ -285,8 +285,8 @@ const ApprovalBar: FC<{ request: ApprovalRequest; surface: 'floating' | 'inline'
           <p>{request.disclosure}</p>
           <p>
             Bounded handoff: {request.handoffMetadata?.messageCount ?? 0} messages · approximately{' '}
-            {request.handoffMetadata?.estimatedTokens ?? 0} tokens ·{' '}
-            {request.handoffMetadata?.toolResultCount ?? 0} tool results.
+            {request.handoffMetadata?.estimatedTokens ?? 0} tokens · {request.handoffMetadata?.toolResultCount ?? 0}{' '}
+            tool results.
           </p>
         </div>
       )}

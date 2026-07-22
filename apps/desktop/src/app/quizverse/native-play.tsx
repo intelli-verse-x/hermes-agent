@@ -42,7 +42,12 @@ function ModeGrid({ onSelect }: { onSelect: (mode: PlayMode) => void }) {
       <div className="mx-auto max-w-6xl">
         <div className="mb-4 flex flex-wrap gap-1">
           {categories.map(category => (
-            <Button key={category} onClick={() => setFilter(category)} size="xs" variant={filter === category ? 'secondary' : 'ghost'}>
+            <Button
+              key={category}
+              onClick={() => setFilter(category)}
+              size="xs"
+              variant={filter === category ? 'secondary' : 'ghost'}
+            >
               {category}
             </Button>
           ))}
@@ -104,14 +109,16 @@ function QuizGame({
   const start = useCallback(() => {
     setError(null)
     $playResult.set(null)
-    void (initialQuestions
-      ? Promise.resolve({
-          fallbackReason: undefined,
-          packId: undefined,
-          provenance: mode.protocol ?? 'protocol',
-          questions: initialQuestions
-        })
-      : fetchPlayQuestions(mode, topic))
+    void (
+      initialQuestions
+        ? Promise.resolve({
+            fallbackReason: undefined,
+            packId: undefined,
+            provenance: mode.protocol ?? 'protocol',
+            questions: initialQuestions
+          })
+        : fetchPlayQuestions(mode, topic)
+    )
       .then(data => {
         setQuestions(data.questions)
         setPackId(data.packId)
@@ -135,8 +142,12 @@ function QuizGame({
   if (!mode.available) {
     return (
       <div className="flex h-full flex-col items-center justify-center gap-3 text-center">
-        <div className="text-4xl">{mode.icon}</div><h2>{mode.name}</h2><p className="max-w-md text-xs text-muted-foreground">{mode.reason}</p>
-        <Button onClick={onBack} size="sm">Back to modes</Button>
+        <div className="text-4xl">{mode.icon}</div>
+        <h2>{mode.name}</h2>
+        <p className="max-w-md text-xs text-muted-foreground">{mode.reason}</p>
+        <Button onClick={onBack} size="sm">
+          Back to modes
+        </Button>
       </div>
     )
   }
@@ -145,14 +156,34 @@ function QuizGame({
     return (
       <div className="flex h-full flex-col items-center justify-center gap-3">
         <h2 className="text-lg font-semibold">{mode.name}</h2>
-        <input className="w-80 rounded border border-(--ui-border-primary) bg-transparent px-3 py-2 text-sm" onChange={event => setTopic(event.target.value)} placeholder="What should the quiz be about?" value={topic} />
-        <div className="flex gap-2"><Button onClick={onBack} variant="ghost">Back</Button><Button disabled={!topic.trim()} onClick={start}>Generate quiz</Button></div>
+        <input
+          className="w-80 rounded border border-(--ui-border-primary) bg-transparent px-3 py-2 text-sm"
+          onChange={event => setTopic(event.target.value)}
+          placeholder="What should the quiz be about?"
+          value={topic}
+        />
+        <div className="flex gap-2">
+          <Button onClick={onBack} variant="ghost">
+            Back
+          </Button>
+          <Button disabled={!topic.trim()} onClick={start}>
+            Generate quiz
+          </Button>
+        </div>
       </div>
     )
   }
 
   if (error) {
-    return <div className="flex h-full flex-col items-center justify-center gap-3"><p className="max-w-lg text-sm text-red-400">{error}</p><Button onClick={start}>Retry</Button><Button onClick={onBack} variant="ghost">Back</Button></div>
+    return (
+      <div className="flex h-full flex-col items-center justify-center gap-3">
+        <p className="max-w-lg text-sm text-red-400">{error}</p>
+        <Button onClick={start}>Retry</Button>
+        <Button onClick={onBack} variant="ghost">
+          Back
+        </Button>
+      </div>
+    )
   }
 
   if (result) {
@@ -161,7 +192,9 @@ function QuizGame({
         <img alt="" className="size-24" src={`${import.meta.env.BASE_URL}quizverse/quizy-front.png`} />
         <h2 className="text-xl font-semibold">Quiz complete!</h2>
         <div className="text-4xl font-bold text-violet-300">{result.score}</div>
-        <p className="text-sm text-muted-foreground">{result.correct} of {result.total} correct</p>
+        <p className="text-sm text-muted-foreground">
+          {result.correct} of {result.total} correct
+        </p>
         {!result.ranked && (
           <div className="max-w-md rounded-lg border border-amber-300/45 bg-amber-950/35 px-4 py-3 text-sm text-amber-100">
             <strong>Unranked result.</strong> {result.reason}
@@ -170,14 +203,25 @@ function QuizGame({
         {result.ranked && result.rank != null && (
           <p className="text-sm text-muted-foreground">Leaderboard rank #{result.rank}</p>
         )}
-        <div className="flex gap-2"><Button onClick={start}>Play again</Button><Button onClick={onBack} variant="secondary">Modes</Button></div>
+        <div className="flex gap-2">
+          <Button onClick={start}>Play again</Button>
+          <Button onClick={onBack} variant="secondary">
+            Modes
+          </Button>
+        </div>
       </div>
     )
   }
 
   const question = questions[index]
 
-  if (!question) {return <div className="flex h-full items-center justify-center"><Codicon name="loading~spin" /></div>}
+  if (!question) {
+    return (
+      <div className="flex h-full items-center justify-center">
+        <Codicon name="loading~spin" />
+      </div>
+    )
+  }
 
   const finish = (nextAnswers: (number | null)[]) =>
     void submitPlayResult(
@@ -195,10 +239,16 @@ function QuizGame({
     <div className="h-full overflow-y-auto p-5">
       <div className="mx-auto max-w-2xl">
         <div className="mb-4 flex items-center justify-between text-xs text-muted-foreground">
-          <Button onClick={onBack} size="xs" variant="ghost"><Codicon name="arrow-left" /> Modes</Button>
-          <span>{index + 1} / {questions.length} · {provenance}</span>
+          <Button onClick={onBack} size="xs" variant="ghost">
+            <Codicon name="arrow-left" /> Modes
+          </Button>
+          <span>
+            {index + 1} / {questions.length} · {provenance}
+          </span>
         </div>
-        {question.mediaUrl && <img alt="" className="mb-4 max-h-64 w-full rounded-xl object-contain" src={question.mediaUrl} />}
+        {question.mediaUrl && (
+          <img alt="" className="mb-4 max-h-64 w-full rounded-xl object-contain" src={question.mediaUrl} />
+        )}
         <h2 className="text-lg font-semibold">{question.prompt}</h2>
         <div className="mt-5 grid gap-2">
           {question.options.map((option, optionIndex) => (
@@ -229,8 +279,9 @@ function QuizGame({
             <Button
               className="mt-3"
               onClick={() => {
-                if (index + 1 >= questions.length) {finish(answers)}
-                else {
+                if (index + 1 >= questions.length) {
+                  finish(answers)
+                } else {
                   setIndex(index + 1)
                   setSelected(null)
                   questionStartedAt.current = performance.now()
@@ -238,11 +289,7 @@ function QuizGame({
               }}
               size="sm"
             >
-              {index + 1 >= questions.length
-                ? submission.phase === 'submitting'
-                  ? 'Submitting…'
-                  : 'Results'
-                : 'Next'}
+              {index + 1 >= questions.length ? (submission.phase === 'submitting' ? 'Submitting…' : 'Results') : 'Next'}
             </Button>
           </div>
         )}
@@ -254,7 +301,9 @@ function QuizGame({
 function PhantomLobby({ mode, onBack }: { mode: PlayMode; onBack: () => void }) {
   const [code, setCode] = useState('')
   const [error, setError] = useState('')
-  const [session, setSession] = useState<{ challengeId: string; questions: PlayQuestion[]; shareCode: string } | null>(null)
+  const [session, setSession] = useState<{ challengeId: string; questions: PlayQuestion[]; shareCode: string } | null>(
+    null
+  )
   const [topic, setTopic] = useState('General Knowledge')
 
   const adopt = (result: Record<string, unknown>, fallbackCode = '') => {
@@ -267,12 +316,14 @@ function PhantomLobby({ mode, onBack }: { mode: PlayMode; onBack: () => void }) 
           const correctIndex = Number(raw.correctIndex ?? raw.correct_index ?? raw.correct_answer)
 
           return options.length >= 2 && Number.isInteger(correctIndex)
-            ? [{
-                correctIndex,
-                id: String(raw.id ?? raw.question_id ?? index),
-                options,
-                prompt: String(raw.prompt ?? raw.question ?? '')
-              }]
+            ? [
+                {
+                  correctIndex,
+                  id: String(raw.id ?? raw.question_id ?? index),
+                  options,
+                  prompt: String(raw.prompt ?? raw.question ?? '')
+                }
+              ]
             : []
         })
       : []
@@ -310,29 +361,44 @@ function PhantomLobby({ mode, onBack }: { mode: PlayMode; onBack: () => void }) 
 
   return (
     <div className="mx-auto flex h-full max-w-md flex-col justify-center gap-3 p-5">
-      <Button onClick={onBack} size="xs" variant="ghost">Back to modes</Button>
+      <Button onClick={onBack} size="xs" variant="ghost">
+        Back to modes
+      </Button>
       <h2 className="text-lg font-semibold">Phantom Challenge</h2>
-      <input className="rounded border border-(--ui-border-primary) bg-transparent px-3 py-2 text-sm" onChange={event => setTopic(event.target.value)} value={topic} />
+      <input
+        className="rounded border border-(--ui-border-primary) bg-transparent px-3 py-2 text-sm"
+        onChange={event => setTopic(event.target.value)}
+        value={topic}
+      />
       <Button
         onClick={() =>
           void playRpc<Record<string, unknown>>('async_challenge_create', {
             count: mode.count,
             idempotency_key: crypto.randomUUID(),
             topic
-          }).then(adopt).catch(reason => setError(String(reason)))
+          })
+            .then(adopt)
+            .catch(reason => setError(String(reason)))
         }
       >
         Create challenge
       </Button>
       <div className="flex gap-2">
-        <input className="min-w-0 flex-1 rounded border border-(--ui-border-primary) bg-transparent px-3 py-2 text-sm uppercase" onChange={event => setCode(event.target.value.toUpperCase())} placeholder="Invite code" value={code} />
+        <input
+          className="min-w-0 flex-1 rounded border border-(--ui-border-primary) bg-transparent px-3 py-2 text-sm uppercase"
+          onChange={event => setCode(event.target.value.toUpperCase())}
+          placeholder="Invite code"
+          value={code}
+        />
         <Button
           disabled={code.trim().length < 4}
           onClick={() =>
             void playRpc<Record<string, unknown>>('async_challenge_join', {
               code: code.trim(),
               share_code: code.trim()
-            }).then(result => adopt(result, code)).catch(reason => setError(String(reason)))
+            })
+              .then(result => adopt(result, code))
+              .catch(reason => setError(String(reason)))
           }
           variant="secondary"
         >
@@ -357,7 +423,9 @@ function TournamentLobby({ onBack }: { onBack: () => void }) {
 
   return (
     <div className="h-full overflow-y-auto p-5">
-      <Button onClick={onBack} size="xs" variant="ghost">Back to modes</Button>
+      <Button onClick={onBack} size="xs" variant="ghost">
+        Back to modes
+      </Button>
       <h2 className="mt-3 text-lg font-semibold">Tournaments</h2>
       <p className="text-xs text-muted-foreground">Enrollment uses the server entitlement and entry-fee protocol.</p>
       <div className="mt-4 grid gap-2">
@@ -394,27 +462,40 @@ function PartyLobby({ onBack }: { onBack: () => void }) {
   const [party, setParty] = useState<Record<string, unknown> | null>(null)
   const [status, setStatus] = useState('')
 
-  const adopt = (action: 'created' | 'joined') => ({ name, result }: { name: string; result: Record<string, unknown> }) => {
-    const data = (result.data ?? result) as Record<string, unknown>
+  const adopt =
+    (action: 'created' | 'joined') =>
+    ({ name, result }: { name: string; result: Record<string, unknown> }) => {
+      const data = (result.data ?? result) as Record<string, unknown>
 
-    setParty(data)
-    setStatus(`Party ${action} through ${name}. Waiting for the host to start the match.`)
-  }
+      setParty(data)
+      setStatus(`Party ${action} through ${name}. Waiting for the host to start the match.`)
+    }
 
   return (
     <div className="mx-auto flex h-full max-w-md flex-col justify-center gap-3 p-5">
-      <Button onClick={onBack} size="xs" variant="ghost">Back to modes</Button>
+      <Button onClick={onBack} size="xs" variant="ghost">
+        Back to modes
+      </Button>
       <h2 className="text-lg font-semibold">Party & Trivia</h2>
       <p className="text-xs text-muted-foreground">
-        Native party matchmaking uses the deployed matchmaking RPC, with the legacy party protocol as compatibility fallback.
+        Native party matchmaking uses the deployed matchmaking RPC, with the legacy party protocol as compatibility
+        fallback.
       </p>
       <Button
-        onClick={() => void firstSupportedPartyRpc(PARTY_CREATE_RPCS, {
-          idempotency_key: crypto.randomUUID(),
-          game_id: 'quizverse',
-          max_players: 12,
-          mode: 'PartyAndTrivia'
-        }, playRpc).then(adopt('created')).catch(reason => setError(String(reason)))}
+        onClick={() =>
+          void firstSupportedPartyRpc(
+            PARTY_CREATE_RPCS,
+            {
+              idempotency_key: crypto.randomUUID(),
+              game_id: 'quizverse',
+              max_players: 12,
+              mode: 'PartyAndTrivia'
+            },
+            playRpc
+          )
+            .then(adopt('created'))
+            .catch(reason => setError(String(reason)))
+        }
       >
         Host party
       </Button>
@@ -427,17 +508,29 @@ function PartyLobby({ onBack }: { onBack: () => void }) {
         />
         <Button
           disabled={code.trim().length < 4}
-          onClick={() => void firstSupportedPartyRpc(PARTY_JOIN_RPCS, {
-            code: code.trim(),
-            game_id: 'quizverse',
-            party_code: code.trim()
-          }, playRpc).then(adopt('joined')).catch(reason => setError(String(reason)))}
+          onClick={() =>
+            void firstSupportedPartyRpc(
+              PARTY_JOIN_RPCS,
+              {
+                code: code.trim(),
+                game_id: 'quizverse',
+                party_code: code.trim()
+              },
+              playRpc
+            )
+              .then(adopt('joined'))
+              .catch(reason => setError(String(reason)))
+          }
           variant="secondary"
         >
           Join
         </Button>
       </div>
-      {party && <pre className="max-h-32 overflow-auto rounded bg-black/15 p-2 text-[0.65rem]">{JSON.stringify(party, null, 2)}</pre>}
+      {party && (
+        <pre className="max-h-32 overflow-auto rounded bg-black/15 p-2 text-[0.65rem]">
+          {JSON.stringify(party, null, 2)}
+        </pre>
+      )}
       {status && <p className="text-xs text-emerald-400">{status}</p>}
       {error && <p className="text-xs text-red-400">{error}</p>}
     </div>
@@ -491,7 +584,9 @@ function LiveArena({ onBack }: { onBack: () => void }) {
       } else if (decoded.type === 'turn-resolved') {
         const result = (decoded.payload.result_payload ?? {}) as Record<string, unknown>
 
-        setReveal(`Correct option: ${Number(result.correct_option ?? -1) + 1}${result.explanation ? ` — ${String(result.explanation)}` : ''}`)
+        setReveal(
+          `Correct option: ${Number(result.correct_option ?? -1) + 1}${result.explanation ? ` — ${String(result.explanation)}` : ''}`
+        )
         setPhase('waiting')
       } else if (decoded.type === 'score') {
         setScores((decoded.payload.totals ?? {}) as Record<string, unknown>)
@@ -546,10 +641,14 @@ function LiveArena({ onBack }: { onBack: () => void }) {
 
   return (
     <div className="mx-auto flex h-full max-w-2xl flex-col justify-center gap-4 p-5 text-center">
-      <Button className="self-start" onClick={onBack} size="xs" variant="ghost">Back to modes</Button>
+      <Button className="self-start" onClick={onBack} size="xs" variant="ghost">
+        Back to modes
+      </Button>
       <h2 className="text-xl font-semibold">Live Arena</h2>
       {phase === 'connecting' && <p className="text-sm text-muted-foreground">Connecting to sync-turn-v1…</p>}
-      {phase === 'waiting' && <p className="text-sm text-muted-foreground">{reveal || 'Match joined. Waiting for the next server turn…'}</p>}
+      {phase === 'waiting' && (
+        <p className="text-sm text-muted-foreground">{reveal || 'Match joined. Waiting for the next server turn…'}</p>
+      )}
       {phase === 'question' && question && (
         <section className="qv-glass-tile rounded-xl p-4 text-left">
           <h3 className="text-lg font-semibold">{question.prompt}</h3>
@@ -576,7 +675,9 @@ function LiveArena({ onBack }: { onBack: () => void }) {
         </section>
       )}
       {phase === 'ended' && <p className="text-sm">Match complete.</p>}
-      {Object.keys(scores).length > 0 && <p className="text-xs text-muted-foreground">Scores: {JSON.stringify(scores)}</p>}
+      {Object.keys(scores).length > 0 && (
+        <p className="text-xs text-muted-foreground">Scores: {JSON.stringify(scores)}</p>
+      )}
       {phase === 'error' && (
         <div className="rounded-lg border border-red-400/40 bg-red-950/25 p-3 text-sm text-red-200">
           Live Arena is unavailable: {error}
@@ -608,7 +709,7 @@ function AiChatGame({ onBack }: { onBack: () => void }) {
     setStreaming(true)
 
     try {
-      const socket = socketRef.current ?? await createTutorSocket('/api/v1/ws')
+      const socket = socketRef.current ?? (await createTutorSocket('/api/v1/ws'))
 
       socketRef.current = socket
 
@@ -617,9 +718,11 @@ function AiChatGame({ onBack }: { onBack: () => void }) {
           const frame = JSON.parse(event.data) as { content?: string; type?: string }
 
           if (frame.type === 'content' && frame.content) {
-            setMessages(current => current.map((message, index) =>
-              index === current.length - 1 ? { ...message, content: message.content + frame.content } : message
-            ))
+            setMessages(current =>
+              current.map((message, index) =>
+                index === current.length - 1 ? { ...message, content: message.content + frame.content } : message
+              )
+            )
           } else if (frame.type === 'done') {
             setStreaming(false)
           } else if (frame.type === 'error') {
@@ -637,17 +740,20 @@ function AiChatGame({ onBack }: { onBack: () => void }) {
         setError('TutorX AI Chat is not reachable. Configure a hosted or local TutorX service in Setup.')
       }
 
-      const start = () => socket.send(JSON.stringify({
-        capability: null,
-        config: {},
-        content: text,
-        knowledge_bases: [],
-        language: 'en',
-        persona: '',
-        session_id: null,
-        tools: [],
-        type: 'start_turn'
-      }))
+      const start = () =>
+        socket.send(
+          JSON.stringify({
+            capability: null,
+            config: {},
+            content: text,
+            knowledge_bases: [],
+            language: 'en',
+            persona: '',
+            session_id: null,
+            tools: [],
+            type: 'start_turn'
+          })
+        )
 
       if (socket.readyState === WebSocket.OPEN) {
         start()
@@ -663,14 +769,19 @@ function AiChatGame({ onBack }: { onBack: () => void }) {
   return (
     <div className="flex h-full flex-col">
       <div className="flex items-center gap-2 border-b border-(--ui-border-primary) p-2">
-        <Button onClick={onBack} size="xs" variant="ghost">Back to modes</Button>
+        <Button onClick={onBack} size="xs" variant="ghost">
+          Back to modes
+        </Button>
         <strong className="text-sm">AI Chat</strong>
         <span className="text-xs text-muted-foreground">Native TutorX conversation protocol</span>
       </div>
       <div className="flex-1 space-y-2 overflow-y-auto p-4">
         {messages.map((message, index) => (
           <div
-            className={cn('max-w-2xl rounded-lg p-3 text-sm', message.role === 'user' ? 'ml-auto bg-violet-500/20' : 'bg-black/15')}
+            className={cn(
+              'max-w-2xl rounded-lg p-3 text-sm',
+              message.role === 'user' ? 'ml-auto bg-violet-500/20' : 'bg-black/15'
+            )}
             key={`${message.role}-${index}`}
           >
             {message.content || '…'}
@@ -678,9 +789,22 @@ function AiChatGame({ onBack }: { onBack: () => void }) {
         ))}
         {error && <p className="text-sm text-red-400">{error}</p>}
       </div>
-      <form className="flex gap-2 border-t border-(--ui-border-primary) p-3" onSubmit={event => { event.preventDefault(); void send() }}>
-        <input className="min-w-0 flex-1 rounded border border-(--ui-border-primary) bg-transparent px-3 py-2 text-sm" onChange={event => setDraft(event.target.value)} placeholder="Ask the QuizVerse AI coach…" value={draft} />
-        <Button disabled={!draft.trim() || streaming} type="submit">Send</Button>
+      <form
+        className="flex gap-2 border-t border-(--ui-border-primary) p-3"
+        onSubmit={event => {
+          event.preventDefault()
+          void send()
+        }}
+      >
+        <input
+          className="min-w-0 flex-1 rounded border border-(--ui-border-primary) bg-transparent px-3 py-2 text-sm"
+          onChange={event => setDraft(event.target.value)}
+          placeholder="Ask the QuizVerse AI coach…"
+          value={draft}
+        />
+        <Button disabled={!draft.trim() || streaming} type="submit">
+          Send
+        </Button>
       </form>
     </div>
   )
@@ -726,11 +850,19 @@ function SyncBeatGame({ onBack }: { onBack: () => void }) {
 
   return (
     <div className="mx-auto flex h-full max-w-xl flex-col items-center justify-center gap-4 p-5 text-center">
-      <Button className="self-start" onClick={onBack} size="xs" variant="ghost">Back to modes</Button>
+      <Button className="self-start" onClick={onBack} size="xs" variant="ghost">
+        Back to modes
+      </Button>
       <h2 className="text-xl font-semibold">Sync with Beat</h2>
-      <p className="text-xs text-muted-foreground">A native deterministic rhythm timeline. Tap as the pulse reaches zero.</p>
+      <p className="text-xs text-muted-foreground">
+        A native deterministic rhythm timeline. Tap as the pulse reaches zero.
+      </p>
       <div className="text-5xl font-bold text-violet-300">
-        {running && nextBeat ? Math.max(0, Math.round(nextBeat.atMs - elapsed)) : result ? `${Math.round(result.accuracy * 100)}%` : 'Ready'}
+        {running && nextBeat
+          ? Math.max(0, Math.round(nextBeat.atMs - elapsed))
+          : result
+            ? `${Math.round(result.accuracy * 100)}%`
+            : 'Ready'}
       </div>
       <Button
         className="h-24 w-56 text-lg"
@@ -740,7 +872,11 @@ function SyncBeatGame({ onBack }: { onBack: () => void }) {
         TAP
       </Button>
       {!running && <Button onClick={start}>{result ? 'Play again' : 'Start rhythm'}</Button>}
-      {result && <p className="text-sm text-muted-foreground">{result.hits}/{result.total} beats · average offset {Math.round(result.averageOffsetMs)}ms</p>}
+      {result && (
+        <p className="text-sm text-muted-foreground">
+          {result.hits}/{result.total} beats · average offset {Math.round(result.averageOffsetMs)}ms
+        </p>
+      )}
     </div>
   )
 }
@@ -758,7 +894,9 @@ function PlayerHeader() {
 
   return (
     <div className="flex h-10 shrink-0 items-center border-b border-(--ui-border-primary) px-3 text-xs">
-      <span className="font-medium">{session?.username || (state === 'error' ? 'Guest auth unavailable' : 'Connecting guest…')}</span>
+      <span className="font-medium">
+        {session?.username || (state === 'error' ? 'Guest auth unavailable' : 'Connecting guest…')}
+      </span>
       <span className="ml-auto text-muted-foreground">{profile ? 'Profile synced' : state}</span>
     </div>
   )
@@ -775,27 +913,31 @@ export function NativePlay() {
     <div className="bg-quizverse-mesh flex h-full min-h-0 flex-col rounded-lg">
       <PlayerHeader />
       <div className="min-h-0 flex-1">
-        {mode?.protocol === 'live'
-          ? <LiveArena onBack={() => setMode(null)} />
-          : mode?.protocol === 'party'
-            ? <PartyLobby onBack={() => setMode(null)} />
-            : mode?.protocol === 'ai-chat'
-              ? <AiChatGame onBack={() => setMode(null)} />
-              : mode?.protocol === 'sync-beat'
-                ? <SyncBeatGame onBack={() => setMode(null)} />
-                : mode?.protocol === 'phantom'
-          ? <PhantomLobby mode={mode} onBack={() => setMode(null)} />
-          : mode?.protocol === 'tournament'
-            ? <TournamentLobby onBack={() => setMode(null)} />
-            : mode
-              ? <QuizGame mode={mode} onBack={() => setMode(null)} />
-              : <ModeGrid onSelect={selected => {
-                if (selected.protocol === 'native-surface') {
-                  openNativeSurface('link-play', 'library')
-                }
+        {mode?.protocol === 'live' ? (
+          <LiveArena onBack={() => setMode(null)} />
+        ) : mode?.protocol === 'party' ? (
+          <PartyLobby onBack={() => setMode(null)} />
+        ) : mode?.protocol === 'ai-chat' ? (
+          <AiChatGame onBack={() => setMode(null)} />
+        ) : mode?.protocol === 'sync-beat' ? (
+          <SyncBeatGame onBack={() => setMode(null)} />
+        ) : mode?.protocol === 'phantom' ? (
+          <PhantomLobby mode={mode} onBack={() => setMode(null)} />
+        ) : mode?.protocol === 'tournament' ? (
+          <TournamentLobby onBack={() => setMode(null)} />
+        ) : mode ? (
+          <QuizGame mode={mode} onBack={() => setMode(null)} />
+        ) : (
+          <ModeGrid
+            onSelect={selected => {
+              if (selected.protocol === 'native-surface') {
+                openNativeSurface('link-play', 'library')
+              }
 
-                setMode(selected)
-              }} />}
+              setMode(selected)
+            }}
+          />
+        )}
       </div>
     </div>
   )

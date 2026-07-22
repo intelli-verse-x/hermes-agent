@@ -137,7 +137,9 @@ function InteractiveTutorQuestion({
                     correct_answer: question.correct_answer ?? '',
                     explanation: question.explanation ?? '',
                     is_correct: correct,
-                    options: Object.fromEntries((question.options ?? []).map((option, index) => [String(index), option])),
+                    options: Object.fromEntries(
+                      (question.options ?? []).map((option, index) => [String(index), option])
+                    ),
                     question: question.question,
                     question_id: question.question_id,
                     question_type: question.question_type ?? (question.options?.length ? 'choice' : 'short_answer'),
@@ -175,7 +177,8 @@ function TutorQuizSet({ questions, turnId }: { questions: TutorQuizQuestion[]; t
   return (
     <section className="mt-3">
       <div className="mb-2 text-xs text-muted-foreground">
-        Score: {Object.values(attempts).filter(Boolean).length} / {questions.length} · Answered {Object.keys(attempts).length}
+        Score: {Object.values(attempts).filter(Boolean).length} / {questions.length} · Answered{' '}
+        {Object.keys(attempts).length}
       </div>
       {questions.map((question, index) => {
         const id = question.question_id ?? String(index)
@@ -204,22 +207,70 @@ function TutorQuizSet({ questions, turnId }: { questions: TutorQuizQuestion[]; t
 }
 
 export function sanitizeTutorMarkup(source: string, kind: 'html' | 'svg'): string {
-  const clean = DOMPurify.sanitize(source, kind === 'svg'
-    ? {
-        FORBID_ATTR: ['style'],
-        FORBID_TAGS: ['foreignObject', 'iframe', 'script'],
-        USE_PROFILES: { svg: true, svgFilters: false }
-      }
-    : {
-        ALLOWED_ATTR: ['alt', 'aria-label', 'class', 'colspan', 'height', 'href', 'rel', 'role', 'rowspan', 'src', 'target', 'title', 'width'],
-        ALLOWED_TAGS: [
-          'a', 'article', 'b', 'blockquote', 'br', 'code', 'div', 'em', 'figcaption', 'figure', 'h1', 'h2', 'h3',
-          'h4', 'h5', 'h6', 'hr', 'i', 'img', 'li', 'ol', 'p', 'pre', 'section', 'span', 'strong', 'table',
-          'tbody', 'td', 'th', 'thead', 'tr', 'u', 'ul'
-        ],
-        FORBID_ATTR: ['style'],
-        FORBID_TAGS: ['embed', 'iframe', 'object', 'script', 'svg']
-      })
+  const clean = DOMPurify.sanitize(
+    source,
+    kind === 'svg'
+      ? {
+          FORBID_ATTR: ['style'],
+          FORBID_TAGS: ['foreignObject', 'iframe', 'script'],
+          USE_PROFILES: { svg: true, svgFilters: false }
+        }
+      : {
+          ALLOWED_ATTR: [
+            'alt',
+            'aria-label',
+            'class',
+            'colspan',
+            'height',
+            'href',
+            'rel',
+            'role',
+            'rowspan',
+            'src',
+            'target',
+            'title',
+            'width'
+          ],
+          ALLOWED_TAGS: [
+            'a',
+            'article',
+            'b',
+            'blockquote',
+            'br',
+            'code',
+            'div',
+            'em',
+            'figcaption',
+            'figure',
+            'h1',
+            'h2',
+            'h3',
+            'h4',
+            'h5',
+            'h6',
+            'hr',
+            'i',
+            'img',
+            'li',
+            'ol',
+            'p',
+            'pre',
+            'section',
+            'span',
+            'strong',
+            'table',
+            'tbody',
+            'td',
+            'th',
+            'thead',
+            'tr',
+            'u',
+            'ul'
+          ],
+          FORBID_ATTR: ['style'],
+          FORBID_TAGS: ['embed', 'iframe', 'object', 'script', 'svg']
+        }
+  )
 
   const document = new DOMParser().parseFromString(
     kind === 'svg' ? clean : `<div>${clean}</div>`,
@@ -243,9 +294,7 @@ export function sanitizeTutorMarkup(source: string, kind: 'html' | 'svg'): strin
   })
   root.querySelectorAll('a[target="_blank"]').forEach(node => node.setAttribute('rel', 'noopener noreferrer'))
 
-  return kind === 'svg'
-    ? new XMLSerializer().serializeToString(root)
-    : root.innerHTML
+  return kind === 'svg' ? new XMLSerializer().serializeToString(root) : root.innerHTML
 }
 
 function ChartArtifact({ source }: { source: string }) {
@@ -298,9 +347,11 @@ function VisualArtifact({ artifact }: { artifact: TutorVisualArtifact }) {
   if (artifact.renderType === 'svg') {
     const svg = sanitizeTutorMarkup(artifact.content ?? '', 'svg')
 
-    return svg
-      ? <div className="mt-3 overflow-auto rounded bg-white p-3" dangerouslySetInnerHTML={{ __html: svg }} />
-      : <p className="mt-2 text-xs text-red-400">Unsafe or invalid SVG was blocked.</p>
+    return svg ? (
+      <div className="mt-3 overflow-auto rounded bg-white p-3" dangerouslySetInnerHTML={{ __html: svg }} />
+    ) : (
+      <p className="mt-2 text-xs text-red-400">Unsafe or invalid SVG was blocked.</p>
+    )
   }
 
   if (artifact.renderType === 'html') {
@@ -320,10 +371,17 @@ function VisualArtifact({ artifact }: { artifact: TutorVisualArtifact }) {
   }
 
   if (artifact.renderType === 'mermaid') {
-    const lines = (artifact.content ?? '').split('\n').filter(line => line.includes('-->')).slice(0, 20)
+    const lines = (artifact.content ?? '')
+      .split('\n')
+      .filter(line => line.includes('-->'))
+      .slice(0, 20)
 
     return (
-      <svg className="mt-3 w-full rounded bg-black/20 p-3" role="img" viewBox={`0 0 600 ${Math.max(80, lines.length * 32)}`}>
+      <svg
+        className="mt-3 w-full rounded bg-black/20 p-3"
+        role="img"
+        viewBox={`0 0 600 ${Math.max(80, lines.length * 32)}`}
+      >
         {lines.map((line, index) => (
           <text fill="#ddd6fe" fontSize="13" key={`${line}-${index}`} x="12" y={28 + index * 30}>
             {line.replaceAll(/[<>{}]/g, '')}
@@ -334,9 +392,15 @@ function VisualArtifact({ artifact }: { artifact: TutorVisualArtifact }) {
   }
 
   if (artifact.url) {
-    return artifact.renderType === 'manim_video'
-      ? <video className="mt-3 max-h-96 w-full rounded" controls poster={artifact.posterUrl} src={artifact.url} />
-      : <img alt="TutorX generated visualization" className="mt-3 max-h-96 w-full rounded object-contain" src={artifact.url} />
+    return artifact.renderType === 'manim_video' ? (
+      <video className="mt-3 max-h-96 w-full rounded" controls poster={artifact.posterUrl} src={artifact.url} />
+    ) : (
+      <img
+        alt="TutorX generated visualization"
+        className="mt-3 max-h-96 w-full rounded object-contain"
+        src={artifact.url}
+      />
+    )
   }
 
   return <p className="mt-2 text-xs text-red-400">The animation service returned no artifact URL.</p>
@@ -359,14 +423,18 @@ function ResearchOutline({
           <input
             className="rounded border border-(--ui-border-primary) bg-transparent px-2 py-1 text-xs"
             onChange={event =>
-              setSubTopics(items => items.map((item, itemIndex) => itemIndex === index ? { ...item, title: event.target.value } : item))
+              setSubTopics(items =>
+                items.map((item, itemIndex) => (itemIndex === index ? { ...item, title: event.target.value } : item))
+              )
             }
             value={topic.title}
           />
           <textarea
             className="rounded border border-(--ui-border-primary) bg-transparent px-2 py-1 text-xs"
             onChange={event =>
-              setSubTopics(items => items.map((item, itemIndex) => itemIndex === index ? { ...item, overview: event.target.value } : item))
+              setSubTopics(items =>
+                items.map((item, itemIndex) => (itemIndex === index ? { ...item, overview: event.target.value } : item))
+              )
             }
             value={topic.overview}
           />
@@ -384,7 +452,9 @@ function ResearchOutline({
         >
           Confirm and research
         </Button>
-        <Button onClick={() => dismissResearchOutline(messageId)} size="xs" variant="ghost">Cancel</Button>
+        <Button onClick={() => dismissResearchOutline(messageId)} size="xs" variant="ghost">
+          Cancel
+        </Button>
       </div>
     </section>
   )
@@ -394,15 +464,18 @@ function QuestionBank({ onClose }: { onClose: () => void }) {
   const [entries, setEntries] = useState<Record<string, unknown>[]>([])
 
   useEffect(() => {
-    void tutorFetch<{ items?: Record<string, unknown>[] }>('/api/v1/question-notebook/entries?limit=100&offset=0')
-      .then(result => setEntries(result.items ?? []))
+    void tutorFetch<{ items?: Record<string, unknown>[] }>('/api/v1/question-notebook/entries?limit=100&offset=0').then(
+      result => setEntries(result.items ?? [])
+    )
   }, [])
 
   return (
     <div className="h-full overflow-y-auto p-4">
       <div className="flex items-center justify-between">
         <h2 className="font-semibold">Question Bank</h2>
-        <Button onClick={onClose} size="xs" variant="ghost">Back to chat</Button>
+        <Button onClick={onClose} size="xs" variant="ghost">
+          Back to chat
+        </Button>
       </div>
       <div className="mt-3 grid gap-2">
         {entries.map((entry, index) => (
@@ -435,9 +508,8 @@ function TutorChat() {
   const [showBank, setShowBank] = useState(false)
   const lastSpokenRef = useRef<string | null>(null)
 
-  const availableModes = capabilities.checked && !capabilities.masteryMode
-    ? MODES.filter(item => item.id !== 'mastery_path')
-    : MODES
+  const availableModes =
+    capabilities.checked && !capabilities.masteryMode ? MODES.filter(item => item.id !== 'mastery_path') : MODES
 
   useEffect(() => {
     void loadTutorSessions().catch(() => {})
@@ -455,15 +527,16 @@ function TutorChat() {
       lastSpokenRef.current = messages.findLast(message => message.role === 'assistant' && message.content)?.id ?? null
     },
     onSubmit: (text, metadata) =>
-      sendTutorMessage(text, mode === 'deep_research'
-        ? { config: { depth: researchDepth, mode: researchMode }, inputModality: metadata.input_modality, mode }
-        : { inputModality: metadata.input_modality, mode }),
+      sendTutorMessage(
+        text,
+        mode === 'deep_research'
+          ? { config: { depth: researchDepth, mode: researchMode }, inputModality: metadata.input_modality, mode }
+          : { inputModality: metadata.input_modality, mode }
+      ),
     pendingResponse: () => {
       const last = messages.findLast(message => message.role === 'assistant' && message.content)
 
-      return last && last.id !== lastSpokenRef.current
-        ? { id: last.id, pending: streaming, text: last.content }
-        : null
+      return last && last.id !== lastSpokenRef.current ? { id: last.id, pending: streaming, text: last.content } : null
     }
   })
 
@@ -492,127 +565,146 @@ function TutorChat() {
         })}
       </aside>
       <div className="flex min-w-0 flex-1 flex-col">
-        {showBank ? <QuestionBank onClose={() => setShowBank(false)} /> : (
+        {showBank ? (
+          <QuestionBank onClose={() => setShowBank(false)} />
+        ) : (
           <>
-        <div className="flex flex-wrap gap-1 border-b border-(--ui-border-primary) p-2">
-          {availableModes.map(item => (
-            <Button
-              key={item.id}
-              onClick={() => $tutorMode.set(item.id)}
-              size="xs"
-              variant={mode === item.id ? 'secondary' : 'ghost'}
-            >
-              {item.label}
-            </Button>
-          ))}
-          <span className="ml-auto self-center text-[0.65rem] text-muted-foreground">{connection}</span>
-        </div>
-        {mode === 'deep_research' && (
-          <div className="flex flex-wrap items-center gap-2 border-b border-(--ui-border-primary) bg-black/10 px-3 py-2 text-xs">
-            <label className="flex items-center gap-2">
-              Output
-              <select onChange={event => setResearchMode(event.target.value)} value={researchMode}>
-                <option value="report">Report</option>
-                <option value="notes">Study notes</option>
-                <option value="comparison">Comparison</option>
-                <option value="learning_path">Learning path</option>
-              </select>
-            </label>
-            <label className="flex items-center gap-2">
-              Depth
-              <select onChange={event => setResearchDepth(event.target.value)} value={researchDepth}>
-                <option value="quick">Quick</option>
-                <option value="standard">Standard</option>
-                <option value="deep">Deep</option>
-              </select>
-            </label>
-            <span className="text-muted-foreground">TutorX will generate an editable outline before research starts.</span>
-          </div>
-        )}
-        <div className="flex-1 space-y-3 overflow-y-auto p-4">
-          {messages.length === 0 && (
-            <div className="mx-auto mt-20 max-w-md text-center">
-              <img alt="" className="mx-auto size-20" src={`${import.meta.env.BASE_URL}quizverse/quizy-front.png`} />
-              <h2 className="mt-3 text-base font-semibold">What do you want to master?</h2>
-              <p className="mt-1 text-xs text-muted-foreground">Choose a TutorX mode and start a native learning session.</p>
-            </div>
-          )}
-          {messages.map(message => (
-            <article
-              className={cn(
-                'max-w-3xl rounded-xl border px-4 py-3 text-sm',
-                message.role === 'user'
-                  ? 'ml-auto bg-violet-500/15'
-                  : 'mr-auto border-(--ui-border-primary) bg-black/15'
-              )}
-              key={message.id}
-            >
-              <div className="whitespace-pre-wrap leading-relaxed">{message.content || (streaming ? '…' : '')}</div>
-              {message.traces.length > 0 && (
-                <details className="mt-2 text-xs text-muted-foreground">
-                  <summary>Tool trace ({message.traces.length})</summary>
-                  {message.traces.map((trace, index) => (
-                    <div className="mt-1 border-l border-violet-400/30 pl-2" key={`${trace.type}-${index}`}>
-                      <strong>{trace.label}</strong> {trace.content}
-                    </div>
-                  ))}
-                </details>
-              )}
-              {message.quiz && message.quiz.length > 0 && (
-                <TutorQuizSet questions={message.quiz} turnId={message.turnId} />
-              )}
-              {message.researchOutline && <ResearchOutline messageId={message.id} outline={message.researchOutline} />}
-              {message.artifact && <VisualArtifact artifact={message.artifact} />}
-              {message.askUser && (
-                <form
-                  className="mt-3 flex gap-2"
-                  onSubmit={event => {
-                    event.preventDefault()
-                    answerTutorPrompt(message.askUser!.turnId, reply)
-                    setReply('')
-                  }}
+            <div className="flex flex-wrap gap-1 border-b border-(--ui-border-primary) p-2">
+              {availableModes.map(item => (
+                <Button
+                  key={item.id}
+                  onClick={() => $tutorMode.set(item.id)}
+                  size="xs"
+                  variant={mode === item.id ? 'secondary' : 'ghost'}
                 >
-                  <input
-                    className="min-w-0 flex-1 rounded border border-(--ui-border-primary) bg-transparent px-2 py-1 text-xs"
-                    onChange={event => setReply(event.target.value)}
-                    placeholder={message.askUser.question}
-                    value={reply}
-                  />
-                  <Button size="xs" type="submit">Reply</Button>
-                </form>
-              )}
-            </article>
-          ))}
-        </div>
-        <form
-          className="grid gap-2 border-t border-(--ui-border-primary) p-3"
-          onSubmit={event => {
-            event.preventDefault()
-            void sendTutorMessage(draft, mode === 'deep_research'
-              ? { config: { depth: researchDepth, mode: researchMode }, mode }
-              : undefined)
-            setDraft('')
-          }}
-        >
-          <div className="flex gap-2">
-            <textarea
-              className="min-h-10 flex-1 resize-none rounded-lg border border-(--ui-border-primary) bg-black/10 px-3 py-2 text-sm outline-none focus:border-violet-400/50"
-              disabled={streaming}
-              onChange={event => setDraft(event.target.value)}
-              placeholder={`Ask TutorX in ${MODES.find(item => item.id === mode)?.label} mode…`}
-              value={draft}
-            />
-            {streaming ? (
-              <Button onClick={cancelTutorTurn} type="button" variant="secondary">Cancel</Button>
-            ) : (
-              <Button disabled={!draft.trim()} type="submit">Send</Button>
+                  {item.label}
+                </Button>
+              ))}
+              <span className="ml-auto self-center text-[0.65rem] text-muted-foreground">{connection}</span>
+            </div>
+            {mode === 'deep_research' && (
+              <div className="flex flex-wrap items-center gap-2 border-b border-(--ui-border-primary) bg-black/10 px-3 py-2 text-xs">
+                <label className="flex items-center gap-2">
+                  Output
+                  <select onChange={event => setResearchMode(event.target.value)} value={researchMode}>
+                    <option value="report">Report</option>
+                    <option value="notes">Study notes</option>
+                    <option value="comparison">Comparison</option>
+                    <option value="learning_path">Learning path</option>
+                  </select>
+                </label>
+                <label className="flex items-center gap-2">
+                  Depth
+                  <select onChange={event => setResearchDepth(event.target.value)} value={researchDepth}>
+                    <option value="quick">Quick</option>
+                    <option value="standard">Standard</option>
+                    <option value="deep">Deep</option>
+                  </select>
+                </label>
+                <span className="text-muted-foreground">
+                  TutorX will generate an editable outline before research starts.
+                </span>
+              </div>
             )}
-            <Button onClick={regenerateTutorTurn} type="button" variant="ghost">
-              <Codicon name="refresh" />
-            </Button>
-          </div>
-          <DesktopVoiceControls controller={voice} />
-        </form>
+            <div className="flex-1 space-y-3 overflow-y-auto p-4">
+              {messages.length === 0 && (
+                <div className="mx-auto mt-20 max-w-md text-center">
+                  <img
+                    alt=""
+                    className="mx-auto size-20"
+                    src={`${import.meta.env.BASE_URL}quizverse/quizy-front.png`}
+                  />
+                  <h2 className="mt-3 text-base font-semibold">What do you want to master?</h2>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Choose a TutorX mode and start a native learning session.
+                  </p>
+                </div>
+              )}
+              {messages.map(message => (
+                <article
+                  className={cn(
+                    'max-w-3xl rounded-xl border px-4 py-3 text-sm',
+                    message.role === 'user'
+                      ? 'ml-auto bg-violet-500/15'
+                      : 'mr-auto border-(--ui-border-primary) bg-black/15'
+                  )}
+                  key={message.id}
+                >
+                  <div className="whitespace-pre-wrap leading-relaxed">{message.content || (streaming ? '…' : '')}</div>
+                  {message.traces.length > 0 && (
+                    <details className="mt-2 text-xs text-muted-foreground">
+                      <summary>Tool trace ({message.traces.length})</summary>
+                      {message.traces.map((trace, index) => (
+                        <div className="mt-1 border-l border-violet-400/30 pl-2" key={`${trace.type}-${index}`}>
+                          <strong>{trace.label}</strong> {trace.content}
+                        </div>
+                      ))}
+                    </details>
+                  )}
+                  {message.quiz && message.quiz.length > 0 && (
+                    <TutorQuizSet questions={message.quiz} turnId={message.turnId} />
+                  )}
+                  {message.researchOutline && (
+                    <ResearchOutline messageId={message.id} outline={message.researchOutline} />
+                  )}
+                  {message.artifact && <VisualArtifact artifact={message.artifact} />}
+                  {message.askUser && (
+                    <form
+                      className="mt-3 flex gap-2"
+                      onSubmit={event => {
+                        event.preventDefault()
+                        answerTutorPrompt(message.askUser!.turnId, reply)
+                        setReply('')
+                      }}
+                    >
+                      <input
+                        className="min-w-0 flex-1 rounded border border-(--ui-border-primary) bg-transparent px-2 py-1 text-xs"
+                        onChange={event => setReply(event.target.value)}
+                        placeholder={message.askUser.question}
+                        value={reply}
+                      />
+                      <Button size="xs" type="submit">
+                        Reply
+                      </Button>
+                    </form>
+                  )}
+                </article>
+              ))}
+            </div>
+            <form
+              className="grid gap-2 border-t border-(--ui-border-primary) p-3"
+              onSubmit={event => {
+                event.preventDefault()
+                void sendTutorMessage(
+                  draft,
+                  mode === 'deep_research' ? { config: { depth: researchDepth, mode: researchMode }, mode } : undefined
+                )
+                setDraft('')
+              }}
+            >
+              <div className="flex gap-2">
+                <textarea
+                  className="min-h-10 flex-1 resize-none rounded-lg border border-(--ui-border-primary) bg-black/10 px-3 py-2 text-sm outline-none focus:border-violet-400/50"
+                  disabled={streaming}
+                  onChange={event => setDraft(event.target.value)}
+                  placeholder={`Ask TutorX in ${MODES.find(item => item.id === mode)?.label} mode…`}
+                  value={draft}
+                />
+                {streaming ? (
+                  <Button onClick={cancelTutorTurn} type="button" variant="secondary">
+                    Cancel
+                  </Button>
+                ) : (
+                  <Button disabled={!draft.trim()} type="submit">
+                    Send
+                  </Button>
+                )}
+                <Button onClick={regenerateTutorTurn} type="button" variant="ghost">
+                  <Codicon name="refresh" />
+                </Button>
+              </div>
+              <DesktopVoiceControls controller={voice} />
+            </form>
           </>
         )}
       </div>
@@ -645,18 +737,22 @@ function KnowledgeCenter() {
       tutorFetch<{ providers?: { id?: string; name?: string }[] }>('/api/v1/knowledge/rag-providers'),
       tutorFetch<{ default_kb?: string }>('/api/v1/knowledge/default'),
       tutorFetch<typeof policy>('/api/v1/knowledge/supported-file-types')
-    ]).then(([providerResult, defaultResult, policyResult]) => {
-      setProviders(providerResult.providers ?? [])
-      setDefaultBase(defaultResult.default_kb ?? '')
-      setPolicy(policyResult)
-    }).catch(reason => setError(String(reason)))
+    ])
+      .then(([providerResult, defaultResult, policyResult]) => {
+        setProviders(providerResult.providers ?? [])
+        setDefaultBase(defaultResult.default_kb ?? '')
+        setPolicy(policyResult)
+      })
+      .catch(reason => setError(String(reason)))
   }, [])
 
   const watchTask = (taskId: string) => {
     setLogs([])
     void tutorStream(`/api/v1/knowledge/tasks/${encodeURIComponent(taskId)}/stream`, event => {
       setLogs(current => [...current.slice(-99), String(event.message ?? event.content ?? event.type ?? 'Progress')])
-    }).then(load).catch(reason => setError(String(reason)))
+    })
+      .then(load)
+      .catch(reason => setError(String(reason)))
   }
 
   const loadFiles = (baseName: string) => {
@@ -680,31 +776,48 @@ function KnowledgeCenter() {
             body.set('name', name)
             body.set('rag_provider', provider)
             createFiles.forEach(file => body.append('files', file))
-            void tutorFetch<{ task_id?: string }>('/api/v1/knowledge/create', { body, method: 'POST' }).then(result => {
-              setName('')
-              setCreateFiles([])
+            void tutorFetch<{ task_id?: string }>('/api/v1/knowledge/create', { body, method: 'POST' })
+              .then(result => {
+                setName('')
+                setCreateFiles([])
 
-              if (result.task_id) {
-                watchTask(result.task_id)
-              } else {
-                load()
-              }
-            }).catch(reason => setError(String(reason)))
+                if (result.task_id) {
+                  watchTask(result.task_id)
+                } else {
+                  load()
+                }
+              })
+              .catch(reason => setError(String(reason)))
           }}
         >
-          <input className="rounded border border-(--ui-border-primary) bg-transparent px-3 text-sm" onChange={e => setName(e.target.value)} placeholder="New knowledge base" value={name} />
-          <select className="rounded border border-(--ui-border-primary) bg-transparent px-2 text-xs" onChange={event => setProvider(event.target.value)} value={provider}>
+          <input
+            className="rounded border border-(--ui-border-primary) bg-transparent px-3 text-sm"
+            onChange={e => setName(e.target.value)}
+            placeholder="New knowledge base"
+            value={name}
+          />
+          <select
+            className="rounded border border-(--ui-border-primary) bg-transparent px-2 text-xs"
+            onChange={event => setProvider(event.target.value)}
+            value={provider}
+          >
             <option value="default">Default provider</option>
-            {providers.map(item => <option key={item.id} value={item.id}>{item.name ?? item.id}</option>)}
+            {providers.map(item => (
+              <option key={item.id} value={item.id}>
+                {item.name ?? item.id}
+              </option>
+            ))}
           </select>
           <input
             accept={policy.accept}
             className="max-w-48 text-xs"
             multiple
-            onChange={event => setCreateFiles([...event.target.files ?? []])}
+            onChange={event => setCreateFiles([...(event.target.files ?? [])])}
             type="file"
           />
-          <Button disabled={!name.trim() || createFiles.length === 0} size="sm" type="submit">Create</Button>
+          <Button disabled={!name.trim() || createFiles.length === 0} size="sm" type="submit">
+            Create
+          </Button>
         </form>
         <p className="mt-2 text-[0.65rem] text-muted-foreground">
           {policy.accept || 'Supported documents and archives'} · up to{' '}
@@ -712,7 +825,9 @@ function KnowledgeCenter() {
         </p>
         {logs.length > 0 && (
           <div className="mt-3 max-h-28 overflow-auto rounded bg-black/20 p-2 text-[0.65rem]">
-            {logs.map((line, index) => <div key={`${line}-${index}`}>{line}</div>)}
+            {logs.map((line, index) => (
+              <div key={`${line}-${index}`}>{line}</div>
+            ))}
           </div>
         )}
         {error && <p className="mt-3 text-xs text-red-400">{error}</p>}
@@ -721,7 +836,8 @@ function KnowledgeCenter() {
             <article className="qv-glass-tile rounded-xl p-4" key={base.name}>
               <h3 className="font-medium">{base.name}</h3>
               <p className="text-xs text-muted-foreground">
-                {base.status ?? 'ready'} · {base.statistics?.document_count ?? 0} documents · {base.rag_provider ?? 'default'}
+                {base.status ?? 'ready'} · {base.statistics?.document_count ?? 0} documents ·{' '}
+                {base.rag_provider ?? 'default'}
                 {defaultBase === base.name ? ' · default' : ''}
               </p>
               <div className="mt-3 flex gap-2">
@@ -736,8 +852,11 @@ function KnowledgeCenter() {
                         body.append('files', file)
                         body.append('rel_paths', file.name)
                       })
-                      void tutorFetch<{ task_id?: string }>(`/api/v1/knowledge/${encodeURIComponent(base.name)}/upload`, { body, method: 'POST' })
-                        .then(result => result.task_id ? watchTask(result.task_id) : load())
+                      void tutorFetch<{ task_id?: string }>(
+                        `/api/v1/knowledge/${encodeURIComponent(base.name)}/upload`,
+                        { body, method: 'POST' }
+                      )
+                        .then(result => (result.task_id ? watchTask(result.task_id) : load()))
                         .catch(reason => setError(String(reason)))
                     }}
                     type="file"
@@ -746,8 +865,10 @@ function KnowledgeCenter() {
                 <button
                   className="text-xs text-violet-300"
                   onClick={() =>
-                    void tutorFetch<{ task_id?: string }>(`/api/v1/knowledge/${encodeURIComponent(base.name)}/reindex`, { method: 'POST' })
-                      .then(result => result.task_id ? watchTask(result.task_id) : load())
+                    void tutorFetch<{ task_id?: string }>(
+                      `/api/v1/knowledge/${encodeURIComponent(base.name)}/reindex`,
+                      { method: 'POST' }
+                    ).then(result => (result.task_id ? watchTask(result.task_id) : load()))
                   }
                   type="button"
                 >
@@ -756,20 +877,35 @@ function KnowledgeCenter() {
                 <button
                   className="text-xs text-violet-300"
                   onClick={() =>
-                    void tutorFetch<{ task_id?: string }>(`/api/v1/knowledge/${encodeURIComponent(base.name)}/retry`, { method: 'POST' })
-                      .then(result => result.task_id ? watchTask(result.task_id) : load())
+                    void tutorFetch<{ task_id?: string }>(`/api/v1/knowledge/${encodeURIComponent(base.name)}/retry`, {
+                      method: 'POST'
+                    }).then(result => (result.task_id ? watchTask(result.task_id) : load()))
                   }
                   type="button"
                 >
                   Retry
                 </button>
-                <button className="text-xs text-violet-300" onClick={() => loadFiles(base.name)} type="button">Files</button>
-                <button className="text-xs text-violet-300" onClick={() => void tutorFetch(`/api/v1/knowledge/default/${encodeURIComponent(base.name)}`, { method: 'PUT' }).then(() => setDefaultBase(base.name))} type="button">Set default</button>
+                <button className="text-xs text-violet-300" onClick={() => loadFiles(base.name)} type="button">
+                  Files
+                </button>
+                <button
+                  className="text-xs text-violet-300"
+                  onClick={() =>
+                    void tutorFetch(`/api/v1/knowledge/default/${encodeURIComponent(base.name)}`, {
+                      method: 'PUT'
+                    }).then(() => setDefaultBase(base.name))
+                  }
+                  type="button"
+                >
+                  Set default
+                </button>
                 <button
                   className="text-xs text-red-300"
                   onClick={() => {
                     if (window.confirm(`Delete knowledge base “${base.name}”?`)) {
-                      void tutorFetch(`/api/v1/knowledge/${encodeURIComponent(base.name)}`, { method: 'DELETE' }).then(load)
+                      void tutorFetch(`/api/v1/knowledge/${encodeURIComponent(base.name)}`, { method: 'DELETE' }).then(
+                        load
+                      )
                     }
                   }}
                   type="button"
@@ -841,7 +977,11 @@ function KnowledgeCenter() {
                 )
               })}
             </div>
-            {preview && <pre className="mt-3 max-h-64 overflow-auto whitespace-pre-wrap rounded bg-black/20 p-3 text-xs">{preview}</pre>}
+            {preview && (
+              <pre className="mt-3 max-h-64 overflow-auto whitespace-pre-wrap rounded bg-black/20 p-3 text-xs">
+                {preview}
+              </pre>
+            )}
           </section>
         )}
       </div>
@@ -856,9 +996,7 @@ function StructuredRecords({ data }: { data: unknown }) {
 
   const root = data as Record<string, unknown>
 
-  const records = Array.isArray(data)
-    ? data
-    : Object.values(root).find(value => Array.isArray(value)) ?? [root]
+  const records = Array.isArray(data) ? data : (Object.values(root).find(value => Array.isArray(value)) ?? [root])
 
   if (!Array.isArray(records) || records.length === 0) {
     return <div className="qv-glass-tile mt-4 rounded-xl p-4 text-xs text-muted-foreground">No records yet.</div>
@@ -867,13 +1005,19 @@ function StructuredRecords({ data }: { data: unknown }) {
   return (
     <div className="mt-4 grid gap-3 sm:grid-cols-2">
       {records.map((record, index) => {
-        const fields = record && typeof record === 'object' ? Object.entries(record as Record<string, unknown>) : [['value', record]]
+        const fields =
+          record && typeof record === 'object' ? Object.entries(record as Record<string, unknown>) : [['value', record]]
 
         return (
-          <article className="qv-glass-tile rounded-xl p-4 text-xs" key={String((record as Record<string, unknown>)?.id ?? index)}>
+          <article
+            className="qv-glass-tile rounded-xl p-4 text-xs"
+            key={String((record as Record<string, unknown>)?.id ?? index)}
+          >
             {fields.map(([key, value]) => (
               <div className="mb-2" key={key}>
-                <div className="text-[0.65rem] uppercase tracking-wide text-muted-foreground">{key.replaceAll('_', ' ')}</div>
+                <div className="text-[0.65rem] uppercase tracking-wide text-muted-foreground">
+                  {key.replaceAll('_', ' ')}
+                </div>
                 <div className="mt-0.5 break-words">
                   {typeof value === 'object' ? JSON.stringify(value) : String(value ?? '—')}
                 </div>
@@ -951,44 +1095,54 @@ function LearningSpace() {
             ? 'Build, inspect, and restart TutorX mastery paths.'
             : 'Track native QuizVerse mastery, level, and learning progress.'}
         </p>
-        {source === 'tutor' && <div className="mt-3 flex gap-2">
-          <input
-            className="rounded border border-(--ui-border-primary) bg-transparent px-2 text-xs"
-            onChange={event => setBookId(event.target.value)}
-            placeholder="Book or path ID"
-            value={bookId}
-          />
-          <Button disabled={!bookId.trim()} onClick={() => void open(bookId)} size="xs">Open path</Button>
-          <Button
-            disabled={!bookId.trim()}
-            onClick={() =>
-              void tutorFetch(`/api/v1/learning/progress/${encodeURIComponent(bookId)}/init-modules`, {
-                body: JSON.stringify({
-                  modules: [{
-                    id: `${bookId}-module-1`,
-                    knowledge_points: [{
-                      id: `${bookId}-kp-1`,
-                      module_id: `${bookId}-module-1`,
-                      name: 'Core concepts',
-                      type: 'concept'
-                    }],
-                    name: 'Getting started',
-                    order: 0,
-                    pass_threshold: 0.7
-                  }]
-                }),
-                method: 'POST'
-              }).then(() => open(bookId))
-            }
-            size="xs"
-            variant="secondary"
-          >
-            Initialize
-          </Button>
-        </div>}
+        {source === 'tutor' && (
+          <div className="mt-3 flex gap-2">
+            <input
+              className="rounded border border-(--ui-border-primary) bg-transparent px-2 text-xs"
+              onChange={event => setBookId(event.target.value)}
+              placeholder="Book or path ID"
+              value={bookId}
+            />
+            <Button disabled={!bookId.trim()} onClick={() => void open(bookId)} size="xs">
+              Open path
+            </Button>
+            <Button
+              disabled={!bookId.trim()}
+              onClick={() =>
+                void tutorFetch(`/api/v1/learning/progress/${encodeURIComponent(bookId)}/init-modules`, {
+                  body: JSON.stringify({
+                    modules: [
+                      {
+                        id: `${bookId}-module-1`,
+                        knowledge_points: [
+                          {
+                            id: `${bookId}-kp-1`,
+                            module_id: `${bookId}-module-1`,
+                            name: 'Core concepts',
+                            type: 'concept'
+                          }
+                        ],
+                        name: 'Getting started',
+                        order: 0,
+                        pass_threshold: 0.7
+                      }
+                    ]
+                  }),
+                  method: 'POST'
+                }).then(() => open(bookId))
+              }
+              size="xs"
+              variant="secondary"
+            >
+              Initialize
+            </Button>
+          </div>
+        )}
         {source === 'nakama' && (
           <div className="mt-3 flex gap-2">
-            <Button onClick={() => void load()} size="xs" variant="secondary">Refresh progress</Button>
+            <Button onClick={() => void load()} size="xs" variant="secondary">
+              Refresh progress
+            </Button>
             <Button
               onClick={() => {
                 $tutorMode.set('chat')
@@ -1025,24 +1179,29 @@ function LearningSpace() {
           <section>
             {selected ? (
               <>
-                {source === 'tutor' && <div className="flex gap-2">
-                  <Button
-                    onClick={() =>
-                      void tutorFetch(`/api/v1/learning/progress/${encodeURIComponent(bookId)}/redo`, { method: 'POST' })
-                        .then(() => open(bookId))
-                    }
-                    size="xs"
-                    variant="secondary"
-                  >
-                    Redo path
-                  </Button>
-                  <Button
-                    onClick={() => void sendTutorMessage(`Continue my mastery path ${bookId}.`, { mode: 'mastery_path' })}
-                    size="xs"
-                  >
-                    Continue with TutorX
-                  </Button>
-                </div>}
+                {source === 'tutor' && (
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={() =>
+                        void tutorFetch(`/api/v1/learning/progress/${encodeURIComponent(bookId)}/redo`, {
+                          method: 'POST'
+                        }).then(() => open(bookId))
+                      }
+                      size="xs"
+                      variant="secondary"
+                    >
+                      Redo path
+                    </Button>
+                    <Button
+                      onClick={() =>
+                        void sendTutorMessage(`Continue my mastery path ${bookId}.`, { mode: 'mastery_path' })
+                      }
+                      size="xs"
+                    >
+                      Continue with TutorX
+                    </Button>
+                  </div>
+                )}
                 {source === 'tutor' && (
                   <>
                     <h3 className="mt-4 text-sm font-semibold">Mastery map</h3>
@@ -1052,7 +1211,9 @@ function LearningSpace() {
                 <h3 className="mt-4 text-sm font-semibold">Progress detail</h3>
                 <StructuredRecords data={selected} />
               </>
-            ) : <p className="text-xs text-muted-foreground">No learning progress has been recorded yet.</p>}
+            ) : (
+              <p className="text-xs text-muted-foreground">No learning progress has been recorded yet.</p>
+            )}
           </section>
         </div>
       </div>
@@ -1077,7 +1238,10 @@ function MemorySpace() {
         <h2 className="text-lg font-semibold">Memory</h2>
         <p className="text-xs text-muted-foreground">Inspect and refresh the learner context TutorX uses.</p>
         <div className="mt-3 flex gap-2">
-          <Button onClick={() => void tutorFetch('/api/v1/memory/refresh', { body: '{}', method: 'POST' }).then(load)} size="xs">
+          <Button
+            onClick={() => void tutorFetch('/api/v1/memory/refresh', { body: '{}', method: 'POST' }).then(load)}
+            size="xs"
+          >
             Refresh memory
           </Button>
           <Button
@@ -1100,11 +1264,17 @@ function MemorySpace() {
 }
 
 export function NativeTutorSurface({ surface }: { surface: 'knowledge' | 'learning' | 'memory' | 'tutor' }) {
-  if (surface === 'tutor') {return <TutorChat />}
+  if (surface === 'tutor') {
+    return <TutorChat />
+  }
 
-  if (surface === 'knowledge') {return <KnowledgeCenter />}
+  if (surface === 'knowledge') {
+    return <KnowledgeCenter />
+  }
 
-  if (surface === 'memory') {return <MemorySpace />}
+  if (surface === 'memory') {
+    return <MemorySpace />
+  }
 
   return <LearningSpace />
 }

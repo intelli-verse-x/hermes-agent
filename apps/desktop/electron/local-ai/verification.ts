@@ -48,14 +48,14 @@ async function requestJson(
     }
   })
 
-  if (!response.ok) {throw new Error(`${path} returned HTTP ${response.status}`)}
+  if (!response.ok) {
+    throw new Error(`${path} returned HTTP ${response.status}`)
+  }
 
   return response.json()
 }
 
-export async function verifyInference(
-  options: InferenceVerificationOptions
-): Promise<InferenceVerificationResult> {
+export async function verifyInference(options: InferenceVerificationOptions): Promise<InferenceVerificationResult> {
   const checks = { models: false, completion: false, toolCall: false, latency: false, context: false }
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(), options.timeoutMs ?? 15_000)
@@ -63,10 +63,11 @@ export async function verifyInference(
   try {
     const base = normalizeLoopbackEndpoint(options.endpoint)
     const models = await requestJson(base, '/v1/models', { method: 'GET' }, options, controller.signal)
-    checks.models =
-      Array.isArray(models?.data) && models.data.some((model: any) => model?.id === options.modelId)
+    checks.models = Array.isArray(models?.data) && models.data.some((model: any) => model?.id === options.modelId)
 
-    if (!checks.models) {throw new Error(`Model ${options.modelId} was not advertised`)}
+    if (!checks.models) {
+      throw new Error(`Model ${options.modelId} was not advertised`)
+    }
 
     const completionStartedAt = Date.now()
 
@@ -91,9 +92,13 @@ export async function verifyInference(
     const latencyMs = Date.now() - completionStartedAt
     checks.latency = latencyMs <= (options.maxLatencyMs ?? 30_000)
 
-    if (!checks.completion) {throw new Error('Deterministic completion check failed')}
+    if (!checks.completion) {
+      throw new Error('Deterministic completion check failed')
+    }
 
-    if (!checks.latency) {throw new Error(`First-token readiness exceeded latency limit (${latencyMs}ms)`)}
+    if (!checks.latency) {
+      throw new Error(`First-token readiness exceeded latency limit (${latencyMs}ms)`)
+    }
 
     const toolCall = await requestJson(
       base,
@@ -144,7 +149,9 @@ export async function verifyInference(
       args !== null &&
       (args as { value?: unknown }).value === 7
 
-    if (!checks.toolCall) {throw new Error('Structured tool-call check failed')}
+    if (!checks.toolCall) {
+      throw new Error('Structured tool-call check failed')
+    }
 
     const contextProbeTokens = Math.max(128, Math.min(2048, options.contextProbeTokens ?? 512))
 
@@ -172,7 +179,9 @@ export async function verifyInference(
 
     checks.context = context?.choices?.[0]?.message?.content?.trim() === CONTEXT_SENTINEL
 
-    if (!checks.context) {throw new Error('Context-window smoke check failed')}
+    if (!checks.context) {
+      throw new Error('Context-window smoke check failed')
+    }
 
     return { ok: true, checks, latencyMs }
   } catch (error) {

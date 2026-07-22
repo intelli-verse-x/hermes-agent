@@ -8,11 +8,9 @@ import { stringify } from 'yaml'
 
 import { QUIZVERSE_CONTRACTS } from '../../../packages/quizverse-mcp/contracts.mjs'
 
-const {
-  inspectQuizverseProvision,
-  QUIZVERSE_SKILL_IDS,
-  validateQuizverseProbe
-} = await import(new URL('./qv-mcp-readiness.ts', import.meta.url).href)
+const { inspectQuizverseProvision, QUIZVERSE_SKILL_IDS, validateQuizverseProbe } = await import(
+  new URL('./qv-mcp-readiness.ts', import.meta.url).href
+)
 
 test('structurally verifies exact MCP config and all six skills', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'qv-ready-'))
@@ -52,9 +50,12 @@ test('structurally verifies exact MCP config and all six skills', () => {
   assert.equal(inspectQuizverseProvision(input).ready, true)
   fs.writeFileSync(configPath, '# args: relay.mjs\n# QUIZVERSE_MCP_SERVER_SOCKET: /server.sock\n')
   assert.match(inspectQuizverseProvision(input).reason, /stale|partial/)
-  fs.writeFileSync(configPath, stringify({
-    mcp_servers: { quizverse: { ...exact, args: ['/stale-relay.mjs'] } }
-  }))
+  fs.writeFileSync(
+    configPath,
+    stringify({
+      mcp_servers: { quizverse: { ...exact, args: ['/stale-relay.mjs'] } }
+    })
+  )
   assert.match(inspectQuizverseProvision(input).reason, /stale|partial/)
   fs.writeFileSync(configPath, stringify({ mcp_servers: { quizverse: exact } }))
   fs.rmSync(path.join(skillsRoot, QUIZVERSE_SKILL_IDS[0]), { recursive: true })

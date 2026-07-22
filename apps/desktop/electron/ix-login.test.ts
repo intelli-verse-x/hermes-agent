@@ -69,7 +69,11 @@ test('sendOtp surfaces the portal error text (cooldown, etc.)', async () => {
 
 test('sendOtp fails when the portal returns no challenge', async () => {
   await assert.rejects(
-    ixLoginSendOtp(PORTAL, 'user@intelli-verse-x.ai', fakeFetch(() => ({ body: {} }))),
+    ixLoginSendOtp(
+      PORTAL,
+      'user@intelli-verse-x.ai',
+      fakeFetch(() => ({ body: {} }))
+    ),
     /no OTP challenge/
   )
 })
@@ -120,7 +124,11 @@ test('verifyOtp surfaces the portal rejection (wrong code, no access)', async ()
 
 test('verifyOtp never succeeds without an explicit {ok:true}', async () => {
   await assert.rejects(
-    ixLoginVerifyOtp(PORTAL, { email: 'a@b.co', code: '123456', challenge: 'ch' }, fakeFetch(() => ({ body: {} }))),
+    ixLoginVerifyOtp(
+      PORTAL,
+      { email: 'a@b.co', code: '123456', challenge: 'ch' },
+      fakeFetch(() => ({ body: {} }))
+    ),
     /did not confirm/
   )
 })

@@ -37,7 +37,9 @@ const SkillsView = lazy(async () => ({ default: (await import('../skills')).Skil
 // Brand workspaces: only the active brand's workspace exists in the bundle —
 // IS_*_BRAND are compile-time constants, so the other branch (and its whole
 // import graph) is dead-code-eliminated by the renderer build.
-const IxAgencyView = IS_IX_AGENCY_BRAND ? lazy(async () => ({ default: (await import('../ix-agency')).IxAgencyView })) : null
+const IxAgencyView = IS_IX_AGENCY_BRAND
+  ? lazy(async () => ({ default: (await import('../ix-agency')).IxAgencyView }))
+  : null
 
 const QuizverseView = IS_QUIZVERSE_BRAND
   ? lazy(async () => ({ default: (await import('@/app/quizverse-brand')).QuizverseView }))

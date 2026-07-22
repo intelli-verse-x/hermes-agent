@@ -46,9 +46,10 @@ export function decodeLiveProtocolFrame(frame: { data?: unknown; opCode?: unknow
   let envelope: Record<string, unknown> = {}
 
   try {
-    envelope = typeof frame.data === 'string'
-      ? JSON.parse(frame.data) as Record<string, unknown>
-      : (frame.data ?? {}) as Record<string, unknown>
+    envelope =
+      typeof frame.data === 'string'
+        ? (JSON.parse(frame.data) as Record<string, unknown>)
+        : ((frame.data ?? {}) as Record<string, unknown>)
   } catch {
     return { payload: {}, type: 'ignored' }
   }

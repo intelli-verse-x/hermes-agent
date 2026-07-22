@@ -4,10 +4,7 @@ export type WordsDictionaryKind = 'guess-5' | 'spell'
 
 const memory = new Map<WordsDictionaryKind, ReadonlySet<string>>()
 
-export function withWordsFallback(
-  dictionary: ReadonlySet<string>,
-  fallback: readonly string[]
-): ReadonlySet<string> {
+export function withWordsFallback(dictionary: ReadonlySet<string>, fallback: readonly string[]): ReadonlySet<string> {
   const merged = new Set(dictionary)
 
   for (const word of fallback) {
@@ -17,11 +14,7 @@ export function withWordsFallback(
   return merged
 }
 
-export function normalizeWordsDictionary(
-  value: unknown,
-  kind: WordsDictionaryKind,
-  minimumItems: number
-): string[] {
+export function normalizeWordsDictionary(value: unknown, kind: WordsDictionaryKind, minimumItems: number): string[] {
   if (value && typeof value === 'object' && !Array.isArray(value)) {
     value = (value as { items?: unknown; words?: unknown }).words ?? (value as { items?: unknown }).items
   }
@@ -74,10 +67,7 @@ export async function loadWordsDictionary(
   }
 
   try {
-    const loadedDataset = await loadWordsDataset<unknown>(
-      kind === 'guess-5' ? 'guess-5' : 'spell-dictionary',
-      'shared'
-    )
+    const loadedDataset = await loadWordsDataset<unknown>(kind === 'guess-5' ? 'guess-5' : 'spell-dictionary', 'shared')
 
     const words = normalizeWordsDictionary(loadedDataset.data, kind, loadedDataset.minimumItems)
     const result = withWordsFallback(new Set(words), fallback)

@@ -102,7 +102,9 @@ function queuedPromptStore<T extends KeyedPrompt>(): PromptStore<T> {
           ? queue.findIndex(value => (value as { requestId?: string }).requestId === requestId)
           : 0
 
-        if (index < 0) {continue}
+        if (index < 0) {
+          continue
+        }
         const remaining = queue.filter((_, candidate) => candidate !== index)
 
         if (remaining.length) {

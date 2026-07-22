@@ -34,9 +34,7 @@ describe('native QuizVerse products', () => {
         if (url.includes('/quiz-verse/daily/dailyquiz-')) {
           return Response.json({
             today_quiz: {
-              questions: [
-                { correct_answer: 1, id: 'daily-1', options: ['A', 'B', 'C'], question: 'Daily question?' }
-              ]
+              questions: [{ correct_answer: 1, id: 'daily-1', options: ['A', 'B', 'C'], question: 'Daily question?' }]
             }
           })
         }
@@ -80,9 +78,9 @@ describe('native QuizVerse products', () => {
     expect(playable.some(mode => mode.source === 'ai')).toBe(true)
     expect(playable.some(mode => mode.source === 'daily')).toBe(true)
     expect(playable.some(mode => mode.source === 'bank')).toBe(true)
-    expect(['live-arena', 'party', 'ai-chat', 'sync-beat'].map(id =>
-      PLAY_MODES.find(mode => mode.id === id)?.available
-    )).toEqual([true, true, true, true])
+    expect(
+      ['live-arena', 'party', 'ai-chat', 'sync-beat'].map(id => PLAY_MODES.find(mode => mode.id === id)?.available)
+    ).toEqual([true, true, true, true])
   })
 
   it('uses the daily client pool when Nakama requests client fallback', async () => {

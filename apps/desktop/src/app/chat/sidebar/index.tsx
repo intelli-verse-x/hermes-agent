@@ -158,7 +158,6 @@ const BRAND_WORKSPACE_NAV: SidebarNavItem = IS_QUIZVERSE_BRAND
       route: IX_AGENCY_ROUTE
     }
 
-
 const SIDEBAR_NAV: SidebarNavItem[] = [
   {
     id: 'new-session',

@@ -249,7 +249,9 @@ export function materializeIxPortalSkills(
   let written = 0
 
   for (const skill of skills) {
-    const slug = String(skill.id || '').replace(/[^a-zA-Z0-9-_]+/g, '-').replace(/^-+|-+$/g, '')
+    const slug = String(skill.id || '')
+      .replace(/[^a-zA-Z0-9-_]+/g, '-')
+      .replace(/^-+|-+$/g, '')
 
     if (!slug) {
       continue
@@ -257,9 +259,7 @@ export function materializeIxPortalSkills(
 
     const description = (skill.description || skill.title || slug).replace(/\s+/g, ' ').trim()
 
-    const body =
-      skill.content?.trim() ||
-      `# Skill: ${skill.title || slug}\n\n${skill.description || ''}\n`
+    const body = skill.content?.trim() || `# Skill: ${skill.title || slug}\n\n${skill.description || ''}\n`
 
     const frontmatter = [
       '---',
@@ -305,7 +305,11 @@ export async function fetchLiteLlmModels(
   const url = `${/\/v1$/.test(base) ? base : `${base}/v1`}/models`
   const cacheKey = `${url}\n${litellmKey || ''}`
 
-  if (liteLlmModelsCache && liteLlmModelsCache.key === cacheKey && Date.now() - liteLlmModelsCache.at < LITELLM_MODELS_TTL_MS) {
+  if (
+    liteLlmModelsCache &&
+    liteLlmModelsCache.key === cacheKey &&
+    Date.now() - liteLlmModelsCache.at < LITELLM_MODELS_TTL_MS
+  ) {
     return liteLlmModelsCache.models
   }
 

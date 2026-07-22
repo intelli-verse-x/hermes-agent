@@ -15,9 +15,13 @@ export interface SignedCatalogOptions {
 }
 
 function canonicalJson(value: unknown): string {
-  if (value === null || typeof value !== 'object') {return JSON.stringify(value)}
+  if (value === null || typeof value !== 'object') {
+    return JSON.stringify(value)
+  }
 
-  if (Array.isArray(value)) {return `[${value.map(canonicalJson).join(',')}]`}
+  if (Array.isArray(value)) {
+    return `[${value.map(canonicalJson).join(',')}]`
+  }
   const object = value as Record<string, unknown>
 
   return `{${Object.keys(object)
@@ -39,10 +43,14 @@ export async function fetchVerifiedModelCatalog(options: SignedCatalogOptions): 
     headers: { accept: 'application/json' }
   })
 
-  if (!response.ok) {throw new Error(`Remote catalog returned HTTP ${response.status}`)}
+  if (!response.ok) {
+    throw new Error(`Remote catalog returned HTTP ${response.status}`)
+  }
   const raw = await response.text()
 
-  if (Buffer.byteLength(raw, 'utf8') > 2 * 1024 * 1024) {throw new Error('Remote catalog exceeded size limit')}
+  if (Buffer.byteLength(raw, 'utf8') > 2 * 1024 * 1024) {
+    throw new Error('Remote catalog exceeded size limit')
+  }
   const envelope = JSON.parse(raw) as SignedCatalogEnvelope
 
   if (!envelope || typeof envelope.signature !== 'string' || envelope.payload === undefined) {
@@ -56,7 +64,9 @@ export async function fetchVerifiedModelCatalog(options: SignedCatalogOptions): 
     Buffer.from(envelope.signature, 'base64')
   )
 
-  if (!verified) {throw new Error('Remote catalog signature verification failed')}
+  if (!verified) {
+    throw new Error('Remote catalog signature verification failed')
+  }
 
   return validateCatalog(envelope.payload)
 }

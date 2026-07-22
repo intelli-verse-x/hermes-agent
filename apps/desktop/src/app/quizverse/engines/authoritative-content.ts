@@ -64,11 +64,7 @@ export const FALLBACK_VOYAGE_TIER: VoyageTier = {
   tier: 2
 }
 
-export function fallbackWordsDaily(
-  mode: WordsMode,
-  skin: WordsSkin,
-  date = new Date()
-): WordsDailyEnvelope {
+export function fallbackWordsDaily(mode: WordsMode, skin: WordsSkin, date = new Date()): WordsDailyEnvelope {
   const day = utcDay(date)
 
   return {
@@ -97,11 +93,7 @@ function wordsCacheKey(mode: WordsMode, skin: WordsSkin, day: string): string {
   return `qv_words_authoritative_v1:${day}:${mode}:${skin}`
 }
 
-export async function loadWordsDaily(
-  mode: WordsMode,
-  skin: WordsSkin,
-  date = new Date()
-): Promise<WordsDailyEnvelope> {
+export async function loadWordsDaily(mode: WordsMode, skin: WordsSkin, date = new Date()): Promise<WordsDailyEnvelope> {
   const day = utcDay(date)
   const key = wordsCacheKey(mode, skin, day)
   let cachedDaily: WordsDailyEnvelope | null = null
@@ -109,12 +101,7 @@ export async function loadWordsDaily(
   try {
     const cached = JSON.parse(localStorage.getItem(key) ?? '') as WordsDailyEnvelope
 
-    if (
-      cached.utc_day === day &&
-      cached.mode === mode &&
-      cached.skin === skin &&
-      typeof cached.seed === 'number'
-    ) {
+    if (cached.utc_day === day && cached.mode === mode && cached.skin === skin && typeof cached.seed === 'number') {
       cachedDaily = cached
     }
   } catch {
@@ -156,11 +143,7 @@ export async function loadWordsDaily(
         path: `/api/words/daily?mode=${encodeURIComponent(mode)}&skin=${encodeURIComponent(skin)}`
       })
 
-      if (
-        typeof data.day_index !== 'number' ||
-        typeof data.seed !== 'number' ||
-        data.utc_day !== day
-      ) {
+      if (typeof data.day_index !== 'number' || typeof data.seed !== 'number' || data.utc_day !== day) {
         throw new Error('Words daily response is malformed or stale')
       }
 
