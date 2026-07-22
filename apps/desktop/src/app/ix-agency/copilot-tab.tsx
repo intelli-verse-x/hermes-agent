@@ -15,6 +15,11 @@ import { DesktopVoiceControls, useDesktopVoiceActions } from '../chat/desktop-vo
 
 import { $ixPendingSkill } from './copilot-store'
 import { LoginPane } from './login-pane'
+import {
+  type ScoredSkillSuggestion,
+  SKILL_SUGGEST_DEBOUNCE_MS,
+  suggestSkills
+} from './skill-suggestions'
 import { $ixSync, orgSkillCatalog } from './sync-store'
 import type { IxSkillItem } from './types'
 
@@ -220,6 +225,7 @@ export function CopilotTab() {
   const [model, setModel] = useState('')
   const [activeSkillIds, setActiveSkillIds] = useState<string[]>([])
   const [lockedSkills, setLockedSkills] = useState<null | string[]>(null)
+  const [skillSuggestions, setSkillSuggestions] = useState<ScoredSkillSuggestion[]>([])
 
   const scrollRef = useRef<HTMLDivElement | null>(null)
   const conversationIdRef = useRef<null | string>(null)
@@ -357,6 +363,23 @@ export function CopilotTab() {
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight })
   }, [items, streamingText])
+
+  // Contextual skill suggestions under the composer (portal PR #203 parity):
+  // debounced keyword match of the draft against the org catalog. Only while
+  // skills can still be attached — they lock once the conversation exists.
+  useEffect(() => {
+    if (lockedSkills || !draft.trim()) {
+      setSkillSuggestions([])
+
+      return
+    }
+
+    const timer = window.setTimeout(() => {
+      setSkillSuggestions(suggestSkills(skillCatalog, { activeSkillIds, composerText: draft }))
+    }, SKILL_SUGGEST_DEBOUNCE_MS)
+
+    return () => window.clearTimeout(timer)
+  }, [activeSkillIds, draft, lockedSkills, skillCatalog])
 
   const loadConversation = useCallback(
     async (id: string) => {
@@ -656,6 +679,29 @@ export function CopilotTab() {
               placeholder="Ask across the whole admin estate — every MCP tile is wired in…"
               value={draft}
             />
+            {skillSuggestions.length > 0 && (
+              <div aria-label="Suggested skills" className="flex flex-wrap items-center gap-1.5" role="group">
+                <span className="text-[0.65rem] font-medium tracking-wider text-muted-foreground/60 uppercase">
+                  Suggested
+                </span>
+                {skillSuggestions.map(({ skill }) => (
+                  <Tip key={skill.id} label={skill.description} side="top">
+                    <button
+                      className="shrink-0 rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2 py-0.5 text-[0.68rem] font-medium text-emerald-600 hover:bg-emerald-500/20 dark:text-emerald-400"
+                      onClick={() =>
+                        setActiveSkillIds(current =>
+                          current.includes(skill.id) ? current : [...current, skill.id].slice(-MAX_ACTIVE_SKILLS)
+                        )
+                      }
+                      type="button"
+                    >
+                      <Codicon className="mr-1" name="sparkle" size="0.65rem" />
+                      {skill.title}
+                    </button>
+                  </Tip>
+                ))}
+              </div>
+            )}
             <div className="flex items-center gap-2">
               <DesktopVoiceControls className="min-w-0 flex-1" controller={voice} />
               <select
