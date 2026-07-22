@@ -9,14 +9,10 @@ act/
 .venv/
 .venv
 .vscode/
-.env
 .op.env
-.env.local
 .env.development.local
 .env.test.local
 .env.production.local
-.env.development
-.env.test
 .hermes-docker/
 .notebooklm-home/
 .notebooklm-cli-venv/
@@ -172,3 +168,4 @@ apps/desktop/demo/
 # PR body is the archive. See the hermes-agent-dev skill's
 # pr-infographic-workflow reference (storage rule + lapse #8 / #COMMIT-1).
 infographic/
+config.bat
