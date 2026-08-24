@@ -99,6 +99,22 @@ describe('LocalAiSetupOverlay accessibility', () => {
     opener.remove()
   })
 
+  it('pre-selects cloud-only when no catalog model fits so first-run can continue', async () => {
+    window.hermesDesktop = {
+      localAi: {
+        ...bridge(),
+        getRecommendation: vi.fn().mockRejectedValue(new Error('No catalog model fits this system safely'))
+      }
+    } as typeof window.hermesDesktop
+
+    render(<LocalAiSetupOverlay />)
+
+    await screen.findByText(/Local AI is unavailable/)
+    const continueBtn = await screen.findByRole('button', { name: /Use cloud only/ })
+    expect(continueBtn.hasAttribute('disabled')).toBe(false)
+    expect(screen.getByRole('button', { name: /Cloud only/ }).getAttribute('aria-pressed')).toBe('true')
+  })
+
   it('announces detailed progress without moving focus', async () => {
     render(<LocalAiSetupOverlay />)
     const title = await screen.findByRole('heading', { name: /Choose how/ })

@@ -103,6 +103,15 @@ export function LocalAiSetupOverlay({ enabled = true, forceOpen = false, onCompl
     }
   }, [enabled, state.initialized])
 
+  // When this machine has no safe local catalog match, Local first / Local only
+  // cannot continue (Download stays disabled). Pre-select Cloud only so first-run
+  // is one click instead of a red error that looks like a crash.
+  useEffect(() => {
+    if (choice === null && state.initialized && state.error && !state.recommendation) {
+      setChoice('cloud-only')
+    }
+  }, [choice, state.error, state.initialized, state.recommendation])
+
   useEffect(() => {
     if (!visible) {return}
     const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null
