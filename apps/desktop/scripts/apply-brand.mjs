@@ -202,6 +202,11 @@ export function brandedBuilderConfig(brand, pkg) {
     build.extraResources = [
       ...(build.extraResources || []),
       {
+        from: '../../packages/foundrly-mcp',
+        to: 'foundrly-mcp',
+        filter: ['server.mjs', 'knowledge.md', 'package.json', 'README.md']
+      },
+      {
         from: 'brands/foundrly-skills',
         to: 'foundrly-skills'
       }

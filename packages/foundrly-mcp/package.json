@@ -1,0 +1,10 @@
+{
+  "name": "@hermes/foundrly-mcp",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Foundrly desktop product-knowledge MCP (local Hermes chat). No portal admin tools.",
+  "bin": {
+    "foundrly-mcp": "./server.mjs"
+  }
+}

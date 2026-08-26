@@ -25,22 +25,25 @@ copilot are different. Do not merge them.
 ## Prerequisites
 
 - Foundrly desktop is open.
+- Call `fd_product_knowledge` for the authoritative surfaces table.
 - Admin copilot needs email OTP and a Foundrly-scoped portal grant.
 - Left-rail Hermes needs a configured inference provider (API key / LiteLLM).
 
 ## How to Run
 
-1. Name the surface: left-rail Hermes vs Foundrly → Admin copilot vs Home links.
-2. Match the job: local files/terminal → left-rail; scoped admin tools → Admin
+1. Call `fd_product_knowledge` with topic `surfaces` when explaining where to work.
+2. Name the surface: left-rail Hermes vs Foundrly → Admin copilot vs Home links.
+3. Match the job: local files/terminal → left-rail; scoped admin tools → Admin
    copilot; marketing site / overnight product UI → Foundrly web / Home.
-3. Give the click path in one short list.
+4. Give the click path in one short list.
 
 ## Quick Reference
 
 | Need | Surface |
 |---|---|
 | Local AI + tools on this PC | Left-rail Hermes (New session) |
-| Foundrly-scoped portal tools | Foundrly → Admin copilot |
+| Foundrly product facts | MCP `fd_product_knowledge` |
+| Foundrly-scoped portal tools (Mail Studio, CRM) | Foundrly → Admin copilot |
 | Product website | Open Foundrly web (getfoundrly.com) |
 | Full admin UI | Open Foundrly admin portal |
 
