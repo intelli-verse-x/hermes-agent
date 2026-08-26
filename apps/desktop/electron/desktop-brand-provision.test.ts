@@ -20,7 +20,7 @@ test('Foundrly rich soul names co-founder product and not IX Agency', () => {
 
   assert.match(soul, /You are Foundrly/)
   assert.match(soul, /AI co-founder/)
-  assert.match(soul, /foundrly\.intelli-verse-x\.ai/)
+  assert.match(soul, /getfoundrly\.com/)
   assert.match(soul, /NOT IX Agency/)
   assert.doesNotMatch(soul, /^You are IX Agency/m)
 })
