@@ -26,15 +26,17 @@ local business. Desktop Home is still MVP for product UI — link out when neede
 
 - Product overnight UI lives primarily on Foundrly web / admin, not fully
   embedded in desktop Home today.
-- Use Admin copilot for Foundrly-scoped portal tools after OTP.
+- Call `fd_product_knowledge` (topic `overnight`) for product boundaries.
+- Use Admin copilot for Foundrly-scoped portal tools after OTP — not left-rail MCP.
 - Messaging (Discord/Telegram) is a separate Hermes gateway setup.
 
 ## How to Run
 
-1. Explain overnight visibility as: scan → draft → approve → morning review.
-2. Offer a short operator checklist (who approves, what ships, what waits).
-3. Open or point to Foundrly web / Admin copilot for product actions.
-4. Only use Messaging if they already configured a bot and want delivery there.
+1. Optionally call `fd_product_knowledge` with topic `overnight`.
+2. Explain overnight visibility as: scan → draft → approve → morning review.
+3. Offer a short operator checklist (who approves, what ships, what waits).
+4. Open or point to Foundrly web / Admin copilot for product actions.
+5. Only use Messaging if they already configured a bot and want delivery there.
 
 ## Quick Reference
 
