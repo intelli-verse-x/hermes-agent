@@ -167,17 +167,13 @@ const BRAND_WORKSPACE_NAV: SidebarNavItem = IS_QUIZVERSE_BRAND
       }
 
 const SIDEBAR_NAV: SidebarNavItem[] = [
-  ...(IS_FOUNDRLY_BRAND
-    ? []
-    : [
-        {
-          id: 'new-session',
-          label: '',
-          icon: (props: { className?: string }) => <Codicon name="robot" {...props} />,
-          action: 'new-session',
-          keybindActionId: 'session.new'
-        } as SidebarNavItem
-      ]),
+  {
+    id: 'new-session',
+    label: '',
+    icon: props => <Codicon name="robot" {...props} />,
+    action: 'new-session',
+    keybindActionId: 'session.new'
+  },
   {
     id: 'skills',
     label: '',
@@ -1090,8 +1086,7 @@ export function ChatSidebar({
 
   const showSessionSkeletons = sessionsLoading && sortedSessions.length === 0
 
-  const showSessionSections =
-    !IS_FOUNDRLY_BRAND && (showSessionSkeletons || sortedSessions.length > 0 || projectModel.length > 0)
+  const showSessionSections = showSessionSkeletons || sortedSessions.length > 0 || projectModel.length > 0
 
   // Each reorderable list reports its OWN new id order; persisting is a direct,
   // typed write — no id-prefix sniffing to figure out which level moved.
@@ -1518,7 +1513,7 @@ export function ChatSidebar({
           </div>
         )}
 
-        {!IS_FOUNDRLY_BRAND && !showSessionSections && <SidebarBlankState onNewProject={openProjectCreate} />}
+        {!showSessionSections && <SidebarBlankState onNewProject={openProjectCreate} />}
 
         <div className="shrink-0 px-0.5 pb-1 pt-0.5">
           <ProfileRail />

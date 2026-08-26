@@ -191,12 +191,10 @@ export const ChatRoutesSurface = memo(function ChatRoutesSurface({
 
   return (
     <Routes>
-      <Route
-        element={
-          DEFAULT_WORKSPACE_ROUTE === NEW_CHAT_ROUTE ? chatView : <Navigate replace to={DEFAULT_WORKSPACE_ROUTE} />
-        }
-        index
-      />
+      {/* Index is always local Hermes chat so Foundrly "New session" can land
+          on `/`. Boot still opens Admin copilot via DEFAULT_WORKSPACE_ROUTE in
+          use-desktop-integrations (Option A: keep portal default, restore local chat UI). */}
+      <Route element={chatView} index />
       <Route element={chatView} path=":sessionId" />
       <Route element={page(<SkillsView setStatusbarItemGroup={setStatusbarItemGroup} />)} path="skills" />
       <Route element={page(<MessagingView setStatusbarItemGroup={setStatusbarItemGroup} />)} path="messaging" />
@@ -220,7 +218,7 @@ export const ChatRoutesSurface = memo(function ChatRoutesSurface({
           path={route.path.slice(1)}
         />
       ))}
-      <Route element={<Navigate replace to={DEFAULT_WORKSPACE_ROUTE} />} path="new" />
+      <Route element={<Navigate replace to={NEW_CHAT_ROUTE} />} path="new" />
       <Route element={<LegacySessionRedirect />} path="sessions/:sessionId" />
       <Route element={<Navigate replace to={DEFAULT_WORKSPACE_ROUTE} />} path="*" />
     </Routes>
