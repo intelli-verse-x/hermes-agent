@@ -76,6 +76,7 @@ import {
 } from './connection-config'
 import { adoptServedDashboardToken } from './dashboard-token'
 import { provisionDesktopBrand } from './desktop-brand-provision'
+import { provisionFoundrlySkills } from './foundrly-skills-provision'
 import {
   assertFoundrlyIsolatedHome,
   resolveFoundrlyEffectiveHermesHome
@@ -752,6 +753,27 @@ function ensureDesktopBrandProvision(targetHermesHome = effectiveDesktopHermesHo
       )
     } catch (error) {
       rememberLog(`[qv-mcp] provision failed: ${error instanceof Error ? error.message : String(error)}`)
+    }
+  }
+
+  // Foundrly: copy bundled playbooks only (no Foundrly MCP yet). Gated so
+  // IX Agency / QuizVerse never touch foundrly-skills.
+  if (process.env.HERMES_DESKTOP_BRAND === 'foundrly') {
+    try {
+      const skillsSource = IS_PACKAGED
+        ? path.join(process.resourcesPath, 'foundrly-skills')
+        : path.join(APP_ROOT, 'brands', 'foundrly-skills')
+
+      const result = provisionFoundrlySkills({
+        hermesHome: effectiveHermesHome,
+        skillsSource
+      })
+
+      rememberLog(`[foundrly-skills] provisioned ${result.skillCount} skills at ${result.destination}`)
+    } catch (error) {
+      rememberLog(
+        `[foundrly-skills] provision failed: ${error instanceof Error ? error.message : String(error)}`
+      )
     }
   }
 }
