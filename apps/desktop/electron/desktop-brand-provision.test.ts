@@ -14,7 +14,7 @@ import {
 
 test('Foundrly rich soul names co-founder product and not IX Agency', () => {
   const soul = foundrlySoulMd({
-    webUrl: 'https://foundrly.intelli-verse-x.ai',
+    webUrl: 'https://getfoundrly.com',
     adminPortalUrl: 'https://admin.intelli-verse-x.ai/admin/portal'
   })
 
@@ -54,7 +54,7 @@ test('provisionDesktopBrand writes rich Foundrly soul into an isolated home', ()
       hermesHome: home,
       productName: 'Foundrly',
       foundrly: {
-        webUrl: 'https://foundrly.intelli-verse-x.ai',
+        webUrl: 'https://getfoundrly.com',
         adminPortalUrl: 'https://admin.intelli-verse-x.ai/admin/portal',
         adminChatUrl: 'https://admin.intelli-verse-x.ai/admin/portal/chat'
       }
@@ -63,7 +63,7 @@ test('provisionDesktopBrand writes rich Foundrly soul into an isolated home', ()
     assert.equal(result.soulWritten, true)
     const soul = fs.readFileSync(result.soulPath, 'utf8')
     assert.match(soul, /AI co-founder desktop/)
-    assert.match(soul, /foundrly\.intelli-verse-x\.ai/)
+    assert.match(soul, /getfoundrly\.com/)
   } finally {
     fs.rmSync(home, { force: true, recursive: true })
   }
