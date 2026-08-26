@@ -76,7 +76,7 @@ import {
 } from './connection-config'
 import { adoptServedDashboardToken } from './dashboard-token'
 import { provisionDesktopBrand } from './desktop-brand-provision'
-import { provisionFoundrlySkills } from './foundrly-skills-provision'
+import { provisionFoundrlyMcp } from './foundrly-mcp-provision'
 import {
   assertFoundrlyIsolatedHome,
   resolveFoundrlyEffectiveHermesHome
@@ -756,23 +756,32 @@ function ensureDesktopBrandProvision(targetHermesHome = effectiveDesktopHermesHo
     }
   }
 
-  // Foundrly: copy bundled playbooks only (no Foundrly MCP yet). Gated so
-  // IX Agency / QuizVerse never touch foundrly-skills.
+  // Foundrly: product-knowledge MCP (stdio) + skill playbooks. No Mail Studio /
+  // CRM tools — those stay on Admin copilot. Gated so IX / QuizVerse untouched.
   if (process.env.HERMES_DESKTOP_BRAND === 'foundrly') {
     try {
+      const mcpServerPath = IS_PACKAGED
+        ? path.join(process.resourcesPath, 'foundrly-mcp', 'server.mjs')
+        : path.join(SOURCE_REPO_ROOT, 'packages', 'foundrly-mcp', 'server.mjs')
+
       const skillsSource = IS_PACKAGED
         ? path.join(process.resourcesPath, 'foundrly-skills')
         : path.join(APP_ROOT, 'brands', 'foundrly-skills')
 
-      const result = provisionFoundrlySkills({
+      const result = provisionFoundrlyMcp({
+        electronExecutable: process.execPath,
         hermesHome: effectiveHermesHome,
+        mcpServerPath,
         skillsSource
       })
 
-      rememberLog(`[foundrly-skills] provisioned ${result.skillCount} skills at ${result.destination}`)
+      rememberLog(
+        `[foundrly-mcp] provisioned ${result.skillCount} skills` +
+          `${result.configChanged ? ' and MCP config' : ''} (${result.serverPath})`
+      )
     } catch (error) {
       rememberLog(
-        `[foundrly-skills] provision failed: ${error instanceof Error ? error.message : String(error)}`
+        `[foundrly-mcp] provision failed: ${error instanceof Error ? error.message : String(error)}`
       )
     }
   }
