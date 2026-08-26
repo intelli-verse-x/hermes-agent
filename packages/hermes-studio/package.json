@@ -7,7 +7,7 @@
   "type": "module",
   "main": "lib/protocol.js",
   "scripts": {
-    "build": "tsc",
+    "build": "node init && tsc",
     "check": "npm run typecheck && npm run test && npm run verify:resources",
     "fix": "echo 'no lint/format step for this package'",
     "test": "tsx --test test/*.test.ts",

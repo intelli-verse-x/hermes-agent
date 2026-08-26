@@ -1,8 +1,8 @@
 # Foundrly desktop skills pack
 
 Bundled into the Foundrly Electron brand (`extraResources` → `foundrly-skills`).
-At boot, Foundrly copies this folder into `$HERMES_HOME/skills/foundrly/` so
-left-rail Hermes can load the playbooks.
+At boot, Foundrly copies this folder into `$HERMES_HOME/skills/foundrly/` and
+registers the product-knowledge MCP (`fd_product_knowledge`).
 
 | Skill | Purpose |
 |---|---|
@@ -10,5 +10,5 @@ left-rail Hermes can load the playbooks.
 | `foundrly-product-surfaces` | Left-rail vs Admin copilot vs web/admin |
 | `foundrly-overnight-visibility` | Overnight / morning review guidance |
 
-These are playbooks only (no Foundrly MCP). Live portal tools stay on Admin
-copilot (`/admin/portal/chat`).
+**MCP:** `fd_product_knowledge` only (bundled facts).  
+**Not in local Hermes MCP:** Mail Studio, CRM, Automation Studio — use Admin copilot.
