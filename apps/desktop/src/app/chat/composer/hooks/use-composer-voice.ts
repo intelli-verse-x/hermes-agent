@@ -105,7 +105,7 @@ export function useComposerVoice({
     if (!route.allowed && route.usesCloudAudio && !route.localOnly) {
       const approved = window.confirm(
         `${route.disclosure}\n\nAudio will be processed by configured cloud speech providers. ` +
-        'This consent is separate from cloud inference. Continue?'
+          'This consent is separate from cloud inference. Continue?'
       )
 
       if (approved) {

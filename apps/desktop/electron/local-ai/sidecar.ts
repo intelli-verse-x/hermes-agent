@@ -11,11 +11,7 @@ export interface SidecarProcess extends EventEmitter {
   kill(signal?: NodeJS.Signals): boolean
 }
 
-export type SidecarSpawner = (
-  command: string,
-  args: string[],
-  options: SpawnOptionsWithoutStdio
-) => SidecarProcess
+export type SidecarSpawner = (command: string, args: string[], options: SpawnOptionsWithoutStdio) => SidecarProcess
 
 export interface ManagedSidecarOptions {
   executablePath: string
@@ -40,7 +36,9 @@ export interface SidecarSnapshot {
 }
 
 function validateOptions(options: ManagedSidecarOptions): void {
-  if (!options.executablePath || !options.modelPath) {throw new Error('Sidecar executable and model paths are required')}
+  if (!options.executablePath || !options.modelPath) {
+    throw new Error('Sidecar executable and model paths are required')
+  }
 
   if (!Number.isSafeInteger(options.port) || options.port < 1 || options.port > 65_535) {
     throw new Error('Sidecar port must be between 1 and 65535')
@@ -85,7 +83,9 @@ export class ManagedLlamaSidecar {
   }
 
   start(): SidecarSnapshot {
-    if (this.child && this.child.exitCode === null) {return this.snapshot()}
+    if (this.child && this.child.exitCode === null) {
+      return this.snapshot()
+    }
     this.lifecycleState = 'starting'
     this.lastError = undefined
 
@@ -100,9 +100,13 @@ export class ManagedLlamaSidecar {
       this.apiKey
     ]
 
-    if (this.options.threads) {args.push('--threads', String(this.options.threads))}
+    if (this.options.threads) {
+      args.push('--threads', String(this.options.threads))
+    }
 
-    if (this.options.contextTokens) {args.push('--ctx-size', String(this.options.contextTokens))}
+    if (this.options.contextTokens) {
+      args.push('--ctx-size', String(this.options.contextTokens))
+    }
     args.push(...(this.options.extraArgs ?? []))
 
     try {
@@ -133,7 +137,9 @@ export class ManagedLlamaSidecar {
           if (this.lifecycleState !== 'stopped') {
             this.lifecycleState = code === 0 ? 'stopped' : 'error'
 
-            if (code !== 0) {this.lastError = `Sidecar exited with ${code ?? signal ?? 'unknown status'}`}
+            if (code !== 0) {
+              this.lastError = `Sidecar exited with ${code ?? signal ?? 'unknown status'}`
+            }
           }
 
           this.options.onStateChange?.(this.snapshot())
@@ -163,10 +169,14 @@ export class ManagedLlamaSidecar {
       let timer: NodeJS.Timeout | undefined
 
       const finish = () => {
-        if (settled) {return}
+        if (settled) {
+          return
+        }
         settled = true
 
-        if (timer) {clearTimeout(timer)}
+        if (timer) {
+          clearTimeout(timer)
+        }
         resolve()
       }
 
@@ -175,13 +185,17 @@ export class ManagedLlamaSidecar {
 
       if (!settled) {
         timer = setTimeout(() => {
-          if (child.exitCode === null) {child.kill('SIGKILL')}
+          if (child.exitCode === null) {
+            child.kill('SIGKILL')
+          }
           finish()
         }, this.options.stopTimeoutMs ?? 5000)
       }
     })
 
-    if (this.child === child) {this.child = undefined}
+    if (this.child === child) {
+      this.child = undefined
+    }
 
     return this.snapshot()
   }

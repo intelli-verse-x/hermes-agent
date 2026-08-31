@@ -25,8 +25,11 @@ function copyDirectory(source: string, destination: string): void {
     const from = path.join(source, entry.name)
     const to = path.join(destination, entry.name)
 
-    if (entry.isDirectory()) {copyDirectory(from, to)}
-    else if (entry.isFile()) {fs.copyFileSync(from, to)}
+    if (entry.isDirectory()) {
+      copyDirectory(from, to)
+    } else if (entry.isFile()) {
+      fs.copyFileSync(from, to)
+    }
   }
 }
 
@@ -55,17 +58,27 @@ function mcpEntry(input: QvMcpProvisionInput) {
  * Electron process and intentionally never appear here.
  */
 export function provisionQuizverseMcp(input: QvMcpProvisionInput): QvMcpProvisionResult {
-  if (!fs.existsSync(input.mcpServerPath)) {throw new Error(`QuizVerse MCP server is missing: ${input.mcpServerPath}`)}
+  if (!fs.existsSync(input.mcpServerPath)) {
+    throw new Error(`QuizVerse MCP server is missing: ${input.mcpServerPath}`)
+  }
 
-  if (!fs.existsSync(input.mcpRelayPath)) {throw new Error(`QuizVerse MCP relay is missing: ${input.mcpRelayPath}`)}
+  if (!fs.existsSync(input.mcpRelayPath)) {
+    throw new Error(`QuizVerse MCP relay is missing: ${input.mcpRelayPath}`)
+  }
 
-  if (!fs.existsSync(input.skillsSource)) {throw new Error(`QuizVerse skill bundle is missing: ${input.skillsSource}`)}
+  if (!fs.existsSync(input.skillsSource)) {
+    throw new Error(`QuizVerse skill bundle is missing: ${input.skillsSource}`)
+  }
 
   fs.mkdirSync(input.hermesHome, { recursive: true })
   const configPath = path.join(input.hermesHome, 'config.yaml')
   let existing = ''
 
-  try { existing = fs.readFileSync(configPath, 'utf8') } catch { /* first launch */ }
+  try {
+    existing = fs.readFileSync(configPath, 'utf8')
+  } catch {
+    /* first launch */
+  }
 
   const document = parseDocument(existing || '{}\n', { keepSourceTokens: true })
 
@@ -76,9 +89,10 @@ export function provisionQuizverseMcp(input: QvMcpProvisionInput): QvMcpProvisio
   const desired = mcpEntry(input)
   const current = document.getIn(['mcp_servers', 'quizverse'], true)
 
-  const currentJson = current && typeof current === 'object' && 'toJSON' in current
-    ? (current as { toJSON: () => unknown }).toJSON()
-    : current
+  const currentJson =
+    current && typeof current === 'object' && 'toJSON' in current
+      ? (current as { toJSON: () => unknown }).toJSON()
+      : current
 
   const configChanged = JSON.stringify(currentJson) !== JSON.stringify(desired)
 

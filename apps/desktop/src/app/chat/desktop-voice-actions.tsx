@@ -4,10 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Codicon } from '@/components/ui/codicon'
 import { cn } from '@/lib/utils'
 
-import {
-  type ConversationStatus,
-  useVoiceConversation
-} from './composer/hooks/use-voice-conversation'
+import { type ConversationStatus, useVoiceConversation } from './composer/hooks/use-voice-conversation'
 import {
   type DesktopVoiceRoute,
   grantCloudAudioConsent,
@@ -72,7 +69,7 @@ export function useDesktopVoiceActions({
 
   const allowCloudAudio = useCallback(() => {
     grantCloudAudioConsent()
-    setRoute(current => current ? { ...current, allowed: true, reason: undefined } : current)
+    setRoute(current => (current ? { ...current, allowed: true, reason: undefined } : current))
   }, [])
 
   return useMemo(
@@ -101,7 +98,8 @@ export function DesktopVoiceControls({
   const status = controller.conversation.status
   const meta = STATUS_META[status]
   const captureBlocked = status === 'awaiting-approval' || status === 'transcribing'
-  const cloudConsentNeeded = controller.route?.usesCloudAudio && !controller.route.allowed && !controller.route.localOnly
+  const cloudConsentNeeded =
+    controller.route?.usesCloudAudio && !controller.route.allowed && !controller.route.localOnly
 
   return (
     <div className={cn('flex min-w-0 items-center gap-2 text-[0.68rem]', className)}>
@@ -127,7 +125,9 @@ export function DesktopVoiceControls({
       >
         <Codicon name={meta.icon} size="0.8125rem" />
       </Button>
-      <span aria-live="polite" className="shrink-0 text-muted-foreground" role="status">{meta.label}</span>
+      <span aria-live="polite" className="shrink-0 text-muted-foreground" role="status">
+        {meta.label}
+      </span>
       {controller.route && (
         <span className="min-w-0 truncate text-muted-foreground/60" title={controller.route.disclosure}>
           {controller.route.disclosure}

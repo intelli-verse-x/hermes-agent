@@ -270,8 +270,8 @@ export function ConnectorEditor({
         </Button>
       </div>
       <p className="text-xs leading-relaxed text-muted-foreground">
-        Point the copilot at any MCP endpoint — the portal stores it for the whole org (super-admin only). The token
-        is kept server-side and never shown again.
+        Point the copilot at any MCP endpoint — the portal stores it for the whole org (super-admin only). The token is
+        kept server-side and never shown again.
       </p>
 
       {importOpen && (
@@ -297,7 +297,10 @@ export function ConnectorEditor({
           <Input onChange={event => set('label', event.target.value)} placeholder="Stripe MCP" value={form.label} />
         </Field>
         <Field label="Transport">
-          <Select onValueChange={value => set('transport', value as ConnectorFormState['transport'])} value={form.transport}>
+          <Select
+            onValueChange={value => set('transport', value as ConnectorFormState['transport'])}
+            value={form.transport}
+          >
             <SelectTrigger>
               <SelectValue />
             </SelectTrigger>

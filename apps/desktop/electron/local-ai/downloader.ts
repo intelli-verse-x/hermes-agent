@@ -110,37 +110,54 @@ async function requestFollowingRedirects(
   let current = initialUrl
 
   for (let redirects = 0; ; redirects += 1) {
-    if (options.signal?.aborted) {throw abortError()}
+    if (options.signal?.aborted) {
+      throw abortError()
+    }
     const response = await transport(current, headers, options.signal)
 
-    if (![301, 302, 303, 307, 308].includes(response.statusCode)) {return response}
+    if (![301, 302, 303, 307, 308].includes(response.statusCode)) {
+      return response
+    }
     response.body.destroy()
 
-    if (redirects >= limit) {throw new Error(`Download exceeded redirect limit of ${limit}`)}
+    if (redirects >= limit) {
+      throw new Error(`Download exceeded redirect limit of ${limit}`)
+    }
     const location = headerValue(response.headers, 'location')
 
-    if (!location) {throw new Error('Redirect response omitted Location')}
+    if (!location) {
+      throw new Error('Redirect response omitted Location')
+    }
     const next = new URL(location, current)
 
-    if (next.protocol !== 'https:') {throw new Error('Download redirect must use HTTPS')}
+    if (next.protocol !== 'https:') {
+      throw new Error('Download redirect must use HTTPS')
+    }
 
-    if (next.username || next.password) {throw new Error('Download redirect must not contain credentials')}
+    if (next.username || next.password) {
+      throw new Error('Download redirect must not contain credentials')
+    }
     current = next
   }
 }
 
-export async function downloadModel(
-  spec: DownloadSpec,
-  options: DownloaderOptions = {}
-): Promise<DownloadResult> {
-  if (!SHA256_PATTERN.test(spec.sha256)) {throw new Error('Expected SHA-256 must contain 64 hexadecimal characters')}
+export async function downloadModel(spec: DownloadSpec, options: DownloaderOptions = {}): Promise<DownloadResult> {
+  if (!SHA256_PATTERN.test(spec.sha256)) {
+    throw new Error('Expected SHA-256 must contain 64 hexadecimal characters')
+  }
 
-  if (!Number.isSafeInteger(spec.sizeBytes) || spec.sizeBytes <= 0) {throw new Error('Expected size must be positive')}
+  if (!Number.isSafeInteger(spec.sizeBytes) || spec.sizeBytes <= 0) {
+    throw new Error('Expected size must be positive')
+  }
   const initialUrl = new URL(spec.url)
 
-  if (initialUrl.protocol !== 'https:') {throw new Error('Downloads require HTTPS')}
+  if (initialUrl.protocol !== 'https:') {
+    throw new Error('Downloads require HTTPS')
+  }
 
-  if (initialUrl.username || initialUrl.password) {throw new Error('Download URL must not contain credentials')}
+  if (initialUrl.username || initialUrl.password) {
+    throw new Error('Download URL must not contain credentials')
+  }
 
   const directory = path.dirname(spec.destinationPath)
   const temporaryPath = `${spec.destinationPath}.part`
@@ -158,7 +175,9 @@ export async function downloadModel(
       }
     }
   } catch (error) {
-    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {throw error}
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+      throw error
+    }
   }
 
   let resumedFromBytes = 0
@@ -171,7 +190,9 @@ export async function downloadModel(
       resumedFromBytes = 0
     }
   } catch (error) {
-    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {throw error}
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+      throw error
+    }
   }
 
   const neededBytes = spec.sizeBytes - resumedFromBytes + (options.diskReserveBytes ?? 64 * 1024 * 1024)
@@ -182,13 +203,17 @@ export async function downloadModel(
 
   const headers: Record<string, string> = { 'accept-encoding': 'identity' }
 
-  if (resumedFromBytes > 0) {headers.range = `bytes=${resumedFromBytes}-`}
+  if (resumedFromBytes > 0) {
+    headers.range = `bytes=${resumedFromBytes}-`
+  }
   let response: DownloadResponse
 
   try {
     response = await requestFollowingRedirects(initialUrl, headers, options)
   } catch (error) {
-    if (options.signal?.aborted) {await removeIfPresent(temporaryPath)}
+    if (options.signal?.aborted) {
+      await removeIfPresent(temporaryPath)
+    }
     throw error
   }
 
@@ -230,11 +255,15 @@ export async function downloadModel(
 
   try {
     for await (const chunk of response.body) {
-      if (options.signal?.aborted) {throw abortError()}
+      if (options.signal?.aborted) {
+        throw abortError()
+      }
       const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)
       downloaded += buffer.length
 
-      if (downloaded > spec.sizeBytes) {throw new Error('Download exceeded expected size')}
+      if (downloaded > spec.sizeBytes) {
+        throw new Error('Download exceeded expected size')
+      }
       hash.update(buffer)
       await file.write(buffer)
       options.onProgress?.(downloaded, spec.sizeBytes)
@@ -257,7 +286,9 @@ export async function downloadModel(
   if (downloaded !== spec.sizeBytes || digest.toLowerCase() !== spec.sha256.toLowerCase()) {
     await removeIfPresent(temporaryPath)
     throw new Error(
-      downloaded !== spec.sizeBytes ? 'Downloaded size did not match catalog' : 'Downloaded SHA-256 did not match catalog'
+      downloaded !== spec.sizeBytes
+        ? 'Downloaded size did not match catalog'
+        : 'Downloaded SHA-256 did not match catalog'
     )
   }
 

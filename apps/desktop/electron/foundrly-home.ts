@@ -18,11 +18,6 @@ export function assertFoundrlyIsolatedHome(candidate: string, ixDefault: string)
   return resolved
 }
 
-export function resolveFoundrlyEffectiveHermesHome(
-  baseHome: string,
-  activeProfile: string | null
-): string {
-  return activeProfile && activeProfile !== 'default'
-    ? path.join(baseHome, 'profiles', activeProfile)
-    : baseHome
+export function resolveFoundrlyEffectiveHermesHome(baseHome: string, activeProfile: string | null): string {
+  return activeProfile && activeProfile !== 'default' ? path.join(baseHome, 'profiles', activeProfile) : baseHome
 }

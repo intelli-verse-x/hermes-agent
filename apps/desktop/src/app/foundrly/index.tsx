@@ -37,10 +37,13 @@ const TAB_LABEL: Record<FoundrlyMode, string> = {
 
 async function openExternal(url: string) {
   const bridge = window.hermesDesktop?.foundrly
+
   if (bridge?.openUrl) {
     await bridge.openUrl(url)
+
     return
   }
+
   window.open(url, '_blank', 'noopener,noreferrer')
 }
 
@@ -57,16 +60,14 @@ function FoundrlyHome({ onOpenChat }: { onOpenChat: () => void }) {
             width={40}
           />
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-teal-300/90">
-              Foundrly home
-            </p>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-teal-300/90">Foundrly home</p>
             <h1 className="mt-1 text-2xl font-semibold tracking-tight">{BRAND.productName}</h1>
           </div>
         </div>
         <p className="mt-3 max-w-xl text-sm text-white/65">
-          AI co-founder desktop — Hermes on the left rail, Foundrly product surfaces here. Admin
-          copilot is the same portal chat operators use in the browser (email OTP, Foundrly-scoped
-          tools). Overnight visibility and growth workflows land in this workspace.
+          AI co-founder desktop — Hermes on the left rail, Foundrly product surfaces here. Admin copilot is the same
+          portal chat operators use in the browser (email OTP, Foundrly-scoped tools). Overnight visibility and growth
+          workflows land in this workspace.
         </p>
       </header>
 
@@ -74,13 +75,13 @@ function FoundrlyHome({ onOpenChat }: { onOpenChat: () => void }) {
         <article className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
           <h2 className="text-base font-semibold">Overnight visibility</h2>
           <p className="mt-2 text-sm text-white/60">
-            Run overnight scans, approve drafts, and review morning results from the Foundrly product
-            stack. Use Admin copilot for portal tools; Hermes chat for local ops questions.
+            Run overnight scans, approve drafts, and review morning results from the Foundrly product stack. Use Admin
+            copilot for portal tools; Hermes chat for local ops questions.
           </p>
           <button
-            type="button"
             className="mt-4 rounded-lg bg-teal-500 px-3 py-2 text-sm font-semibold text-slate-950 hover:bg-teal-400"
             onClick={() => void openExternal(WEB_URL)}
+            type="button"
           >
             Open Foundrly web
           </button>
@@ -89,21 +90,21 @@ function FoundrlyHome({ onOpenChat }: { onOpenChat: () => void }) {
         <article className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
           <h2 className="text-base font-semibold">Admin portal (scoped)</h2>
           <p className="mt-2 text-sm text-white/60">
-            Foundrly operators with a portal grant sign in here — scope pin keeps data on Foundrly
-            only. Same copilot as /admin/portal/chat on the web frontend.
+            Foundrly operators with a portal grant sign in here — scope pin keeps data on Foundrly only. Same copilot as
+            /admin/portal/chat on the web frontend.
           </p>
           <div className="mt-4 flex flex-wrap gap-2">
             <button
-              type="button"
               className="rounded-lg bg-teal-500 px-3 py-2 text-sm font-semibold text-slate-950 hover:bg-teal-400"
               onClick={onOpenChat}
+              type="button"
             >
               Open Admin copilot
             </button>
             <button
-              type="button"
               className="rounded-lg border border-white/20 px-3 py-2 text-sm font-semibold text-white hover:bg-white/5"
               onClick={() => void openExternal(ADMIN_URL)}
+              type="button"
             >
               Open Foundrly admin
             </button>

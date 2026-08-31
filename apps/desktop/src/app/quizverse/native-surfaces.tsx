@@ -42,7 +42,11 @@ const VOYAGE_CHALLENGES = {
   wordblock: { answer: 'ORBIT', hint: 'A path around a planet.', prompt: 'Unscramble: T B I O R' },
   picture: { answer: 'SATURN', hint: 'Its rings are visible.', prompt: 'Name the planet: 🪐' },
   search: { answer: 'COMET', hint: 'An icy visitor with a tail.', prompt: 'Find the space word in: X C O M E T Z' },
-  premium: { answer: '5', hint: 'Count the filled squares.', prompt: 'Solve 1-3-1 rows: ■ □ □ / ■ ■ ■ / □ □ ■. How many filled?' }
+  premium: {
+    answer: '5',
+    hint: 'Count the filled squares.',
+    prompt: 'Solve 1-3-1 rows: ■ □ □ / ■ ■ ■ / □ □ ■. How many filled?'
+  }
 } as const
 
 interface ProtocolState {
@@ -429,7 +433,11 @@ function VoyageRoute({ route }: { route: string }) {
                   Hint
                 </Button>
               </div>
-              {message && <p className="mt-2 text-xs" role="status">{message}</p>}
+              {message && (
+                <p className="mt-2 text-xs" role="status">
+                  {message}
+                </p>
+              )}
             </>
           )}
         </div>
@@ -546,7 +554,8 @@ function UnavailableRoute({ route }: { route: NativeRouteContract }) {
       <h3 className="text-sm font-semibold">{route.id.replaceAll('-', ' ')}</h3>
       <p className="mt-2 text-xs text-muted-foreground">{route.description}</p>
       <p className="mt-3 rounded border border-amber-500/40 bg-amber-950/30 p-3 text-xs text-amber-100" role="status">
-        This source flow is not implemented in the signed-off Words/Voyage milestone. No generic interaction or hosted fallback is available.
+        This source flow is not implemented in the signed-off Words/Voyage milestone. No generic interaction or hosted
+        fallback is available.
       </p>
     </section>
   )

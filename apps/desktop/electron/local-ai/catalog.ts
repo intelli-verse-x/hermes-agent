@@ -43,29 +43,39 @@ export interface ModelSelection {
 const SHA256_PATTERN = /^[a-f0-9]{64}$/i
 
 export function validateCatalog(value: unknown): ModelCatalog {
-  if (!value || typeof value !== 'object') {throw new Error('Model catalog must be an object')}
+  if (!value || typeof value !== 'object') {
+    throw new Error('Model catalog must be an object')
+  }
   const catalog = value as Partial<ModelCatalog>
 
   if (catalog.schemaVersion !== MODEL_CATALOG_VERSION) {
     throw new Error(`Unsupported model catalog version: ${String(catalog.schemaVersion)}`)
   }
 
-  if (!Array.isArray(catalog.models)) {throw new Error('Model catalog models must be an array')}
+  if (!Array.isArray(catalog.models)) {
+    throw new Error('Model catalog models must be an array')
+  }
 
   const ids = new Set<string>()
 
   for (const model of catalog.models) {
-    if (!model.id || ids.has(model.id)) {throw new Error(`Duplicate or empty model id: ${model.id}`)}
+    if (!model.id || ids.has(model.id)) {
+      throw new Error(`Duplicate or empty model id: ${model.id}`)
+    }
     ids.add(model.id)
 
     if (!Number.isSafeInteger(model.artifact?.sizeBytes) || model.artifact.sizeBytes <= 0) {
       throw new Error(`Invalid artifact size for ${model.id}`)
     }
 
-    if (!SHA256_PATTERN.test(model.artifact.sha256)) {throw new Error(`Invalid SHA-256 for ${model.id}`)}
+    if (!SHA256_PATTERN.test(model.artifact.sha256)) {
+      throw new Error(`Invalid SHA-256 for ${model.id}`)
+    }
     const url = new URL(model.artifact.url)
 
-    if (url.protocol !== 'https:') {throw new Error(`Model artifact URL must use HTTPS: ${model.id}`)}
+    if (url.protocol !== 'https:') {
+      throw new Error(`Model artifact URL must use HTTPS: ${model.id}`)
+    }
 
     if (model.memoryBytes <= 0 || model.minimumDiskBytes < model.artifact.sizeBytes) {
       throw new Error(`Invalid resource requirements for ${model.id}`)
@@ -83,8 +93,7 @@ function chooseAcceleration(
   const available = new Set(hardware.accelerators)
 
   const fits = (acceleration: LocalAiAcceleration) =>
-    acceleration === 'cpu' ||
-    (hardware.gpuMemoryBytes !== undefined && hardware.gpuMemoryBytes >= model.memoryBytes)
+    acceleration === 'cpu' || (hardware.gpuMemoryBytes !== undefined && hardware.gpuMemoryBytes >= model.memoryBytes)
 
   if (preferred && available.has(preferred) && model.accelerations.includes(preferred) && fits(preferred)) {
     return preferred
@@ -101,9 +110,7 @@ export function selectModel(
   const catalog = validateCatalog(catalogValue)
 
   const memoryLimit =
-    request.availableMemoryBytes ??
-    hardware.usableMemoryBytes ??
-    Math.floor(hardware.memoryBytes * 0.65)
+    request.availableMemoryBytes ?? hardware.usableMemoryBytes ?? Math.floor(hardware.memoryBytes * 0.65)
 
   const required = new Set(request.capabilities)
 

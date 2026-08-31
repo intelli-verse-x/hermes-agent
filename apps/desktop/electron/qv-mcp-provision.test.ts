@@ -6,9 +6,7 @@ import test from 'node:test'
 
 import { parse } from 'yaml'
 
-const { provisionQuizverseMcp } = await import(
-  new URL('./qv-mcp-provision.ts', import.meta.url).href
-)
+const { provisionQuizverseMcp } = await import(new URL('./qv-mcp-provision.ts', import.meta.url).href)
 
 function fixture() {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'qv-mcp-provision-'))

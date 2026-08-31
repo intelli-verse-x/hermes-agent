@@ -1,3 +1,4 @@
+import foundrlyBrand from '../../brands/foundrly.json'
 /**
  * brand.ts — the active desktop brand for the renderer.
  *
@@ -10,7 +11,6 @@
  */
 import ixAgencyBrand from '../../brands/ix-agency.json'
 import quizverseBrand from '../../brands/quizverse.json'
-import foundrlyBrand from '../../brands/foundrly.json'
 
 export interface DesktopBrand {
   id: string
@@ -47,11 +47,7 @@ export interface DesktopBrand {
 export const DESKTOP_BRAND_ID: string = import.meta.env.VITE_DESKTOP_BRAND || 'ix-agency'
 
 export const BRAND: DesktopBrand = (
-  DESKTOP_BRAND_ID === 'quizverse'
-    ? quizverseBrand
-    : DESKTOP_BRAND_ID === 'foundrly'
-      ? foundrlyBrand
-      : ixAgencyBrand
+  DESKTOP_BRAND_ID === 'quizverse' ? quizverseBrand : DESKTOP_BRAND_ID === 'foundrly' ? foundrlyBrand : ixAgencyBrand
 ) as DesktopBrand
 
 export const BRAND_NAME = BRAND.productName

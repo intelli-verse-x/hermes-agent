@@ -83,9 +83,7 @@ export class DesktopStudioBroker {
               const route = {
                 route: localOnly ? 'local' : (process.env.HERMES_STUDIO_ROUTE ?? 'offline'),
                 localOnly,
-                detail: localOnly
-                  ? 'Adaptive Local AI; cloud fallback disabled.'
-                  : 'Route supplied by Hermes Desktop.'
+                detail: localOnly ? 'Adaptive Local AI; cloud fallback disabled.' : 'Route supplied by Hermes Desktop.'
               }
 
               const send = (payload: Record<string, unknown>) => {

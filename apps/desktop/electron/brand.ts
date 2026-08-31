@@ -1,3 +1,4 @@
+import foundrlyBrand from '../brands/foundrly.json' with { type: 'json' }
 /**
  * brand.ts — the active desktop brand for the Electron main process.
  *
@@ -17,7 +18,6 @@
  */
 import ixAgencyBrand from '../brands/ix-agency.json' with { type: 'json' }
 import quizverseBrand from '../brands/quizverse.json' with { type: 'json' }
-import foundrlyBrand from '../brands/foundrly.json' with { type: 'json' }
 
 export interface DesktopBrand {
   id: string
@@ -54,7 +54,7 @@ export interface DesktopBrand {
 // The gate booleans live in brand-gates.ts (an import-free module) so
 // esbuild's cross-module constant propagation can inline them — see the DCE
 // contract there. Re-exported here so consumers keep one import surface.
-export { IS_IX_AGENCY_BRAND, IS_QUIZVERSE_BRAND, IS_FOUNDRLY_BRAND } from './brand-gates'
+export { IS_FOUNDRLY_BRAND, IS_IX_AGENCY_BRAND, IS_QUIZVERSE_BRAND } from './brand-gates'
 
 // Reads the env DIRECTLY (not via a variable or object lookup) so the esbuild
 // define constant-folds the ternary and the inactive brand's manifest JSON is

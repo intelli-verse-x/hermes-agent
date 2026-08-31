@@ -110,11 +110,11 @@ describe('LocalAiSetupOverlay accessibility', () => {
       $localAi.set({
         ...$localAi.get(),
         progress: {
-        stage: 'downloading',
-        message: 'Downloading verified model…',
-        percent: 42,
-        completedBytes: 42,
-        totalBytes: 100
+          stage: 'downloading',
+          message: 'Downloading verified model…',
+          percent: 42,
+          completedBytes: 42,
+          totalBytes: 100
         }
       })
     })

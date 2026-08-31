@@ -28,7 +28,9 @@ export interface ExistingEndpoint {
 function isLoopbackHost(hostname: string): boolean {
   const host = hostname.replace(/^\[|\]$/g, '').toLowerCase()
 
-  if (host === 'localhost' || host === '::1') {return true}
+  if (host === 'localhost' || host === '::1') {
+    return true
+  }
 
   if (isIP(host) === 4) {
     const first = Number(host.split('.')[0])
@@ -42,13 +44,21 @@ function isLoopbackHost(hostname: string): boolean {
 export function normalizeLoopbackEndpoint(value: string): URL {
   const url = new URL(value)
 
-  if (!['http:', 'https:'].includes(url.protocol)) {throw new Error('Endpoint must use HTTP or HTTPS')}
+  if (!['http:', 'https:'].includes(url.protocol)) {
+    throw new Error('Endpoint must use HTTP or HTTPS')
+  }
 
-  if (!isLoopbackHost(url.hostname)) {throw new Error('Endpoint must resolve explicitly to a loopback address')}
+  if (!isLoopbackHost(url.hostname)) {
+    throw new Error('Endpoint must resolve explicitly to a loopback address')
+  }
 
-  if (url.username || url.password) {throw new Error('Endpoint URL must not contain credentials')}
+  if (url.username || url.password) {
+    throw new Error('Endpoint URL must not contain credentials')
+  }
 
-  if (url.search || url.hash) {throw new Error('Endpoint URL must not contain a query or fragment')}
+  if (url.search || url.hash) {
+    throw new Error('Endpoint URL must not contain a query or fragment')
+  }
   url.pathname = url.pathname.replace(/\/+$/, '')
 
   return url
@@ -79,10 +89,14 @@ export async function probeExistingEndpoint(
       headers: options.apiKey ? { authorization: `Bearer ${options.apiKey}` } : undefined
     })
 
-    if (!response.ok) {return { ok: false, reason: `Endpoint returned HTTP ${response.status}` }}
+    if (!response.ok) {
+      return { ok: false, reason: `Endpoint returned HTTP ${response.status}` }
+    }
     const body = (await response.json()) as { data?: Array<{ id?: unknown }> }
 
-    if (!Array.isArray(body.data)) {return { ok: false, reason: 'Endpoint returned an invalid model list' }}
+    if (!Array.isArray(body.data)) {
+      return { ok: false, reason: 'Endpoint returned an invalid model list' }
+    }
 
     const modelIds = body.data
       .map(item => item?.id)

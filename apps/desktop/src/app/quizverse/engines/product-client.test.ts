@@ -73,7 +73,9 @@ describe('QuizVerse product client', () => {
       value: { quizverse: { productRequest: request, productStream: stream } }
     })
 
-    await expect(productStream({ path: '/notes/chat/chat-1/stream', streamId: 'stream_123' }, accumulate)).resolves.toMatchObject({
+    await expect(
+      productStream({ path: '/notes/chat/chat-1/stream', streamId: 'stream_123' }, accumulate)
+    ).resolves.toMatchObject({
       status: 200
     })
   })

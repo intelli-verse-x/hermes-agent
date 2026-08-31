@@ -47,39 +47,61 @@ describe('native shared engines', () => {
   })
 
   it('normalizes leaderboard aliases and entitlement policy', () => {
-    expect(normalizeLeaderboard({
-      records: [{ owner_id: 'u1', playerName: 'Ada', rank: 1, score: 42 }]
-    })).toEqual([{ ownerId: 'u1', rank: 1, score: 42, username: 'Ada' }])
+    expect(
+      normalizeLeaderboard({
+        records: [{ owner_id: 'u1', playerName: 'Ada', rank: 1, score: 42 }]
+      })
+    ).toEqual([{ ownerId: 'u1', rank: 1, score: 42, username: 'Ada' }])
     expect(entitlementDecision({ premium: false, requiresPremium: true }).reason).toBe('premium-required')
     expect(entitlementDecision({ cooldownUntil: 200, now: 100, premium: true })).toMatchObject({
       allowed: false,
       reason: 'cooldown',
       retryAt: 200
     })
-    expect(hasActiveEntitlement({
-      data: { entitlements: [{ product_id: 'voyage_pass', status: 'active' }] }
-    }, 'qv_voyage_pass')).toBe(true)
+    expect(
+      hasActiveEntitlement(
+        {
+          data: { entitlements: [{ product_id: 'voyage_pass', status: 'active' }] }
+        },
+        'qv_voyage_pass'
+      )
+    ).toBe(true)
     expect(hasActiveEntitlement({ entitlements: ['qv_voyage_pass'] }, 'qv_voyage_pass')).toBe(true)
     expect(hasActiveEntitlement({ active: { qv_voyage_pass: true } }, 'qv_voyage_pass')).toBe(true)
-    expect(hasActiveEntitlement({
-      data: {
-        consumables: {},
-        one_time: {},
-        subscriptions: {
-          qv_voyage_pass: { active: true, expires_at: '2099-01-01T00:00:00Z' }
-        }
-      }
-    }, 'qv_voyage_pass')).toBe(true)
-    expect(hasActiveEntitlement({
-      data: {
-        subscriptions: {
-          qv_voyage_pass: { active: false, expires_at: '2099-01-01T00:00:00Z' }
-        }
-      }
-    }, 'qv_voyage_pass')).toBe(false)
-    expect(hasActiveEntitlement({
-      entitlements: [{ active: true, expires_at: '2020-01-01T00:00:00Z', product_id: 'voyage_pass' }]
-    }, 'qv_voyage_pass')).toBe(false)
+    expect(
+      hasActiveEntitlement(
+        {
+          data: {
+            consumables: {},
+            one_time: {},
+            subscriptions: {
+              qv_voyage_pass: { active: true, expires_at: '2099-01-01T00:00:00Z' }
+            }
+          }
+        },
+        'qv_voyage_pass'
+      )
+    ).toBe(true)
+    expect(
+      hasActiveEntitlement(
+        {
+          data: {
+            subscriptions: {
+              qv_voyage_pass: { active: false, expires_at: '2099-01-01T00:00:00Z' }
+            }
+          }
+        },
+        'qv_voyage_pass'
+      )
+    ).toBe(false)
+    expect(
+      hasActiveEntitlement(
+        {
+          entitlements: [{ active: true, expires_at: '2020-01-01T00:00:00Z', product_id: 'voyage_pass' }]
+        },
+        'qv_voyage_pass'
+      )
+    ).toBe(false)
   })
 
   it('keeps an ordinarily cancelled Voyage pass active only until expiration', () => {
@@ -90,12 +112,10 @@ describe('native shared engines', () => {
     })
 
     expect(hasActiveEntitlement(entitlement('cancelled'), 'qv_voyage_pass', now)).toBe(true)
-    expect(hasActiveEntitlement(
-      entitlement('cancelled', '2040-01-01T00:00:00Z'),
-      'qv_voyage_pass',
-      now
-    )).toBe(false)
-    expect(hasActiveEntitlement(entitlement('cancelled', '2040-02-01T00:00:00Z', false), 'qv_voyage_pass', now)).toBe(false)
+    expect(hasActiveEntitlement(entitlement('cancelled', '2040-01-01T00:00:00Z'), 'qv_voyage_pass', now)).toBe(false)
+    expect(hasActiveEntitlement(entitlement('cancelled', '2040-02-01T00:00:00Z', false), 'qv_voyage_pass', now)).toBe(
+      false
+    )
 
     for (const status of ['cancelled_immediately', 'expired', 'revoked', 'inactive']) {
       expect(hasActiveEntitlement(entitlement(status), 'qv_voyage_pass', now)).toBe(false)
@@ -114,7 +134,9 @@ describe('native shared engines', () => {
     expect(reusableVoyageCheckoutAttempt(attempt, 'yearly', 'user-1', 2_000)).toBeNull()
     expect(reusableVoyageCheckoutAttempt(attempt, 'monthly', 'user-2', 2_000)).toBeNull()
     expect(reusableVoyageCheckoutAttempt(attempt, 'monthly', 'user-1', 3_602_000)).toBeNull()
-    expect(reusableVoyageCheckoutAttempt({ ...attempt, checkoutAttemptId: 'not-a-uuid' }, 'monthly', 'user-1', 2_000)).toBeNull()
+    expect(
+      reusableVoyageCheckoutAttempt({ ...attempt, checkoutAttemptId: 'not-a-uuid' }, 'monthly', 'user-1', 2_000)
+    ).toBeNull()
   })
 
   it('connects a realtime channel once and closes deterministically', async () => {
@@ -165,7 +187,9 @@ describe('native shared engines', () => {
       }
 
       for (const clue of puzzle.clues.down) {
-        expect(Array.from({ length: clue.len }, (_, index) => puzzle.grid[clue.row + index]![clue.col]).join('')).toBe(clue.answer)
+        expect(Array.from({ length: clue.len }, (_, index) => puzzle.grid[clue.row + index]![clue.col]).join('')).toBe(
+          clue.answer
+        )
       }
     }
   })
@@ -200,11 +224,14 @@ describe('native shared engines', () => {
   it('keeps every Voyage theme playable across all six source mini-games', () => {
     for (const theme of VOYAGE_THEMES) {
       expect(theme.trivia.length).toBeGreaterThanOrEqual(10)
-      expect(theme.trivia.every(question =>
-        question.options.length === 4 &&
-        question.correctIndex >= 0 &&
-        question.correctIndex < question.options.length
-      )).toBe(true)
+      expect(
+        theme.trivia.every(
+          question =>
+            question.options.length === 4 &&
+            question.correctIndex >= 0 &&
+            question.correctIndex < question.options.length
+        )
+      ).toBe(true)
       expect(new Set(theme.icons).size).toBe(theme.icons.length)
       expect(theme.pictures.length).toBeGreaterThanOrEqual(4)
       expect(theme.wordTargets.every(word => /^[A-Z]+$/.test(word))).toBe(true)
