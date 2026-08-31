@@ -47,19 +47,31 @@ describe('Foundrly workspace', () => {
     expect(screen.getByRole('button', { name: 'Open Admin copilot' })).toBeTruthy()
   })
 
-  it('loads the home mark via brand manifest assetPath (file:// safe in packaged builds)', () => {
+  it('defaults to Admin copilot when Foundrly workspace opens', () => {
+    const view = renderFoundrly()
+    expect(view.container.querySelector('[data-foundrly-portal]')).toBeTruthy()
+    expect(screen.queryByText('Foundrly home')).toBeNull()
+  })
+
+  it('loads the home mark via desktopAssetPath (SPA-route safe)', () => {
     renderFoundrly()
     fireEvent.click(screen.getAllByRole('button', { name: 'Home' })[0]!)
 
     const mark = document.querySelector('header img') as HTMLImageElement | null
-    const expected = `${import.meta.env.BASE_URL}${BRAND.markSvg.replace(/^\/+/, '')}`
-
     expect(mark).toBeTruthy()
-    expect(mark?.getAttribute('src')).toBe(expected)
-    // Packaged Electron uses vite base './' → ./foundrly/mark-512.png (not /foundrly/...).
-    if (import.meta.env.BASE_URL === './') {
-      expect(mark?.getAttribute('src')).toMatch(/^\.\//)
-    }
+    expect(mark?.getAttribute('src')).toContain(BRAND.markSvg.replace(/^\/+/, ''))
+    expect(mark?.getAttribute('src')).not.toMatch(/foundrly\/foundrly\//)
+  })
+
+  it('shows Foundrly mark and title on Admin copilot chrome', () => {
+    const view = renderFoundrly()
+    const mark = view.container.querySelector('img[src*="foundrly"]') as HTMLImageElement | null
+    expect(mark).toBeTruthy()
+    expect(mark?.getAttribute('src')).not.toMatch(/foundrly\/foundrly\//)
+    expect(mark?.className).toMatch(/h-10/)
+    expect(mark?.className).toMatch(/w-10/)
+    expect(screen.getAllByText('Foundrly').length).toBeGreaterThanOrEqual(1)
+    expect(screen.getAllByText('Admin copilot').length).toBeGreaterThanOrEqual(1)
   })
 
   it('does not import IX Agency native copilot IPC', () => {

@@ -7,9 +7,8 @@ import { cn } from '@/lib/utils'
 import { useRouteEnumParam } from '../hooks/use-route-enum-param'
 import { PageSearchShell } from '../page-search-shell'
 
+import { FoundrlyMark } from './foundrly-mark'
 import { FoundrlyPortalChat } from './portal-chat-pane'
-
-const assetPath = (path: string) => `${import.meta.env.BASE_URL}${path.replace(/^\/+/, '')}`
 
 /**
  * Foundrly product workspace.
@@ -50,13 +49,7 @@ function FoundrlyHome({ onOpenChat }: { onOpenChat: () => void }) {
       <header className="border-b border-white/10 px-8 py-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <img
-              alt=""
-              className="h-10 w-10 rounded-xl border border-teal-500/30 object-contain"
-              height={40}
-              src={assetPath(BRAND.markSvg)}
-              width={40}
-            />
+            <FoundrlyMark />
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-teal-300/90">
                 Foundrly home
@@ -129,6 +122,7 @@ function FoundrlyHome({ onOpenChat }: { onOpenChat: () => void }) {
 }
 
 export function FoundrlyView(props: React.ComponentProps<'section'>) {
+  // Default tab is Admin copilot (`chat`) when the left-rail Foundrly item is opened.
   const [mode, setMode] = useRouteEnumParam('tab', FOUNDRLY_MODES, 'chat')
   const [query, setQuery] = useState('')
 
