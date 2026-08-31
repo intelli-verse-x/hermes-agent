@@ -1,5 +1,6 @@
 import { type CSSProperties, useState } from 'react'
 
+import { BrandMark } from '@/components/brand-mark'
 import { BRAND_NAME } from '@/lib/brand'
 import { capitalize, normalize } from '@/lib/text'
 
@@ -169,6 +170,7 @@ export function Intro({ personality, seed }: IntroProps) {
       data-slot="aui_intro"
     >
       <div className="w-full min-w-0">
+        <BrandMark className="mx-auto mb-4 size-16" data-testid="intro-brand-mark" />
         <p
           aria-label={WORDMARK}
           className="fit-text mx-auto mb-1 w-[calc(100%-1rem)] font-['Collapse'] font-bold uppercase leading-[0.9] tracking-[0.08em] text-midground mix-blend-plus-lighter dark:text-foreground/90"
