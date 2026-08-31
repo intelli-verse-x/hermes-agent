@@ -9,6 +9,8 @@ import { PageSearchShell } from '../page-search-shell'
 
 import { FoundrlyPortalChat } from './portal-chat-pane'
 
+const assetPath = (path: string) => `${import.meta.env.BASE_URL}${path.replace(/^\/+/, '')}`
+
 /**
  * Foundrly product workspace.
  *
@@ -50,9 +52,9 @@ function FoundrlyHome({ onOpenChat }: { onOpenChat: () => void }) {
           <div className="flex items-center gap-3">
             <img
               alt=""
-              className="h-10 w-10 rounded-xl border border-teal-500/30 object-cover"
+              className="h-10 w-10 rounded-xl border border-teal-500/30 object-contain"
               height={40}
-              src="/foundrly/mark-512.png"
+              src={assetPath(BRAND.markSvg)}
               width={40}
             />
             <div>

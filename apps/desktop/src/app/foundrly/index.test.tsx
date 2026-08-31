@@ -6,6 +6,8 @@ import { resolve } from 'node:path'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, describe, expect, it } from 'vitest'
 
+import { BRAND } from '@/lib/brand'
+
 import { FoundrlyView } from './index'
 import { FOUNDRLY_PORTAL_PARTITION } from './portal-chat-pane'
 
@@ -43,6 +45,21 @@ describe('Foundrly workspace', () => {
     expect(screen.getByText('Foundrly home')).toBeTruthy()
     expect(screen.getByText('Overnight visibility')).toBeTruthy()
     expect(screen.getByRole('button', { name: 'Open Admin copilot' })).toBeTruthy()
+  })
+
+  it('loads the home mark via brand manifest assetPath (file:// safe in packaged builds)', () => {
+    renderFoundrly()
+    fireEvent.click(screen.getAllByRole('button', { name: 'Home' })[0]!)
+
+    const mark = document.querySelector('header img') as HTMLImageElement | null
+    const expected = `${import.meta.env.BASE_URL}${BRAND.markSvg.replace(/^\/+/, '')}`
+
+    expect(mark).toBeTruthy()
+    expect(mark?.getAttribute('src')).toBe(expected)
+    // Packaged Electron uses vite base './' → ./foundrly/mark-512.png (not /foundrly/...).
+    if (import.meta.env.BASE_URL === './') {
+      expect(mark?.getAttribute('src')).toMatch(/^\.\//)
+    }
   })
 
   it('does not import IX Agency native copilot IPC', () => {
