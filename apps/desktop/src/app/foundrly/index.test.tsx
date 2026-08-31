@@ -45,6 +45,7 @@ describe('Foundrly workspace', () => {
     expect(screen.getByText('Foundrly home')).toBeTruthy()
     expect(screen.getByText('Overnight visibility')).toBeTruthy()
     expect(screen.getByRole('button', { name: 'Open Admin copilot' })).toBeTruthy()
+    expect(screen.queryByText('Built on Intelliverse')).toBeNull()
   })
 
   it('loads the home mark via brand manifest assetPath (file:// safe in packaged builds)', () => {
