@@ -1,4 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Foundrly">
-  <rect width="512" height="512" rx="96" fill="#0F766E"/>
-  <text x="256" y="310" text-anchor="middle" font-family="Georgia, serif" font-size="220" font-weight="700" fill="#F0FDFA">F</text>
+  <!-- Foundrly mark: geometric "f" on mint ground (matches product brand asset). -->
+  <rect width="512" height="512" rx="96" fill="#C4DAD2"/>
+  <rect x="148" y="112" width="88" height="288" fill="#0B1220"/>
+  <rect x="268" y="112" width="96" height="96" fill="#0B1220"/>
 </svg>
