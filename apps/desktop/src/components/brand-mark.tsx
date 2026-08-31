@@ -1,7 +1,6 @@
 import { BRAND } from '@/lib/brand'
+import { desktopAssetPath } from '@/lib/desktop-asset-path'
 import { cn } from '@/lib/utils'
-
-const assetPath = (path: string) => `${import.meta.env.BASE_URL}${path.replace(/^\/+/, '')}`
 
 // Brand badge: the active brand's monogram on a white tile, identical in
 // light/dark. Fills the tile (softly rounded); size via className (default
@@ -15,7 +14,7 @@ export function BrandMark({ className, ...props }: React.ComponentProps<'span'>)
       )}
       {...props}
     >
-      <img alt="" className="size-full object-contain p-0.5" src={assetPath(BRAND.markSvg)} />
+      <img alt="" className="size-full object-contain p-0.5" src={desktopAssetPath(BRAND.markSvg)} />
     </span>
   )
 }

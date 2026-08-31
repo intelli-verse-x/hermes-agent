@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from 'react'
 
 import { BRAND } from '@/lib/brand'
 
+import { FoundrlyMark } from './foundrly-mark'
+
 /**
  * Guest partition for the live admin portal copilot.
  * Marker for check-brand-separation — do not rename lightly:
@@ -40,7 +42,8 @@ function isPortalHost(url: string): boolean {
 
 /**
  * Same AdminCopilotChat operators use in Intelliverse-X-Webfrontend at
- * /admin/portal/chat — OTP login, Foundrly-scoped tools, brand starters.
+ * /admin/portal/chat (OTP + scoped tools). Desktop chrome is Foundrly-branded;
+ * the embedded portal page may still show IntelliVerse login until authenticated.
  * Isolated from Hermes left-rail chat and from Agency native copilot IPC.
  */
 export function FoundrlyPortalChat() {
@@ -99,13 +102,17 @@ export function FoundrlyPortalChat() {
   return (
     <div className="flex h-full min-h-0 flex-col bg-[#0B1220]">
       <div className="flex shrink-0 items-center justify-between gap-3 border-b border-white/10 px-4 py-2">
-        <div className="min-w-0">
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-teal-300/90">
-            Admin copilot
-          </p>
-          <p className="truncate text-xs text-white/55">
-            Same portal chat as foundrly.intelli-verse-x.ai operators — email OTP, then Foundrly tools.
-          </p>
+        <div className="flex min-w-0 items-center gap-3">
+          <FoundrlyMark />
+          <div className="min-w-0">
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-teal-300/90">
+              Foundrly
+            </p>
+            <p className="truncate text-sm font-semibold text-[#E7ECF5]">Admin copilot</p>
+            <p className="truncate text-xs text-white/55">
+              Email OTP, then Foundrly-scoped portal tools.
+            </p>
+          </div>
         </div>
         <div className="flex shrink-0 items-center gap-2">
           <button
@@ -140,7 +147,7 @@ export function FoundrlyPortalChat() {
         />
         {loading ? (
           <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-[#0B1220]/40 text-sm text-white/70">
-            Loading admin copilot…
+            Loading Foundrly admin copilot…
           </div>
         ) : null}
         {loadError ? (
