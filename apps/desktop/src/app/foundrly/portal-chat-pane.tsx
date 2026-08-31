@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import { BRAND } from '@/lib/brand'
 
 import { FoundrlyMark } from './foundrly-mark'
+import { applyFoundrlyPortalBrand } from './portal-brand-inject'
 
 /**
  * Guest partition for the live admin portal copilot.
@@ -20,6 +21,8 @@ type PortalWebview = HTMLElement & {
   getURL?: () => string
   loadURL?: (url: string) => void
   reload?: () => void
+  executeJavaScript?: (code: string, userGesture?: boolean) => Promise<unknown>
+  insertCSS?: (css: string) => Promise<string>
 }
 
 async function openExternal(url: string) {
@@ -43,7 +46,7 @@ function isPortalHost(url: string): boolean {
 /**
  * Same AdminCopilotChat operators use in Intelliverse-X-Webfrontend at
  * /admin/portal/chat (OTP + scoped tools). Desktop chrome is Foundrly-branded;
- * the embedded portal page may still show IntelliVerse login until authenticated.
+ * guest login chrome is rebranded via inject (Intelli Verse → Foundrly).
  * Isolated from Hermes left-rail chat and from Agency native copilot IPC.
  */
 export function FoundrlyPortalChat() {
@@ -66,11 +69,21 @@ export function FoundrlyPortalChat() {
     webview.setAttribute('allowpopups', '')
     webview.setAttribute('webpreferences', 'contextIsolation=yes,nodeIntegration=no,sandbox=yes')
 
+    const brandGuest = () => {
+      void applyFoundrlyPortalBrand(webview).catch(() => {
+        /* guest may not be ready yet; dom-ready / finish-load retry */
+      })
+    }
+
     const onStart = () => {
       setLoadError(null)
       setLoading(true)
     }
-    const onStop = () => setLoading(false)
+    const onStop = () => {
+      setLoading(false)
+      brandGuest()
+    }
+    const onDomReady = () => brandGuest()
     const onFail = (event: Event) => {
       const detail = event as Event & {
         errorCode?: number
@@ -86,6 +99,8 @@ export function FoundrlyPortalChat() {
 
     webview.addEventListener('did-start-loading', onStart)
     webview.addEventListener('did-stop-loading', onStop)
+    webview.addEventListener('dom-ready', onDomReady)
+    webview.addEventListener('did-finish-load', onDomReady)
     webview.addEventListener('did-fail-load', onFail)
     host.appendChild(webview)
     webviewRef.current = webview
@@ -93,6 +108,8 @@ export function FoundrlyPortalChat() {
     return () => {
       webview.removeEventListener('did-start-loading', onStart)
       webview.removeEventListener('did-stop-loading', onStop)
+      webview.removeEventListener('dom-ready', onDomReady)
+      webview.removeEventListener('did-finish-load', onDomReady)
       webview.removeEventListener('did-fail-load', onFail)
       webview.remove()
       webviewRef.current = null
