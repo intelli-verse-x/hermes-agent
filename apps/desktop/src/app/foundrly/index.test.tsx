@@ -36,7 +36,10 @@ describe('Foundrly workspace', () => {
     expect(view.container.querySelector('webview')?.getAttribute('partition')).toBe(
       FOUNDRLY_PORTAL_PARTITION
     )
+    expect(view.container.querySelector('[data-foundrly-login-cover]')).toBeTruthy()
+    expect(screen.getByText('AI co-founder for local businesses.')).toBeTruthy()
   })
+
 
   it('keeps Foundrly home markers on the Home tab', () => {
     renderFoundrly()
