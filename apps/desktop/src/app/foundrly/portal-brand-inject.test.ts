@@ -17,13 +17,14 @@ describe('Foundrly portal brand inject', () => {
   })
 
   it('calls insertCSS and executeJavaScript on the guest webview', async () => {
-    const insertCSS = vi.fn(async () => 'css-key')
-    const executeJavaScript = vi.fn(async () => true)
+    const insertCSS = vi.fn(async (_css: string) => 'css-key')
+    const executeJavaScript = vi.fn(async (_code: string, _userGesture?: boolean) => true)
 
     await applyFoundrlyPortalBrand({ insertCSS, executeJavaScript })
 
     expect(insertCSS).toHaveBeenCalledOnce()
     expect(executeJavaScript).toHaveBeenCalledOnce()
-    expect(String(executeJavaScript.mock.calls[0]?.[0])).toContain('Foundrly')
+    const [script] = executeJavaScript.mock.calls[0] ?? []
+    expect(String(script)).toContain('Foundrly')
   })
 })
