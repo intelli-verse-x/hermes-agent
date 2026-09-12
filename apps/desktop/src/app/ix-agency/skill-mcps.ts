@@ -29,7 +29,7 @@ const TILE_ALIASES: Record<string, string[]> = {
   'appsflyer-attribution': ['appsflyer'],
   'didit-kyc': ['didit'],
   'veriff-kyc': ['veriff'],
-  'quickbooks': ['qbo'],
+  quickbooks: ['qbo'],
   'aws-costs': ['aws cost', 'cloud cost']
 }
 
@@ -60,10 +60,7 @@ export function skillMcpIds(skill: SkillTextLike, tiles: IxMcpTileItem[] = MCP_T
 
   return tiles
     .filter(tile => {
-      const terms = [
-        ...(AMBIGUOUS_IDS.has(tile.id) ? [] : [tile.id]),
-        ...(TILE_ALIASES[tile.id] ?? [])
-      ]
+      const terms = [...(AMBIGUOUS_IDS.has(tile.id) ? [] : [tile.id]), ...(TILE_ALIASES[tile.id] ?? [])]
 
       return terms.some(term => patternFor(term).test(haystack))
     })

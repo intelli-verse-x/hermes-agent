@@ -145,7 +145,10 @@ export function LocalAiSettings() {
             title="Runtime"
           />
           <ListRow
-            action={statusBadge(status?.routeStatus?.label || status?.routeHealth?.replace('-', ' ') || 'unknown', routeTone)}
+            action={statusBadge(
+              status?.routeStatus?.label || status?.routeHealth?.replace('-', ' ') || 'unknown',
+              routeTone
+            )}
             description={
               status?.routeStatus
                 ? `${status.routeStatus.localReady ? 'Verified local route is active.' : 'Local route is not ready.'} ${status.routeStatus.cloudFallbacks} cloud fallback${status.routeStatus.cloudFallbacks === 1 ? '' : 's'} recorded.`
@@ -232,9 +235,7 @@ export function LocalAiSettings() {
             </p>
           </div>
           <div className="rounded-xl border border-border/70 bg-muted/10 p-4">
-            <p className="text-xs text-muted-foreground">
-              Estimated cloud tokens avoided
-            </p>
+            <p className="text-xs text-muted-foreground">Estimated cloud tokens avoided</p>
             <p className="mt-1 text-2xl font-semibold tabular-nums">
               {formatCount(status?.estimatedTokensAvoided ?? status?.tokensAvoided ?? 0)}
             </p>

@@ -104,6 +104,7 @@ test('a dead existing endpoint clears fresh historical readiness', async t => {
   assert.equal(status.runtime.state, 'stopped')
   assert.equal(status.runtime.lastVerifiedAt, undefined)
   assert.equal(status.routeHealth, 'unavailable')
+
   if (process.platform !== 'win32') {
     assert.equal((await fs.stat(path.join(root, 'controller.json'))).mode & 0o777, 0o600)
   }
@@ -200,7 +201,9 @@ test('non-catalog adoption ranks candidates and persists verified external capab
 
     const body = JSON.parse(String(init.body))
 
-    if (body.model === 'vision-only') {visionInferenceCalls += 1}
+    if (body.model === 'vision-only') {
+      visionInferenceCalls += 1
+    }
     const prompt = body.messages?.[0]?.content ?? ''
 
     if (body.tools) {
@@ -254,7 +257,10 @@ test('non-catalog adoption ranks candidates and persists verified external capab
   assert.equal(visionInferenceCalls, 0)
   assert.deepEqual(persisted.externalModel.capabilities, ['chat', 'tools'])
   assert.equal(persisted.externalModel.verifiedContextTokens, 512)
-  if (process.platform !== 'win32') {assert.equal(stateMode, 0o600)}
+
+  if (process.platform !== 'win32') {
+    assert.equal(stateMode, 0o600)
+  }
 })
 
 test('packaged restart rehydrates the exact launch spec and independently reprobes readiness', async t => {
@@ -313,7 +319,9 @@ test('packaged restart rehydrates the exact launch spec and independently reprob
       } as unknown as ManagedLlamaSidecar
     },
     fetchImpl: async (_input, init) => {
-      if (!init?.body) {return Response.json({ data: [{ id: 'managed-model' }] })}
+      if (!init?.body) {
+        return Response.json({ data: [{ id: 'managed-model' }] })
+      }
       inferenceCalls += 1
       const body = JSON.parse(String(init.body))
       const prompt = body.messages?.[0]?.content ?? ''
@@ -349,6 +357,7 @@ test('packaged restart rehydrates the exact launch spec and independently reprob
   assert.equal(captured?.threads, launchSpec.threads)
   assert.equal(captured?.contextTokens, launchSpec.contextTokens)
   assert.deepEqual(captured?.extraArgs, launchSpec.extraArgs)
+
   if (process.platform !== 'win32') {
     assert.equal((await fs.stat(path.join(root, 'controller.json'))).mode & 0o777, 0o600)
   }
@@ -361,11 +370,7 @@ test('runtime extraction selects platform-correct tar and ZIP commands', async (
     options?: { env?: NodeJS.ProcessEnv }
   }> = []
 
-  const execute = (async (
-    command: string,
-    args: readonly string[],
-    options?: { env?: NodeJS.ProcessEnv }
-  ) => {
+  const execute = (async (command: string, args: readonly string[], options?: { env?: NodeJS.ProcessEnv }) => {
     calls.push({ command, args, options })
 
     return { stdout: '', stderr: '' }
@@ -385,20 +390,8 @@ test('runtime extraction selects platform-correct tar and ZIP commands', async (
     'win32',
     execute
   )
-  await localAiControllerInternals.extractRuntimeArchive(
-    '/downloads/runtime.zip',
-    '/runtime',
-    'zip',
-    'linux',
-    execute
-  )
-  await localAiControllerInternals.extractRuntimeArchive(
-    '/downloads/runtime.zip',
-    '/runtime',
-    'zip',
-    'darwin',
-    execute
-  )
+  await localAiControllerInternals.extractRuntimeArchive('/downloads/runtime.zip', '/runtime', 'zip', 'linux', execute)
+  await localAiControllerInternals.extractRuntimeArchive('/downloads/runtime.zip', '/runtime', 'zip', 'darwin', execute)
 
   assert.equal(calls[0].command, 'tar')
   assert.equal(calls[1].command, 'powershell.exe')

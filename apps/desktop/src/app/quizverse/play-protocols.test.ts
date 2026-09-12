@@ -40,17 +40,13 @@ describe('native Play protocols', () => {
   it('falls back when a Party RPC returns a resolved rejection', async () => {
     const calls: string[] = []
 
-    const result = await firstSupportedPartyRpc(
-      PARTY_CREATE_RPCS,
-      { game_id: 'quizverse' },
-      async name => {
-        calls.push(name)
+    const result = await firstSupportedPartyRpc(PARTY_CREATE_RPCS, { game_id: 'quizverse' }, async name => {
+      calls.push(name)
 
-        return name === 'matchmaking_create_party'
-          ? { error: 'unsupported', success: false }
-          : { code: 'ABCD', success: true }
-      }
-    )
+      return name === 'matchmaking_create_party'
+        ? { error: 'unsupported', success: false }
+        : { code: 'ABCD', success: true }
+    })
 
     expect(calls).toEqual(['matchmaking_create_party', 'party_create'])
     expect(result).toEqual({ name: 'party_create', result: { code: 'ABCD', success: true } })

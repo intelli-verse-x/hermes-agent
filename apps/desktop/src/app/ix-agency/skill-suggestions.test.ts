@@ -5,12 +5,7 @@
 import { describe, expect, test } from 'vitest'
 
 import skillsData from './data/skills.json'
-import {
-  buildSkillKeywords,
-  MAX_SKILL_SUGGESTIONS,
-  suggestSkills,
-  tokenize
-} from './skill-suggestions'
+import { buildSkillKeywords, MAX_SKILL_SUGGESTIONS, suggestSkills, tokenize } from './skill-suggestions'
 import type { IxSkillItem } from './types'
 
 const skill = (overrides: Partial<IxSkillItem> & Pick<IxSkillItem, 'id' | 'title'>): IxSkillItem => ({

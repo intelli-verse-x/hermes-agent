@@ -44,7 +44,9 @@ function positiveInteger(value: unknown, fallback: number): number {
 function parseFirstInteger(value: string): number | undefined {
   const match = value.match(/\d[\d,]*/)
 
-  if (!match) {return undefined}
+  if (!match) {
+    return undefined
+  }
   const parsed = Number(match[0].replaceAll(',', ''))
 
   return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : undefined
@@ -64,11 +66,7 @@ function uniqueAccelerators(values: LocalAiAcceleration[]): LocalAiAcceleration[
   return order.filter(value => set.has(value))
 }
 
-async function optionalCommand(
-  deps: HardwareProbeDependencies,
-  command: string,
-  args: string[]
-): Promise<string> {
+async function optionalCommand(deps: HardwareProbeDependencies, command: string, args: string[]): Promise<string> {
   try {
     return (await deps.execFile(command, args)).stdout.trim()
   } catch {
@@ -91,7 +89,9 @@ function linuxPhysicalCpuCount(cpuInfo: string): number | undefined {
     const physical = block.match(/^physical id\s*:\s*(.+)$/m)?.[1]
     const core = block.match(/^core id\s*:\s*(.+)$/m)?.[1]
 
-    if (physical !== undefined && core !== undefined) {packages.add(`${physical}:${core}`)}
+    if (physical !== undefined && core !== undefined) {
+      packages.add(`${physical}:${core}`)
+    }
   }
 
   return packages.size || undefined
@@ -101,20 +101,26 @@ function detectAccelerators(platform: NodeJS.Platform, text: string): LocalAiAcc
   const lowered = text.toLowerCase()
   const detected: LocalAiAcceleration[] = []
 
-  if (platform === 'darwin' && /(apple|metal)/.test(lowered)) {detected.push('metal')}
+  if (platform === 'darwin' && /(apple|metal)/.test(lowered)) {
+    detected.push('metal')
+  }
 
-  if (/(nvidia|cuda)/.test(lowered)) {detected.push('cuda')}
+  if (/(nvidia|cuda)/.test(lowered)) {
+    detected.push('cuda')
+  }
 
-  if (/(amd|radeon|rocm)/.test(lowered)) {detected.push('rocm')}
+  if (/(amd|radeon|rocm)/.test(lowered)) {
+    detected.push('rocm')
+  }
 
-  if (/vulkan/.test(lowered)) {detected.push('vulkan')}
+  if (/vulkan/.test(lowered)) {
+    detected.push('vulkan')
+  }
 
   return uniqueAccelerators(detected)
 }
 
-export async function probeHardware(
-  overrides: Partial<HardwareProbeDependencies> = {}
-): Promise<HardwareProfile> {
+export async function probeHardware(overrides: Partial<HardwareProbeDependencies> = {}): Promise<HardwareProfile> {
   const deps = { ...defaultDependencies, ...overrides }
   const platform = deps.platform()
   const cpus = deps.cpus()
@@ -142,7 +148,9 @@ export async function probeHardware(
 
     gpuMemoryBytes = parseNvidiaMemoryBytes(nvidiaMemory)
 
-    if (gpuMemoryBytes) {gpuMemorySource = 'nvidia-smi'}
+    if (gpuMemoryBytes) {
+      gpuMemorySource = 'nvidia-smi'
+    }
   } else if (platform === 'win32') {
     physicalCpuCount = parseFirstInteger(
       await optionalCommand(deps, 'powershell.exe', [
@@ -164,7 +172,9 @@ export async function probeHardware(
     const adapterMatches = [...gpuJson.matchAll(/"AdapterRAM"\s*:\s*(\d+)/g)]
     gpuMemoryBytes = Math.max(0, ...adapterMatches.map(match => Number(match[1]))) || undefined
 
-    if (gpuMemoryBytes) {gpuMemorySource = 'adapter-reported'}
+    if (gpuMemoryBytes) {
+      gpuMemorySource = 'adapter-reported'
+    }
   }
 
   const memoryBytes = positiveInteger(deps.totalmem(), 1)

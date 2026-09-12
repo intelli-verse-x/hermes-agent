@@ -46,7 +46,10 @@ test('managed command quotes paths containing spaces', () => {
 test('managed executable parsing and platform path shapes are stable', () => {
   const root = path.join('tmp', 'Quiz Verse', 'runtime')
 
-  assert.equal(configuredTutorExecutable(`"${path.join(root, 'bin', 'deeptutor')}" start`), path.join(root, 'bin', 'deeptutor'))
+  assert.equal(
+    configuredTutorExecutable(`"${path.join(root, 'bin', 'deeptutor')}" start`),
+    path.join(root, 'bin', 'deeptutor')
+  )
   assert.equal(deeptutorBinPath(root, 'darwin'), path.join(root, 'bin', 'deeptutor'))
   assert.equal(deeptutorBinPath(root, 'linux'), path.join(root, 'bin', 'deeptutor'))
   assert.equal(deeptutorBinPath(root, 'win32'), path.join(root, 'Scripts', 'deeptutor.exe'))
@@ -112,11 +115,7 @@ test('write/read round-trip preserves settings and the secret survives the envel
 test('readQuizverseSettings: clamps out-of-range ports back to defaults', () => {
   const filePath = tmpSettingsPath()
 
-  fs.writeFileSync(
-    filePath,
-    JSON.stringify({ tutorMode: 'local', apiPort: -5, webPort: 700000 }),
-    'utf8'
-  )
+  fs.writeFileSync(filePath, JSON.stringify({ tutorMode: 'local', apiPort: -5, webPort: 700000 }), 'utf8')
 
   const settings = readQuizverseSettings(filePath, decryptSecret)
 
@@ -302,7 +301,10 @@ test('managed install helpers: python floor, entry-point paths, quoted command',
   assert.equal(deeptutorBinPath('C:\\venv', 'win32'), path.join('C:\\venv', 'Scripts', 'deeptutor.exe'))
 
   // Spaces in userData paths must survive the shell:true spawn.
-  assert.equal(managedLocalCommand('/Users/x/Library/App Support/deeptutor/venv/bin/deeptutor'), '"/Users/x/Library/App Support/deeptutor/venv/bin/deeptutor" start')
+  assert.equal(
+    managedLocalCommand('/Users/x/Library/App Support/deeptutor/venv/bin/deeptutor'),
+    '"/Users/x/Library/App Support/deeptutor/venv/bin/deeptutor" start'
+  )
 
   // Interpreter discovery honors the version floor (probe stubbed).
   const found = await findPythonInterpreter(
@@ -311,7 +313,8 @@ test('managed install helpers: python floor, entry-point paths, quoted command',
       { command: 'python-new', args: [] },
       { command: 'python-broken', args: [] }
     ],
-    async spec => (spec.command === 'python-old' ? 'Python 3.9.2' : spec.command === 'python-new' ? 'Python 3.12.1' : null)
+    async spec =>
+      spec.command === 'python-old' ? 'Python 3.9.2' : spec.command === 'python-new' ? 'Python 3.12.1' : null
   )
 
   assert.equal(found?.command, 'python-new')

@@ -92,6 +92,7 @@ test('provisionFoundrlyMcp writes mcp_servers.foundrly stdio entry and copies sk
       electronExecutable: '/fake/electron',
       mcpServerPath: serverPath
     })
+
     assert.deepEqual(entry.env, { ELECTRON_RUN_AS_NODE: '1' })
     assert.deepEqual(entry.args, [serverPath])
   } finally {

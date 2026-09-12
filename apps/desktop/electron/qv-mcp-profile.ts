@@ -12,11 +12,6 @@ export function assertQuizverseIsolatedHome(candidate: string, ixDefault: string
   return resolved
 }
 
-export function resolveQuizverseEffectiveHermesHome(
-  baseHome: string,
-  activeProfile: string | null
-): string {
-  return activeProfile && activeProfile !== 'default'
-    ? path.join(baseHome, 'profiles', activeProfile)
-    : baseHome
+export function resolveQuizverseEffectiveHermesHome(baseHome: string, activeProfile: string | null): string {
+  return activeProfile && activeProfile !== 'default' ? path.join(baseHome, 'profiles', activeProfile) : baseHome
 }

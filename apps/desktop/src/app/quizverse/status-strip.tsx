@@ -75,7 +75,9 @@ export function QvStatusStrip() {
   const tutorState = tutor?.state ?? 'stopped'
 
   const tutorColor =
-    tutor?.state === 'remote' && tutor.reachable === false ? 'bg-red-500' : (TUTOR_LAMP_COLOR[tutorState] ?? 'bg-neutral-400')
+    tutor?.state === 'remote' && tutor.reachable === false
+      ? 'bg-red-500'
+      : (TUTOR_LAMP_COLOR[tutorState] ?? 'bg-neutral-400')
 
   const hermesUp = gatewayState === 'open'
 
@@ -104,11 +106,7 @@ export function QvStatusStrip() {
           label={`${update.currentVersion} → ${update.latestVersion}${update.notes ? ` — ${update.notes}` : ''}`}
           side="bottom"
         >
-          <Button
-            onClick={() => void applyQvUpdate()}
-            size="xs"
-            variant="secondary"
-          >
+          <Button onClick={() => void applyQvUpdate()} size="xs" variant="secondary">
             <Codicon name="arrow-circle-up" size="0.75rem" />
             {update.inPlace ? 'Update available — Restart to update' : 'Update available — Get the new version'}
           </Button>

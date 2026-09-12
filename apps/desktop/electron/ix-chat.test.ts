@@ -142,10 +142,7 @@ test('gate: approval is bound to conversation and canonical arguments', () => {
 
   assert.equal(gate.confirm(nonce, 'conversation-b'), false)
   assert.equal(gate.confirm(nonce, 'conversation-a'), true)
-  assert.equal(
-    gate.redeem('computer_use', { action: 'click', coordinate: [99, 99] }, 'conversation-a'),
-    null
-  )
+  assert.equal(gate.redeem('computer_use', { action: 'click', coordinate: [99, 99] }, 'conversation-a'), null)
   assert.equal(
     gate.redeem('computer_use', { coordinate: [10, 20], action: 'click' }, 'conversation-a')?.action,
     'click'

@@ -29,10 +29,7 @@ const TILES = [
 
 describe('skillMcpIds', () => {
   test('matches tile ids with word boundaries, case-insensitive', () => {
-    expect(skillMcpIds({ content: 'Send via Notifuse, check grafana panels.' }, TILES)).toEqual([
-      'notifuse',
-      'grafana'
-    ])
+    expect(skillMcpIds({ content: 'Send via Notifuse, check grafana panels.' }, TILES)).toEqual(['notifuse', 'grafana'])
   })
 
   test('does not match substrings inside other words', () => {
@@ -76,7 +73,8 @@ describe('groupSkillsByMcp', () => {
     // Real-data check against the shipped playbooks + registry snapshot: the
     // catalog must produce several tool groups, and a healthy share of skills
     // must span MORE than one MCP (the "skills across multiple MCPs" posture).
-    const catalog = (skillsData.items as Array<{ content: string; description: string; id: string; title: string }>) ?? []
+    const catalog =
+      (skillsData.items as Array<{ content: string; description: string; id: string; title: string }>) ?? []
     const { groups } = groupSkillsByMcp(catalog)
 
     expect(groups.length).toBeGreaterThan(5)
@@ -90,10 +88,7 @@ describe('groupSkillsByMcp', () => {
 describe('pods', () => {
   test('skillPods rolls MCPs up to pods in canonical order, deduped', () => {
     // notifuse → growth, grafana → engineering, whatsapp → growth
-    expect(skillPods({ content: 'notifuse + grafana + openbsp broadcast' }, TILES)).toEqual([
-      'growth',
-      'engineering'
-    ])
+    expect(skillPods({ content: 'notifuse + grafana + openbsp broadcast' }, TILES)).toEqual(['growth', 'engineering'])
     expect(skillPods({ content: 'nothing relevant' }, TILES)).toEqual([])
   })
 

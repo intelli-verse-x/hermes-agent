@@ -61,8 +61,7 @@ function McpChips({ skill }: { skill: { content?: string; description?: string; 
   if (!ids.length) {
     return (
       <p className="text-[0.68rem] text-muted-foreground/60">
-        No MCP referenced yet — name the tools this skill calls (e.g. notifuse, chatwoot, grafana) so it groups by
-        tool.
+        No MCP referenced yet — name the tools this skill calls (e.g. notifuse, chatwoot, grafana) so it groups by tool.
       </p>
     )
   }
@@ -80,7 +79,11 @@ function McpChips({ skill }: { skill: { content?: string; description?: string; 
           <Badge key={id} variant="muted">
             <span
               aria-hidden
-              className={tileWiring(tile) === 'direct' ? 'size-1.5 rounded-full bg-emerald-500' : 'size-1.5 rounded-full bg-sky-400'}
+              className={
+                tileWiring(tile) === 'direct'
+                  ? 'size-1.5 rounded-full bg-emerald-500'
+                  : 'size-1.5 rounded-full bg-sky-400'
+              }
             />
             {tile.label}
             <span className="text-muted-foreground/60">{tileWiring(tile) === 'direct' ? 'direct' : 'gateway'}</span>
@@ -237,7 +240,10 @@ export function SkillsTab({ onRunNatively, query }: { onRunNatively?: () => void
     try {
       const saved = await api.skillsSave(draft)
 
-      notify({ message: `Skill saved — the agent and the Copilot tab see it now`, detail: `skills/ix-user/${saved.id}/SKILL.md` })
+      notify({
+        message: `Skill saved — the agent and the Copilot tab see it now`,
+        detail: `skills/ix-user/${saved.id}/SKILL.md`
+      })
       await refresh()
       openUserSkill(saved)
     } catch (error) {
@@ -558,7 +564,9 @@ export function SkillsTab({ onRunNatively, query }: { onRunNatively?: () => void
               />
             </label>
             <div className="space-y-1">
-              <span className="text-[0.68rem] font-medium text-muted-foreground">Wired MCPs (detected live from the text)</span>
+              <span className="text-[0.68rem] font-medium text-muted-foreground">
+                Wired MCPs (detected live from the text)
+              </span>
               <McpChips skill={{ title: draft.title, description: draft.description, content: draft.content }} />
             </div>
             {selectedUser && (
@@ -566,9 +574,7 @@ export function SkillsTab({ onRunNatively, query }: { onRunNatively?: () => void
                 rows={[
                   {
                     label: 'Storage',
-                    value: (
-                      <span className="text-[0.68rem]">Intelliverse local skills / {selectedUser.id}</span>
-                    )
+                    value: <span className="text-[0.68rem]">Intelliverse local skills / {selectedUser.id}</span>
                   },
                   {
                     label: 'Scope',

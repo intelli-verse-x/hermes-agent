@@ -187,12 +187,18 @@ test('dynamic probe green on portal ok, grey on session 401, red on probe failur
   assert.equal((await probeDynamicConnector('https://portal.example.com', 'metabase', noSession)).state, 'grey')
 
   const probeFail = (async () =>
-    jsonResponse({ ok: false, error: 'probe_failed', message: 'MCP tools/list → HTTP 502' }, 502)) as unknown as typeof fetch
+    jsonResponse(
+      { ok: false, error: 'probe_failed', message: 'MCP tools/list → HTTP 502' },
+      502
+    )) as unknown as typeof fetch
 
   assert.equal((await probeDynamicConnector('https://portal.example.com', 'metabase', probeFail)).state, 'red')
 
   const probeAuth = (async () =>
-    jsonResponse({ ok: false, error: 'probe_failed', message: 'MCP tools/list → HTTP 401' }, 502)) as unknown as typeof fetch
+    jsonResponse(
+      { ok: false, error: 'probe_failed', message: 'MCP tools/list → HTTP 401' },
+      502
+    )) as unknown as typeof fetch
 
   assert.equal((await probeDynamicConnector('https://portal.example.com', 'metabase', probeAuth)).state, 'grey')
 })

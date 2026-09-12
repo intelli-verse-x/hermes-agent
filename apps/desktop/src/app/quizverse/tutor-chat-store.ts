@@ -162,7 +162,9 @@ function appendAssistantEvent(event: StreamEvent) {
     message.content += event.content ?? ''
   }
 
-  if (['thinking', 'observation', 'progress', 'stage_start', 'tool_call', 'tool_result', 'sources'].includes(event.type)) {
+  if (
+    ['thinking', 'observation', 'progress', 'stage_start', 'tool_call', 'tool_result', 'sources'].includes(event.type)
+  ) {
     message.traces = [
       ...message.traces,
       { content: event.content ?? JSON.stringify(metadata), label: event.type.replaceAll('_', ' '), type: event.type }
@@ -171,10 +173,14 @@ function appendAssistantEvent(event: StreamEvent) {
 
   const quizPair = metadata.qa_pair as TutorQuizQuestion | undefined
 
-  if (quizPair) {message.quiz = [...(message.quiz ?? []), quizPair]}
+  if (quizPair) {
+    message.quiz = [...(message.quiz ?? []), quizPair]
+  }
   const summary = metadata.summary as { results?: { qa_pair?: TutorQuizQuestion }[] } | undefined
 
-  if (summary?.results) {message.quiz = summary.results.flatMap(item => (item.qa_pair ? [item.qa_pair] : []))}
+  if (summary?.results) {
+    message.quiz = summary.results.flatMap(item => (item.qa_pair ? [item.qa_pair] : []))
+  }
 
   if (metadata.outline_preview === true) {
     message.researchOutline = {
@@ -206,14 +212,19 @@ function appendAssistantEvent(event: StreamEvent) {
     | undefined
 
   if (ask && event.turn_id) {
-    message.askUser = { question: ask.question ?? ask.questions?.[0]?.text ?? 'TutorX needs your input.', turnId: event.turn_id }
+    message.askUser = {
+      question: ask.question ?? ask.questions?.[0]?.text ?? 'TutorX needs your input.',
+      turnId: event.turn_id
+    }
   }
 
   $tutorMessages.set(messages)
 }
 
 async function connect() {
-  if (socket && socket.readyState <= WebSocket.OPEN) {return}
+  if (socket && socket.readyState <= WebSocket.OPEN) {
+    return
+  }
   intentional = false
   $tutorConnection.set('connecting')
   socket = await createTutorSocket('/api/v1/ws')
@@ -252,7 +263,9 @@ async function connect() {
 
     lastReceivedAt = Date.now()
 
-    if (event.type === 'pong' || event.type === 'ping') {return}
+    if (event.type === 'pong' || event.type === 'ping') {
+      return
+    }
     lastStreamAt = lastReceivedAt
 
     if (event.type === 'active_turn_info') {
@@ -280,11 +293,17 @@ async function connect() {
       seenEvents.add(eventKey)
     }
 
-    if (event.session_id) {$tutorSessionId.set(event.session_id)}
+    if (event.session_id) {
+      $tutorSessionId.set(event.session_id)
+    }
 
-    if (event.turn_id) {activeTurn = event.turn_id}
+    if (event.turn_id) {
+      activeTurn = event.turn_id
+    }
 
-    if (event.seq) {lastSeq = Math.max(lastSeq, event.seq)}
+    if (event.seq) {
+      lastSeq = Math.max(lastSeq, event.seq)
+    }
     appendAssistantEvent(event)
 
     if (event.type === 'done' || (event.type === 'error' && event.metadata?.turn_terminal !== false)) {
@@ -322,22 +341,24 @@ export async function sendTutorMessage(
 ) {
   const text = content.trim()
 
-  if (!text || $tutorStreaming.get()) {return}
+  if (!text || $tutorStreaming.get()) {
+    return
+  }
 
   if (options.inputModality === 'voice') {
     assertVoiceSubmissionAllowed(text)
   }
 
-  const voiceAttestation =
-    options.inputModality === 'voice' ? await consumeDesktopVoiceAttestation() : undefined
+  const voiceAttestation = options.inputModality === 'voice' ? await consumeDesktopVoiceAttestation() : undefined
 
   const mode = options.mode ?? $tutorMode.get()
 
-  const defaultConfig = mode === 'deep_question'
-    ? { mode: 'custom', num_questions: 5 }
-    : mode === 'deep_research'
-      ? { depth: 'standard', mode: 'report' }
-      : {}
+  const defaultConfig =
+    mode === 'deep_question'
+      ? { mode: 'custom', num_questions: 5 }
+      : mode === 'deep_research'
+        ? { depth: 'standard', mode: 'report' }
+        : {}
 
   $tutorMessages.set([
     ...$tutorMessages.get(),
@@ -393,18 +414,24 @@ export async function detectTutorCapabilities() {
 
 export function dismissResearchOutline(messageId: string) {
   $tutorMessages.set(
-    $tutorMessages.get().map(message => message.id === messageId ? { ...message, researchOutline: undefined } : message)
+    $tutorMessages
+      .get()
+      .map(message => (message.id === messageId ? { ...message, researchOutline: undefined } : message))
   )
 }
 
 export function cancelTutorTurn() {
-  if (activeTurn) {socket?.send(JSON.stringify({ turn_id: activeTurn, type: 'cancel_turn' }))}
+  if (activeTurn) {
+    socket?.send(JSON.stringify({ turn_id: activeTurn, type: 'cancel_turn' }))
+  }
 }
 
 export function regenerateTutorTurn() {
   const sessionId = $tutorSessionId.get()
 
-  if (sessionId) {socket?.send(JSON.stringify({ session_id: sessionId, type: 'regenerate' }))}
+  if (sessionId) {
+    socket?.send(JSON.stringify({ session_id: sessionId, type: 'regenerate' }))
+  }
 }
 
 export function answerTutorPrompt(turnId: string, text: string) {
@@ -427,50 +454,52 @@ export async function judgeTutorQuestion(
       reject(new Error('TutorX judging timed out'))
     }, 60_000)
 
-    void createTutorSocket('/api/v1/question/judge').then(value => {
-      judge = value
-      judge.onopen = () =>
-        judge?.send(
-        JSON.stringify({
-          correct_answer: question.correct_answer ?? '',
-          explanation: question.explanation ?? '',
-          language: 'en',
-          options: Object.fromEntries((question.options ?? []).map((option, index) => [String(index), option])),
-          question: question.question,
-          question_type: question.options?.length ? 'choice' : 'short_answer',
-          user_answer: answer,
-          user_answer_images: images
-        })
-      )
+    void createTutorSocket('/api/v1/question/judge')
+      .then(value => {
+        judge = value
+        judge.onopen = () =>
+          judge?.send(
+            JSON.stringify({
+              correct_answer: question.correct_answer ?? '',
+              explanation: question.explanation ?? '',
+              language: 'en',
+              options: Object.fromEntries((question.options ?? []).map((option, index) => [String(index), option])),
+              question: question.question,
+              question_type: question.options?.length ? 'choice' : 'short_answer',
+              user_answer: answer,
+              user_answer_images: images
+            })
+          )
 
-      judge.onmessage = raw => {
-      const event = JSON.parse(String(raw.data)) as { content?: string; type?: string }
+        judge.onmessage = raw => {
+          const event = JSON.parse(String(raw.data)) as { content?: string; type?: string }
 
-      if (event.type === 'text') {
-        feedback += event.content ?? ''
-      } else if (event.type === 'done') {
+          if (event.type === 'text') {
+            feedback += event.content ?? ''
+          } else if (event.type === 'done') {
+            window.clearTimeout(timeout)
+            judge?.close()
+            resolve(feedback)
+          } else if (event.type === 'error') {
+            window.clearTimeout(timeout)
+            judge?.close()
+            reject(new Error(event.content || 'TutorX could not judge this answer'))
+          }
+        }
+
+        judge.onerror = () => {
+          window.clearTimeout(timeout)
+          reject(new Error('TutorX judging connection failed'))
+        }
+
+        if (judge.readyState === WebSocket.OPEN) {
+          judge.onopen()
+        }
+      })
+      .catch(error => {
         window.clearTimeout(timeout)
-        judge?.close()
-        resolve(feedback)
-      } else if (event.type === 'error') {
-        window.clearTimeout(timeout)
-        judge?.close()
-        reject(new Error(event.content || 'TutorX could not judge this answer'))
-      }
-      }
-
-      judge.onerror = () => {
-        window.clearTimeout(timeout)
-        reject(new Error('TutorX judging connection failed'))
-      }
-
-      if (judge.readyState === WebSocket.OPEN) {
-        judge.onopen()
-      }
-    }).catch(error => {
-      window.clearTimeout(timeout)
-      reject(error)
-    })
+        reject(error)
+      })
   })
 }
 
@@ -525,7 +554,7 @@ export async function openTutorSession(sessionId: string) {
           : undefined,
         content: message.content ?? '',
         id: String(message.id ?? crypto.randomUUID()),
-        quiz: summary?.results?.flatMap(item => item.qa_pair ? [item.qa_pair] : []),
+        quiz: summary?.results?.flatMap(item => (item.qa_pair ? [item.qa_pair] : [])),
         researchOutline: metadata.outline_preview
           ? {
               researchConfig: (metadata.research_config ?? {}) as Record<string, unknown>,

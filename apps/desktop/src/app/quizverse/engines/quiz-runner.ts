@@ -46,7 +46,7 @@ export function createQuizRunner(questions: readonly QuizQuestion[]) {
         ...current,
         answers,
         index: complete ? current.index : current.index + 1,
-        phase: complete ? 'complete' as const : 'playing' as const,
+        phase: complete ? ('complete' as const) : ('playing' as const),
         score
       }
 

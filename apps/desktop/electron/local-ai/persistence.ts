@@ -29,7 +29,9 @@ async function readJson(filePath: string): Promise<unknown | undefined> {
 
     return value
   } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {return undefined}
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+      return undefined
+    }
     throw error
   }
 }
@@ -47,12 +49,8 @@ export function sanitizeTelemetryEvent(value: LocalAiTelemetryEvent): LocalAiTel
     timestamp: value.timestamp,
     ...(value.modelId ? { modelId: value.modelId } : {}),
     ...(value.errorCode ? { errorCode: value.errorCode } : {}),
-    ...(value.inputTokenCount !== undefined
-      ? { inputTokenCount: finiteNonNegative(value.inputTokenCount) }
-      : {}),
-    ...(value.outputTokenCount !== undefined
-      ? { outputTokenCount: finiteNonNegative(value.outputTokenCount) }
-      : {})
+    ...(value.inputTokenCount !== undefined ? { inputTokenCount: finiteNonNegative(value.inputTokenCount) } : {}),
+    ...(value.outputTokenCount !== undefined ? { outputTokenCount: finiteNonNegative(value.outputTokenCount) } : {})
   }
 }
 
@@ -70,9 +68,13 @@ export class LocalAiPersistence {
   async loadSettings(): Promise<LocalAiSettings> {
     const value = (await readJson(this.settingsPath)) as Partial<LocalAiSettings> | undefined
 
-    if (!value) {return createDefaultSettings()}
+    if (!value) {
+      return createDefaultSettings()
+    }
 
-    if (value.schemaVersion !== LOCAL_AI_SCHEMA_VERSION) {throw new Error('Unsupported local AI settings version')}
+    if (value.schemaVersion !== LOCAL_AI_SCHEMA_VERSION) {
+      throw new Error('Unsupported local AI settings version')
+    }
 
     return {
       schemaVersion: LOCAL_AI_SCHEMA_VERSION,
@@ -87,7 +89,9 @@ export class LocalAiPersistence {
   }
 
   async saveSettings(settings: LocalAiSettings): Promise<void> {
-    if (settings.schemaVersion !== LOCAL_AI_SCHEMA_VERSION) {throw new Error('Unsupported local AI settings version')}
+    if (settings.schemaVersion !== LOCAL_AI_SCHEMA_VERSION) {
+      throw new Error('Unsupported local AI settings version')
+    }
     await writeJsonAtomic(this.settingsPath, settings)
   }
 
@@ -102,7 +106,9 @@ export class LocalAiPersistence {
   }
 
   async saveStatus(status: LocalAiStatus): Promise<void> {
-    if (status.schemaVersion !== LOCAL_AI_SCHEMA_VERSION) {throw new Error('Unsupported local AI status version')}
+    if (status.schemaVersion !== LOCAL_AI_SCHEMA_VERSION) {
+      throw new Error('Unsupported local AI status version')
+    }
     await writeJsonAtomic(this.statusPath, status)
   }
 

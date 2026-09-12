@@ -9,10 +9,9 @@ import { BRAND } from '@/lib/brand'
  */
 export const FOUNDRLY_PORTAL_PARTITION = 'persist:foundrly-portal'
 
-const ADMIN_CHAT_URL =
-  BRAND.foundrly?.adminChatUrl ?? 'https://admin.intelli-verse-x.ai/admin/portal/chat'
-const ADMIN_PORTAL_URL =
-  BRAND.foundrly?.adminPortalUrl ?? 'https://admin.intelli-verse-x.ai/admin/portal'
+const ADMIN_CHAT_URL = BRAND.foundrly?.adminChatUrl ?? 'https://admin.intelli-verse-x.ai/admin/portal/chat'
+
+const ADMIN_PORTAL_URL = BRAND.foundrly?.adminPortalUrl ?? 'https://admin.intelli-verse-x.ai/admin/portal'
 
 type PortalWebview = HTMLElement & {
   getURL?: () => string
@@ -22,16 +21,20 @@ type PortalWebview = HTMLElement & {
 
 async function openExternal(url: string) {
   const bridge = window.hermesDesktop?.foundrly
+
   if (bridge?.openUrl) {
     await bridge.openUrl(url)
+
     return
   }
+
   window.open(url, '_blank', 'noopener,noreferrer')
 }
 
 function isPortalHost(url: string): boolean {
   try {
     const host = new URL(url).hostname
+
     return host === 'admin.intelli-verse-x.ai' || host.endsWith('.intelli-verse-x.ai')
   } catch {
     return false
@@ -51,6 +54,7 @@ export function FoundrlyPortalChat() {
 
   useEffect(() => {
     const host = hostRef.current
+
     if (!host) {
       return
     }
@@ -67,16 +71,20 @@ export function FoundrlyPortalChat() {
       setLoadError(null)
       setLoading(true)
     }
+
     const onStop = () => setLoading(false)
+
     const onFail = (event: Event) => {
       const detail = event as Event & {
         errorCode?: number
         errorDescription?: string
         validatedURL?: string
       }
+
       if (detail.errorCode === -3) {
         return
       }
+
       setLoading(false)
       setLoadError(detail.errorDescription || detail.validatedURL || 'Failed to load admin copilot')
     }
@@ -100,9 +108,7 @@ export function FoundrlyPortalChat() {
     <div className="flex h-full min-h-0 flex-col bg-[#0B1220]">
       <div className="flex shrink-0 items-center justify-between gap-3 border-b border-white/10 px-4 py-2">
         <div className="min-w-0">
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-teal-300/90">
-            Admin copilot
-          </p>
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-teal-300/90">Admin copilot</p>
           <p className="truncate text-xs text-white/55">
             Same portal chat as foundrly.intelli-verse-x.ai operators — email OTP, then Foundrly tools.
           </p>
@@ -110,22 +116,22 @@ export function FoundrlyPortalChat() {
         <div className="flex shrink-0 items-center gap-2">
           <button
             className="rounded-lg border border-white/15 px-2.5 py-1 text-xs font-semibold text-white/80 hover:bg-white/5"
-            type="button"
             onClick={() => webviewRef.current?.reload?.()}
+            type="button"
           >
             Reload
           </button>
           <button
             className="rounded-lg border border-white/15 px-2.5 py-1 text-xs font-semibold text-white/80 hover:bg-white/5"
-            type="button"
             onClick={() => void openExternal(ADMIN_CHAT_URL)}
+            type="button"
           >
             Open in browser
           </button>
           <button
             className="rounded-lg border border-white/15 px-2.5 py-1 text-xs font-semibold text-white/80 hover:bg-white/5"
-            type="button"
             onClick={() => void openExternal(ADMIN_PORTAL_URL)}
+            type="button"
           >
             Tools grid
           </button>
@@ -133,10 +139,10 @@ export function FoundrlyPortalChat() {
       </div>
       <div className="relative min-h-0 flex-1">
         <div
-          ref={hostRef}
           className="absolute inset-0"
           data-foundrly-portal={FOUNDRLY_PORTAL_PARTITION}
           data-portal-src={ADMIN_CHAT_URL}
+          ref={hostRef}
         />
         {loading ? (
           <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-[#0B1220]/40 text-sm text-white/70">
@@ -148,16 +154,19 @@ export function FoundrlyPortalChat() {
             <p className="text-sm text-white/80">{loadError}</p>
             <button
               className="rounded-lg bg-teal-500 px-3 py-2 text-sm font-semibold text-slate-950 hover:bg-teal-400"
-              type="button"
               onClick={() => {
                 setLoadError(null)
                 const current = webviewRef.current
+
                 if (current?.loadURL) {
                   current.loadURL(ADMIN_CHAT_URL)
+
                   return
                 }
+
                 current?.setAttribute('src', ADMIN_CHAT_URL)
               }}
+              type="button"
             >
               Retry
             </button>

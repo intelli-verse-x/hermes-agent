@@ -9,7 +9,10 @@ import { parseWordsContentManifest } from './words-content'
 import { normalizeWordsDictionary, withWordsFallback } from './words-dictionary'
 
 const require = createRequire(import.meta.url)
-const webRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../../../../../Quizverse-web-frontend/web')
+const webRoot = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  '../../../../../../../Quizverse-web-frontend/web'
+)
 const catalogPath = path.join(webRoot, 'lib/words-content/catalog.cjs')
 
 // This suite validates the ACTUAL published Words artifacts, so it needs the

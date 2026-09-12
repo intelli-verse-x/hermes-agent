@@ -39,7 +39,8 @@ export interface IxMcpHealthResult {
 
 export const MCP_PROBE_TIMEOUT_MS = 6000
 
-const AUTH_FAILURE_RE = /\b(401|403|unauthorized|forbidden|auth(entication|orization)? (required|failed)|invalid[_ ]token|missing[_ ]token|no token)\b/i
+const AUTH_FAILURE_RE =
+  /\b(401|403|unauthorized|forbidden|auth(entication|orization)? (required|failed)|invalid[_ ]token|missing[_ ]token|no token)\b/i
 
 /** In-cluster endpoints are only reachable through the admin-mcp gateway. */
 export function isClusterLocalUrl(mcpUrl: string): boolean {

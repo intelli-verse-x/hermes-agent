@@ -7,10 +7,7 @@ function canonicalFilePath(url: URL): string {
   return decodeURIComponent(url.pathname).replace(/\/+$/, '')
 }
 
-export function isApprovedRendererUrl(
-  urlValue: unknown,
-  locations: ApprovedRendererLocations
-): boolean {
+export function isApprovedRendererUrl(urlValue: unknown, locations: ApprovedRendererLocations): boolean {
   if (typeof urlValue !== 'string' || !urlValue) {
     return false
   }
@@ -67,7 +64,10 @@ export function isApprovedMicrophoneRequestContext(
   )
 }
 
-export function isAudioOnlyPermission(permission: unknown, details: { mediaType?: string; mediaTypes?: string[] } = {}) {
+export function isAudioOnlyPermission(
+  permission: unknown,
+  details: { mediaType?: string; mediaTypes?: string[] } = {}
+) {
   if (permission !== 'media' && permission !== 'audioCapture') {
     return false
   }
