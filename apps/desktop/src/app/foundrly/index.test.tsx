@@ -1,15 +1,17 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
+
+import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, describe, expect, it } from 'vitest'
 
 import { BRAND } from '@/lib/brand'
 
-import { FoundrlyView } from './index'
 import { FOUNDRLY_PORTAL_PARTITION } from './portal-chat-pane'
+
+import { FoundrlyView } from './index'
 
 function renderFoundrly(entry = '/foundrly') {
   return render(
@@ -29,13 +31,9 @@ describe('Foundrly workspace', () => {
 
     const host = view.container.querySelector('[data-foundrly-portal]')
     expect(host?.getAttribute('data-foundrly-portal')).toBe(FOUNDRLY_PORTAL_PARTITION)
-    expect(host?.getAttribute('data-portal-src')).toBe(
-      'https://admin.intelli-verse-x.ai/admin/portal/chat'
-    )
+    expect(host?.getAttribute('data-portal-src')).toBe('https://admin.intelli-verse-x.ai/admin/portal/chat')
     expect(view.container.querySelector('webview')).toBeInstanceOf(HTMLElement)
-    expect(view.container.querySelector('webview')?.getAttribute('partition')).toBe(
-      FOUNDRLY_PORTAL_PARTITION
-    )
+    expect(view.container.querySelector('webview')?.getAttribute('partition')).toBe(FOUNDRLY_PORTAL_PARTITION)
   })
 
   it('keeps Foundrly home markers on the Home tab', () => {
@@ -57,6 +55,7 @@ describe('Foundrly workspace', () => {
 
     expect(mark).toBeTruthy()
     expect(mark?.getAttribute('src')).toBe(expected)
+
     // Packaged Electron uses vite base './' → ./foundrly/mark-512.png (not /foundrly/...).
     if (import.meta.env.BASE_URL === './') {
       expect(mark?.getAttribute('src')).toMatch(/^\.\//)

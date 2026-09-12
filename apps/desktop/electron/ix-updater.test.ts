@@ -79,20 +79,35 @@ test('pickFallbackUrl: per-brand download page — brands without one keep the a
   const qvFeed = 'https://intelliverse-x-desktop.s3.amazonaws.com/quizverse'
 
   // A brand with its own landing page gets that page on its official feed.
-  assert.equal(pickFallbackUrl(qvFeed, 'https://x/QuizVerse.dmg', qvFeed, 'https://qv/download.html'), 'https://qv/download.html')
+  assert.equal(
+    pickFallbackUrl(qvFeed, 'https://x/QuizVerse.dmg', qvFeed, 'https://qv/download.html'),
+    'https://qv/download.html'
+  )
   // A brand with NO landing page (QuizVerse today) must get the direct
   // artifact — never another brand's download page.
   assert.equal(pickFallbackUrl(qvFeed, 'https://x/QuizVerse.dmg', qvFeed, ''), 'https://x/QuizVerse.dmg')
   // Custom feed still bypasses the landing page entirely.
-  assert.equal(pickFallbackUrl('https://example.com/feed', 'https://x/QuizVerse.dmg', qvFeed, 'https://qv/download.html'), 'https://x/QuizVerse.dmg')
+  assert.equal(
+    pickFallbackUrl('https://example.com/feed', 'https://x/QuizVerse.dmg', qvFeed, 'https://qv/download.html'),
+    'https://x/QuizVerse.dmg'
+  )
 })
 
 test('pickDownloadUrl: platform-preferred artifact, resolved against the feed base', () => {
   const files = [{ url: 'IX-Agency-0.18.0.AppImage' }, { url: 'IX-Agency-0.18.0.dmg' }, { url: 'IX-Agency-0.18.0.exe' }]
 
-  assert.equal(pickDownloadUrl(files, 'https://feed.example/ix/', 'darwin'), 'https://feed.example/ix/IX-Agency-0.18.0.dmg')
-  assert.equal(pickDownloadUrl(files, 'https://feed.example/ix', 'win32'), 'https://feed.example/ix/IX-Agency-0.18.0.exe')
-  assert.equal(pickDownloadUrl(files, 'https://feed.example/ix', 'linux'), 'https://feed.example/ix/IX-Agency-0.18.0.AppImage')
+  assert.equal(
+    pickDownloadUrl(files, 'https://feed.example/ix/', 'darwin'),
+    'https://feed.example/ix/IX-Agency-0.18.0.dmg'
+  )
+  assert.equal(
+    pickDownloadUrl(files, 'https://feed.example/ix', 'win32'),
+    'https://feed.example/ix/IX-Agency-0.18.0.exe'
+  )
+  assert.equal(
+    pickDownloadUrl(files, 'https://feed.example/ix', 'linux'),
+    'https://feed.example/ix/IX-Agency-0.18.0.AppImage'
+  )
 })
 
 test('pickDownloadUrl: absolute URLs pass through; empty list yields empty string', () => {

@@ -5,12 +5,7 @@ import path from 'node:path'
 
 import { test } from 'vitest'
 
-import {
-  foundrlySoulMd,
-  provisionDesktopBrand,
-  shouldWriteBrandSoul,
-  soulMd
-} from './desktop-brand-provision'
+import { foundrlySoulMd, provisionDesktopBrand, shouldWriteBrandSoul, soulMd } from './desktop-brand-provision'
 
 test('Foundrly rich soul names co-founder product and not IX Agency', () => {
   const soul = foundrlySoulMd({
@@ -29,7 +24,11 @@ test('shouldWriteBrandSoul upgrades IX Agency and thin Foundrly stock only', () 
   assert.equal(shouldWriteBrandSoul(null, 'foundrly', 'Foundrly'), true)
   assert.equal(shouldWriteBrandSoul('', 'foundrly', 'Foundrly'), true)
   assert.equal(
-    shouldWriteBrandSoul('You are IX Agency, an intelligent AI assistant created by Nous Research.', 'foundrly', 'Foundrly'),
+    shouldWriteBrandSoul(
+      'You are IX Agency, an intelligent AI assistant created by Nous Research.',
+      'foundrly',
+      'Foundrly'
+    ),
     true
   )
   assert.equal(shouldWriteBrandSoul(soulMd('Foundrly'), 'foundrly', 'Foundrly'), true)
@@ -39,10 +38,7 @@ test('shouldWriteBrandSoul upgrades IX Agency and thin Foundrly stock only', () 
     false
   )
   assert.equal(shouldWriteBrandSoul(soulMd('Agency'), 'ix-agency', 'Agency'), true)
-  assert.equal(
-    shouldWriteBrandSoul('You are IX Agency, an intelligent AI assistant.', 'ix-agency', 'IX Agency'),
-    false
-  )
+  assert.equal(shouldWriteBrandSoul('You are IX Agency, an intelligent AI assistant.', 'ix-agency', 'IX Agency'), false)
 })
 
 test('provisionDesktopBrand writes rich Foundrly soul into an isolated home', () => {

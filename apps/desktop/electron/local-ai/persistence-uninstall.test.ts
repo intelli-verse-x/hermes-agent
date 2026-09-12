@@ -83,8 +83,5 @@ test('managed uninstall paths cannot escape their root', async t => {
   await fs.mkdir(path.join(root, 'models'), { recursive: true })
   await removeLocalAiInstallation({ rootDirectory: root, managedPaths: ['models'] })
   await assert.rejects(fs.stat(path.join(root, 'models')), { code: 'ENOENT' })
-  await assert.rejects(
-    removeLocalAiInstallation({ rootDirectory: root, managedPaths: ['../outside'] }),
-    /escapes root/
-  )
+  await assert.rejects(removeLocalAiInstallation({ rootDirectory: root, managedPaths: ['../outside'] }), /escapes root/)
 })

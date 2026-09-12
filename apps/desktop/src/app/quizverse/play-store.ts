@@ -59,7 +59,10 @@ export const $playResult = atom<null | PlayResult>(null)
 export const $playSubmission = atom<PlaySubmissionState>({ phase: 'idle' })
 
 const rpcCache = new Map<string, Promise<unknown>>()
-const submissions = new Map<string, { grading?: Record<string, unknown>; idempotencyKey: string; result?: PlayResult }>()
+const submissions = new Map<
+  string,
+  { grading?: Record<string, unknown>; idempotencyKey: string; result?: PlayResult }
+>()
 const RPC_TIMEOUT_MS = 8_000
 const AI_RPC_TIMEOUT_MS = 20_000
 
@@ -115,9 +118,10 @@ export async function playRpc<T>(
 
   const key = `${name}:${JSON.stringify(payload)}`
 
-  const request = options.cache && rpcCache.has(key)
-    ? rpcCache.get(key)!
-    : timeout(bridge.playRpc<T>(name, payload), options.timeoutMs ?? RPC_TIMEOUT_MS, name)
+  const request =
+    options.cache && rpcCache.has(key)
+      ? rpcCache.get(key)!
+      : timeout(bridge.playRpc<T>(name, payload), options.timeoutMs ?? RPC_TIMEOUT_MS, name)
 
   if (options.cache && !rpcCache.has(key)) {
     rpcCache.set(key, request)
@@ -207,10 +211,14 @@ export async function fetchPlayQuestions(mode: PlayMode, topic?: string): Promis
   } else if (mode.source === 'external') {
     const rpcName = mode.provider === 'news' ? 'quizverse_fetch_news_quiz' : 'quizverse_fetch_external_quiz'
 
-    const external = await playRpc<unknown>(rpcName, {
-      provider: mode.provider,
-      query: topic || mode.id
-    }, { cache: true }).catch(error => {
+    const external = await playRpc<unknown>(
+      rpcName,
+      {
+        provider: mode.provider,
+        query: topic || mode.id
+      },
+      { cache: true }
+    ).catch(error => {
       fallbackReason = error instanceof Error ? error.message : String(error)
 
       return null
@@ -219,11 +227,15 @@ export async function fetchPlayQuestions(mode: PlayMode, topic?: string): Promis
     pool = externalToPlayQuestions(mode.provider ?? '', external, mode.count)
     provenance = 'external'
   } else if (mode.source === 'ai') {
-    const generated = await playRpc<unknown>('quizverse_ai_generate_questions', {
-      count: mode.count,
-      lang: 'en',
-      topic: topic || mode.name
-    }, { timeoutMs: AI_RPC_TIMEOUT_MS }).catch(error => {
+    const generated = await playRpc<unknown>(
+      'quizverse_ai_generate_questions',
+      {
+        count: mode.count,
+        lang: 'en',
+        topic: topic || mode.name
+      },
+      { timeoutMs: AI_RPC_TIMEOUT_MS }
+    ).catch(error => {
       fallbackReason = error instanceof Error ? error.message : String(error)
 
       return null
@@ -259,25 +271,23 @@ export async function fetchPlayQuestions(mode: PlayMode, topic?: string): Promis
     ok?: boolean
     question_pack_id?: string
     questions?: unknown[]
-  }>(
-    'quizverse_get_questions',
-    {
-      count: mode.count,
-      id_prefix: mode.source,
-      inline_questions: inlineQuestions(pool),
-      kind: mode.source === 'daily' || mode.source === 'premium' ? 'daily' : 'deduped_s3',
-      mode: mode.enumName,
-      scope: 'global',
-      topic: topic || mode.id
-    }
-  ).catch(error => {
+  }>('quizverse_get_questions', {
+    count: mode.count,
+    id_prefix: mode.source,
+    inline_questions: inlineQuestions(pool),
+    kind: mode.source === 'daily' || mode.source === 'premium' ? 'daily' : 'deduped_s3',
+    mode: mode.enumName,
+    scope: 'global',
+    topic: topic || mode.id
+  }).catch(error => {
     fallbackReason ??= error instanceof Error ? error.message : String(error)
 
     return { fallback_to_client: true }
   })
 
   if (request.ok === false) {
-    fallbackReason = request.message ?? request.error ?? fallbackReason ?? 'The authoritative question service is unavailable'
+    fallbackReason =
+      request.message ?? request.error ?? fallbackReason ?? 'The authoritative question service is unavailable'
   }
 
   const served = normalizePlayQuestions(request.questions ?? [])
@@ -360,7 +370,11 @@ export async function submitPlayResult(
     }
   } catch (error) {
     submissions.delete(fingerprint)
-    $playSubmission.set({ error: error instanceof Error ? error.message : String(error), idempotencyKey, phase: 'idle' })
+    $playSubmission.set({
+      error: error instanceof Error ? error.message : String(error),
+      idempotencyKey,
+      phase: 'idle'
+    })
     throw error
   }
 
@@ -436,15 +450,31 @@ export interface PlayMode {
 }
 
 const rpc = (id: string, enumName: string, name: string, icon: string, category = 'knowledge'): PlayMode => ({
-  available: true, category, count: 10, enumName, icon, id, name, source: 'bank'
+  available: true,
+  category,
+  count: 10,
+  enumName,
+  icon,
+  id,
+  name,
+  source: 'bank'
 })
 
 const ai = (id: string, enumName: string, name: string, icon: string): PlayMode => ({
-  ...rpc(id, enumName, name, icon, 'ai'), source: 'ai'
+  ...rpc(id, enumName, name, icon, 'ai'),
+  source: 'ai'
 })
 
 const unavailable = (id: string, enumName: string, name: string, icon: string, reason: string): PlayMode => ({
-  available: false, category: 'special', count: 0, enumName, icon, id, name, reason, source: 'bank'
+  available: false,
+  category: 'special',
+  count: 0,
+  enumName,
+  icon,
+  id,
+  name,
+  reason,
+  source: 'bank'
 })
 
 const protocol = (
@@ -482,10 +512,18 @@ export const PLAY_MODES: readonly PlayMode[] = [
   rpc('geo', 'GeoExplore', 'Geo Explore', '🌍', 'special'),
   rpc('whos-that', 'WhosThat', "Who's That", '🕵️', 'special'),
   { ...rpc('health', 'HealthQuiz', 'Health Quiz', '🩺', 'special'), source: 'weekly', weeklyType: 'health' },
-  { ...rpc('personal-finance', 'PersonalFinanceQuiz', 'Personal Finance', '💰', 'special'), source: 'weekly', weeklyType: 'personal_finance' },
+  {
+    ...rpc('personal-finance', 'PersonalFinanceQuiz', 'Personal Finance', '💰', 'special'),
+    source: 'weekly',
+    weeklyType: 'personal_finance'
+  },
   { ...rpc('emoji', 'EmojiQuiz', 'Emoji Quiz', '😀', 'creative'), source: 'weekly', weeklyType: 'emoji' },
   { ...rpc('fortune', 'FortuneQuiz', 'Fortune Quiz', '🔮', 'special'), source: 'weekly', weeklyType: 'fortune' },
-  { ...rpc('prediction', 'PredictionQuiz', 'Prediction Quiz', '🎲', 'special'), source: 'weekly', weeklyType: 'prediction' },
+  {
+    ...rpc('prediction', 'PredictionQuiz', 'Prediction Quiz', '🎲', 'special'),
+    source: 'weekly',
+    weeklyType: 'prediction'
+  },
   rpc('connection', 'ConnectionMode', 'Connection Mode', '🔗', 'creative'),
   rpc('image', 'ImageQuiz', 'Image Quiz', '🖼️', 'media'),
   rpc('audio', 'AudioQuiz', 'Audio Quiz', '🔊', 'media'),
@@ -493,12 +531,20 @@ export const PLAY_MODES: readonly PlayMode[] = [
   { ...rpc('guess-anime', 'GuessAnime', 'Guess Anime', '🌸', 'media'), provider: 'jikan', source: 'external' },
   { ...rpc('guess-dog', 'GuessDog', 'Guess the Dog', '🐶', 'media'), provider: 'dog', source: 'external' },
   { ...rpc('guess-dish', 'GuessDish', 'Guess the Dish', '🍜', 'media'), provider: 'themealdb', source: 'external' },
-  { ...rpc('guess-pokemon', 'GuessPokemon', 'Guess Pokémon', '⚡', 'creative'), provider: 'pokeapi', source: 'external' },
+  {
+    ...rpc('guess-pokemon', 'GuessPokemon', 'Guess Pokémon', '⚡', 'creative'),
+    provider: 'pokeapi',
+    source: 'external'
+  },
   { ...rpc('sports', 'SportsQuiz', 'Sports Quiz', '🏅', 'speed'), provider: 'sports', source: 'external' },
   { ...rpc('space', 'SpaceTrivia', 'Space Trivia', '🚀', 'special'), provider: 'nasa', source: 'external' },
   { ...rpc('star-wars', 'StarWarsQuiz', 'Star Wars Quiz', '🌌', 'special'), provider: 'starwars', source: 'external' },
   { ...rpc('disney', 'DisneyQuiz', 'Disney Quiz', '🏰', 'creative'), provider: 'disney', source: 'external' },
-  { ...rpc('guess-flag', 'GuessTheFlag', 'Guess the Flag', '🚩', 'special'), provider: 'countries', source: 'external' },
+  {
+    ...rpc('guess-flag', 'GuessTheFlag', 'Guess the Flag', '🚩', 'special'),
+    provider: 'countries',
+    source: 'external'
+  },
   { ...rpc('guess-ghibli', 'GuessGhibli', 'Guess Ghibli', '🎐', 'media'), provider: 'ghibli', source: 'external' },
   { ...rpc('news', 'NewsQuiz', 'News Quiz', '📰', 'media'), provider: 'news', source: 'external' },
   ai('ai-mode', 'AIMode', 'AI Quiz', '🤖'),
@@ -513,21 +559,97 @@ export const PLAY_MODES: readonly PlayMode[] = [
   protocol('tournament', 'Tournament', 'Tournament', '🏆', 'tournament'),
   unavailable('subjective', 'SubjectiveQuiz', 'Subjective Quiz', '📝', 'No server-side judging protocol is published.'),
   unavailable('rhythm', 'RhythmQuiz', 'Rhythm Quiz', '🥁', 'Requires the Unity rhythm asset pack.'),
-  unavailable('ar-vr', 'ARVR', 'AR / VR', '🥽', 'Requires native XR hardware support.')
-  ,
-  unavailable('ai-tutor', 'AITutor', 'Tinckers Session', '🧑‍🏫', 'The reference mode is not implemented and publishes no game protocol.'),
-  unavailable('iq-rush', 'IQRush', 'IQ Rush', '🏷️', 'The reference mode is not implemented and has no logo asset feed.'),
-  unavailable('hot', 'HotQuiz', 'Hot Quiz', '🌶️', 'The reference mode is not implemented and has no trending feed contract.'),
+  unavailable('ar-vr', 'ARVR', 'AR / VR', '🥽', 'Requires native XR hardware support.'),
+  unavailable(
+    'ai-tutor',
+    'AITutor',
+    'Tinckers Session',
+    '🧑‍🏫',
+    'The reference mode is not implemented and publishes no game protocol.'
+  ),
+  unavailable(
+    'iq-rush',
+    'IQRush',
+    'IQ Rush',
+    '🏷️',
+    'The reference mode is not implemented and has no logo asset feed.'
+  ),
+  unavailable(
+    'hot',
+    'HotQuiz',
+    'Hot Quiz',
+    '🌶️',
+    'The reference mode is not implemented and has no trending feed contract.'
+  ),
   unavailable('ai-gen', 'AIGen', 'AI Gen', '✨', 'The reference mode is not implemented; use AI Quiz instead.'),
-  unavailable('adaptive', 'AdaptiveDifficulty', 'Adaptive Difficulty', '📈', 'The reference mode is not implemented and publishes no adaptation protocol.'),
-  unavailable('personality', 'PersonalityRec', 'Personality Rec', '🎭', 'The reference mode is not implemented and publishes no recommendation protocol.'),
-  unavailable('tiktok', 'TikTokQuizzes', 'TikTok Quizzes', '📱', 'The reference mode is not implemented and publishes no licensed feed.'),
-  unavailable('proc-story', 'ProcStoryline', 'Proc Storyline', '📖', 'The reference mode is not implemented and publishes no storyline engine.'),
-  unavailable('blockchain', 'Blockchain', 'Blockchain', '⛓️', 'The reference mode is not implemented and publishes no wallet game contract.'),
-  unavailable('word-assoc', 'WordAssoc', 'Word Assoc', '🔡', 'The reference mode is not implemented and publishes no scoring contract.'),
-  unavailable('context-clues', 'ContextClues', 'Context Clues', '🔍', 'The reference mode is not implemented and publishes no scoring contract.'),
-  unavailable('creative-eval', 'CreativeEval', 'Creative Eval', '🎨', 'The reference mode is not implemented and publishes no judging contract.')
-  ,
-  unavailable('video-analysis', 'VideoAnalysis', 'Video Analysis', '🎞️', 'The reference mode is not implemented and publishes no video-analysis protocol.'),
-  unavailable('fill-blanks', 'FillBlanks', 'Fill Blanks', '⬜', 'The reference mode is not implemented and publishes no fill-in scoring contract.')
+  unavailable(
+    'adaptive',
+    'AdaptiveDifficulty',
+    'Adaptive Difficulty',
+    '📈',
+    'The reference mode is not implemented and publishes no adaptation protocol.'
+  ),
+  unavailable(
+    'personality',
+    'PersonalityRec',
+    'Personality Rec',
+    '🎭',
+    'The reference mode is not implemented and publishes no recommendation protocol.'
+  ),
+  unavailable(
+    'tiktok',
+    'TikTokQuizzes',
+    'TikTok Quizzes',
+    '📱',
+    'The reference mode is not implemented and publishes no licensed feed.'
+  ),
+  unavailable(
+    'proc-story',
+    'ProcStoryline',
+    'Proc Storyline',
+    '📖',
+    'The reference mode is not implemented and publishes no storyline engine.'
+  ),
+  unavailable(
+    'blockchain',
+    'Blockchain',
+    'Blockchain',
+    '⛓️',
+    'The reference mode is not implemented and publishes no wallet game contract.'
+  ),
+  unavailable(
+    'word-assoc',
+    'WordAssoc',
+    'Word Assoc',
+    '🔡',
+    'The reference mode is not implemented and publishes no scoring contract.'
+  ),
+  unavailable(
+    'context-clues',
+    'ContextClues',
+    'Context Clues',
+    '🔍',
+    'The reference mode is not implemented and publishes no scoring contract.'
+  ),
+  unavailable(
+    'creative-eval',
+    'CreativeEval',
+    'Creative Eval',
+    '🎨',
+    'The reference mode is not implemented and publishes no judging contract.'
+  ),
+  unavailable(
+    'video-analysis',
+    'VideoAnalysis',
+    'Video Analysis',
+    '🎞️',
+    'The reference mode is not implemented and publishes no video-analysis protocol.'
+  ),
+  unavailable(
+    'fill-blanks',
+    'FillBlanks',
+    'Fill Blanks',
+    '⬜',
+    'The reference mode is not implemented and publishes no fill-in scoring contract.'
+  )
 ]

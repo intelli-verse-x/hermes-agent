@@ -18,7 +18,10 @@ test('guided setup exposes detailed candidate attempt progress', () => {
 test('readiness check icon is gated by verified completion', () => {
   assert.match(setup, /data-readiness-verified=\{completed \? 'true' : 'false'\}/)
   assert.match(setup, /\{completed \? \(\s*<CheckCircle2/)
-  assert.match(setup, /progress\?\.stage === 'complete' \|\| \(!progress && state\.status\?\.runtime\.state === 'ready'\)/)
+  assert.match(
+    setup,
+    /progress\?\.stage === 'complete' \|\| \(!progress && state\.status\?\.runtime\.state === 'ready'\)/
+  )
 })
 
 test('settings visibly distinguish smart local and cloud fallback usage', () => {

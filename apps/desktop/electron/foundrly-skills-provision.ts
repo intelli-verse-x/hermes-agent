@@ -48,9 +48,7 @@ export function provisionFoundrlySkills(input: FoundrlySkillsProvisionInput): Fo
 
   const skillCount = fs
     .readdirSync(destination, { withFileTypes: true })
-    .filter(
-      entry => entry.isDirectory() && fs.existsSync(path.join(destination, entry.name, 'SKILL.md'))
-    ).length
+    .filter(entry => entry.isDirectory() && fs.existsSync(path.join(destination, entry.name, 'SKILL.md'))).length
 
   return { skillCount, destination }
 }

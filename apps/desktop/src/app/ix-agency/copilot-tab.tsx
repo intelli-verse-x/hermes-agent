@@ -15,11 +15,7 @@ import { DesktopVoiceControls, useDesktopVoiceActions } from '../chat/desktop-vo
 
 import { $ixPendingSkill } from './copilot-store'
 import { LoginPane } from './login-pane'
-import {
-  type ScoredSkillSuggestion,
-  SKILL_SUGGEST_DEBOUNCE_MS,
-  suggestSkills
-} from './skill-suggestions'
+import { type ScoredSkillSuggestion, SKILL_SUGGEST_DEBOUNCE_MS, suggestSkills } from './skill-suggestions'
 import { $ixSync, orgSkillCatalog } from './sync-store'
 import type { IxSkillItem } from './types'
 
@@ -477,7 +473,9 @@ export function CopilotTab() {
 
       const last = items.findLast(item => item.kind === 'assistant' && item.text)
 
-      if (!last) {return null}
+      if (!last) {
+        return null
+      }
 
       const id = `${last.at}:${last.text}`
 

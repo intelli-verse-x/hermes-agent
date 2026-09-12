@@ -49,7 +49,12 @@ export const NATIVE_SURFACES: readonly NativeSurfaceContract[] = [
       route('spell', 'Build words around the required center letter.'),
       route('crossword', 'Solve the native daily clue grid.'),
       route('imposter', 'Pass-and-play secret-word party.'),
-      route('duel', 'Vocabulary duel and ranked results.', 'quizverse_words_duel_get / quizverse_words_duel_submit', true),
+      route(
+        'duel',
+        'Vocabulary duel and ranked results.',
+        'quizverse_words_duel_get / quizverse_words_duel_submit',
+        true
+      ),
       route('about', 'Rules, scoring, privacy, and content provenance.')
     ]
   },

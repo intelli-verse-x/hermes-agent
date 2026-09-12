@@ -10,10 +10,7 @@ test('resolves default and named Foundrly profiles under the isolated root', () 
 
   assert.equal(resolveFoundrlyEffectiveHermesHome(base, null), base)
   assert.equal(resolveFoundrlyEffectiveHermesHome(base, 'default'), base)
-  assert.equal(
-    resolveFoundrlyEffectiveHermesHome(base, 'ops'),
-    path.join(base, 'profiles', 'ops')
-  )
+  assert.equal(resolveFoundrlyEffectiveHermesHome(base, 'ops'), path.join(base, 'profiles', 'ops'))
 })
 
 test('refuses an explicit IX default home but accepts a dedicated Foundrly path', () => {

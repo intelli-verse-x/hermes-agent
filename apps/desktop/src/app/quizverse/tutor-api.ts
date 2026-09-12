@@ -23,7 +23,9 @@ export const $tutorApiError = atom<null | string>(null)
 export function tutorTenantId(): string {
   const existing = localStorage.getItem(TENANT_KEY)
 
-  if (existing) {return existing}
+  if (existing) {
+    return existing
+  }
   const id = `quizverse-desktop-${crypto.randomUUID()}`
   localStorage.setItem(TENANT_KEY, id)
 
@@ -35,7 +37,9 @@ export async function tutorApiBase(): Promise<string> {
   const status = $tutorStatus.get()
   const base = status?.apiUrl || (status?.mode === 'remote' ? status.webUrl : '')
 
-  if (!base) {throw new Error('TutorX API is not available')}
+  if (!base) {
+    throw new Error('TutorX API is not available')
+  }
 
   return base.replace(/\/+$/, '')
 }
@@ -80,7 +84,9 @@ export async function tutorFetch<T>(path: string, init: RequestInit = {}): Promi
   const headers = new Headers(init.headers)
   headers.set('x-user-id', tutorTenantId())
 
-  if (init.body && !(init.body instanceof FormData)) {headers.set('content-type', 'application/json')}
+  if (init.body && !(init.body instanceof FormData)) {
+    headers.set('content-type', 'application/json')
+  }
   const response = await fetch(`${base}${path}`, { ...init, headers })
 
   if (!response.ok) {
@@ -212,7 +218,11 @@ export async function tutorStream(path: string, onEvent: (event: Record<string, 
         buffer = frames.pop() ?? ''
 
         for (const frame of frames) {
-          const raw = frame.split('\n').find(line => line.startsWith('data:'))?.slice(5).trim()
+          const raw = frame
+            .split('\n')
+            .find(line => line.startsWith('data:'))
+            ?.slice(5)
+            .trim()
 
           if (raw) {
             try {
@@ -226,13 +236,16 @@ export async function tutorStream(path: string, onEvent: (event: Record<string, 
 
       const unsubscribe = bridge.onTutorStreamEvent(dispatch)
 
-      void bridge.tutorStreamStart(path).then(streamId => {
-        id = streamId
-        queued.splice(0).forEach(dispatch)
-      }).catch(error => {
-        unsubscribe()
-        reject(error)
-      })
+      void bridge
+        .tutorStreamStart(path)
+        .then(streamId => {
+          id = streamId
+          queued.splice(0).forEach(dispatch)
+        })
+        .catch(error => {
+          unsubscribe()
+          reject(error)
+        })
     })
   }
 
@@ -260,7 +273,11 @@ export async function tutorStream(path: string, onEvent: (event: Record<string, 
     buffer = frames.pop() ?? ''
 
     for (const frame of frames) {
-      const raw = frame.split('\n').find(line => line.startsWith('data:'))?.slice(5).trim()
+      const raw = frame
+        .split('\n')
+        .find(line => line.startsWith('data:'))
+        ?.slice(5)
+        .trim()
 
       if (raw) {
         try {

@@ -100,10 +100,12 @@ describe('TutorX transport lifecycle', () => {
 
     socket.open()
     await started
-    expect(socket.sent.find(message => message.type === 'start_turn')).toEqual(expect.objectContaining({
-      capability: 'deep_research',
-      config: { depth: 'standard', mode: 'report' }
-    }))
+    expect(socket.sent.find(message => message.type === 'start_turn')).toEqual(
+      expect.objectContaining({
+        capability: 'deep_research',
+        config: { depth: 'standard', mode: 'report' }
+      })
+    )
   })
 
   it('detects unsupported Learning without exposing mastery mode', async () => {

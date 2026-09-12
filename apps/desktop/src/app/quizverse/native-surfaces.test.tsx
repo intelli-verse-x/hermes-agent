@@ -15,7 +15,12 @@ describe('QuizVerse native surface router', () => {
       configurable: true,
       value: {
         quizverse: {
-          authStatus: vi.fn(async () => ({ authenticated: true, configured: true, userId: 'test-user', username: 'Tester' })),
+          authStatus: vi.fn(async () => ({
+            authenticated: true,
+            configured: true,
+            userId: 'test-user',
+            username: 'Tester'
+          })),
           playRpc: vi.fn(async () => ({ success: true })),
           playRealtimeClose: vi.fn(async () => undefined),
           playRealtimeConnect: vi.fn(async () => ({ id: 'socket-1', userId: 'test-user' })),
@@ -70,12 +75,15 @@ describe('QuizVerse native surface router', () => {
   })
 
   it('enforces Voyage cooldowns without simulating a rewarded ad', () => {
-    localStorage.setItem(`qv_voyage_progress_v3:${utcDay()}`, JSON.stringify({
-      completed: ['trivia'],
-      cooldowns: { memory: Date.now() + 60_000 },
-      hintsUsed: 0,
-      scores: { trivia: 8 }
-    }))
+    localStorage.setItem(
+      `qv_voyage_progress_v3:${utcDay()}`,
+      JSON.stringify({
+        completed: ['trivia'],
+        cooldowns: { memory: Date.now() + 60_000 },
+        hintsUsed: 0,
+        scores: { trivia: 8 }
+      })
+    )
     openNativeSurface('voyage', 'memory')
     const view = render(<NativeSurfaceRouter onBack={vi.fn()} />)
 
@@ -93,7 +101,9 @@ describe('QuizVerse native surface router', () => {
     fireEvent.click(view.getByRole('checkbox'))
     expect((setup as HTMLButtonElement).disabled).toBe(false)
     fireEvent.click(setup)
-    await vi.waitFor(() => expect(window.hermesDesktop.openExternal).toHaveBeenCalledWith('https://checkout.stripe.com/c/pay/test'))
+    await vi.waitFor(() =>
+      expect(window.hermesDesktop.openExternal).toHaveBeenCalledWith('https://checkout.stripe.com/c/pay/test')
+    )
   })
 
   it('requires a second explicit action before tournament enrollment', () => {
@@ -106,10 +116,13 @@ describe('QuizVerse native surface router', () => {
 
   it('renders bracket, certificate, referral, learning, and realtime pot as native tournament UI', async () => {
     localStorage.setItem('qv_tournament_selected_v1', 'weekly-cup')
-    localStorage.setItem('qv_tournament_certificate_v1:weekly-cup', JSON.stringify({
-      id: 'cert-1',
-      idempotencyKey: '123e4567-e89b-42d3-a456-426614174000'
-    }))
+    localStorage.setItem(
+      'qv_tournament_certificate_v1:weekly-cup',
+      JSON.stringify({
+        id: 'cert-1',
+        idempotencyKey: '123e4567-e89b-42d3-a456-426614174000'
+      })
+    )
     vi.mocked(window.hermesDesktop.quizverse!.playRpc).mockImplementation(async name => {
       if (name === 'tournament_bracket_state') {
         return {
@@ -135,7 +148,9 @@ describe('QuizVerse native surface router', () => {
         }
       }
 
-      if (name === 'referral_my_code') {return { code: 'ADA123', url: 'https://quizverse.world/r/ADA123' }}
+      if (name === 'referral_my_code') {
+        return { code: 'ADA123', url: 'https://quizverse.world/r/ADA123' }
+      }
 
       if (name === 'learning_track_get') {
         return {
@@ -149,7 +164,9 @@ describe('QuizVerse native surface router', () => {
         }
       }
 
-      if (name === 'tournament_get') {return { entries_count: 12, pot_bc: 500, title: 'Weekly Cup' }}
+      if (name === 'tournament_get') {
+        return { entries_count: 12, pot_bc: 500, title: 'Weekly Cup' }
+      }
 
       return { success: true }
     })

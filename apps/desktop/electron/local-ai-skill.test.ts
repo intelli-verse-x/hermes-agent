@@ -65,6 +65,7 @@ test('both desktop brands package the shared skill and verified catalogs', () =>
 
 test('release verification inspects branded DMG, ZIP, and unpacked resources', () => {
   const desktopScript = fs.readFileSync(path.join(repoRoot, 'apps', 'desktop', 'scripts', 'test-desktop.mjs'), 'utf8')
+
   const artifactScript = fs.readFileSync(
     path.join(repoRoot, 'apps', 'desktop', 'scripts', 'verify-platform-artifacts.mjs'),
     'utf8'
