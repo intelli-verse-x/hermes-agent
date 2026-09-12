@@ -72,6 +72,7 @@ export function provisionFoundrlyMcp(input: FoundrlyMcpProvisionInput): Foundrly
 
   const desired = foundrlyMcpEntry(input)
   const current = document.getIn(['mcp_servers', 'foundrly'], true)
+
   const currentJson =
     current && typeof current === 'object' && 'toJSON' in current
       ? (current as { toJSON: () => unknown }).toJSON()

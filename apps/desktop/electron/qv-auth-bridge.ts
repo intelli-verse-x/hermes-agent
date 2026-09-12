@@ -161,7 +161,7 @@ export async function verifyQuizverseIdToken(
     throw new Error(`Cognito OIDC discovery failed (${discoveryResponse.status})`)
   }
 
-  const discovery = await discoveryResponse.json() as Partial<OidcDiscovery>
+  const discovery = (await discoveryResponse.json()) as Partial<OidcDiscovery>
 
   if (
     !discovery.issuer ||
@@ -188,7 +188,7 @@ export async function verifyQuizverseIdToken(
     throw new Error(`Cognito JWKS fetch failed (${jwksResponse.status})`)
   }
 
-  const jwks = await jwksResponse.json() as { keys?: Array<Record<string, unknown>> }
+  const jwks = (await jwksResponse.json()) as { keys?: Array<Record<string, unknown>> }
   const jwk = jwks.keys?.find(key => key.kid === header.kid && key.kty === 'RSA' && key.use === 'sig')
 
   if (!jwk) {
@@ -211,8 +211,8 @@ export async function verifyQuizverseIdToken(
   const now = options.now ?? Math.floor(Date.now() / 1000)
   const audience = claims.aud
 
-  const audienceMatches = audience === options.clientId ||
-    (Array.isArray(audience) && audience.includes(options.clientId))
+  const audienceMatches =
+    audience === options.clientId || (Array.isArray(audience) && audience.includes(options.clientId))
 
   if (
     discovery.issuer !== issuer.replace(/\/$/, '') ||
@@ -229,13 +229,11 @@ export async function verifyQuizverseIdToken(
   return claims
 }
 
-export async function refreshQuizverseOAuthTokens(
-  request: {
-    clientId: string
-    domain: string
-    refreshToken: string
-  }
-): Promise<QuizverseOAuthTokens> {
+export async function refreshQuizverseOAuthTokens(request: {
+  clientId: string
+  domain: string
+  refreshToken: string
+}): Promise<QuizverseOAuthTokens> {
   const response = await fetch(new URL('/oauth2/token', normalizeDomain(request.domain)), {
     body: new URLSearchParams({
       client_id: request.clientId,
@@ -247,7 +245,7 @@ export async function refreshQuizverseOAuthTokens(
     signal: AbortSignal.timeout(12_000)
   })
 
-  const body = await response.json() as Record<string, unknown>
+  const body = (await response.json()) as Record<string, unknown>
 
   if (!response.ok) {
     throw new Error(String(body.error_description ?? body.error ?? `Cognito token refresh failed (${response.status})`))
@@ -276,10 +274,12 @@ export async function exchangeQuizverseOAuthCode(
     signal: AbortSignal.timeout(12_000)
   })
 
-  const body = await response.json() as Record<string, unknown>
+  const body = (await response.json()) as Record<string, unknown>
 
   if (!response.ok) {
-    throw new Error(String(body.error_description ?? body.error ?? `Cognito token exchange failed (${response.status})`))
+    throw new Error(
+      String(body.error_description ?? body.error ?? `Cognito token exchange failed (${response.status})`)
+    )
   }
 
   return {

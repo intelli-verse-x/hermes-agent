@@ -29,9 +29,13 @@ export interface QvProvisionReadiness {
 }
 
 export function inspectQuizverseProvision(input: QvProvisionReadinessInput): QvProvisionReadiness {
-  if (!fs.existsSync(input.serverPath)) {return degraded(`MCP server is missing: ${input.serverPath}`)}
+  if (!fs.existsSync(input.serverPath)) {
+    return degraded(`MCP server is missing: ${input.serverPath}`)
+  }
 
-  if (!fs.existsSync(input.relayPath)) {return degraded(`MCP relay is missing: ${input.relayPath}`)}
+  if (!fs.existsSync(input.relayPath)) {
+    return degraded(`MCP relay is missing: ${input.relayPath}`)
+  }
 
   let source = ''
 
@@ -43,12 +47,13 @@ export function inspectQuizverseProvision(input: QvProvisionReadinessInput): QvP
 
   const document = parseDocument(source)
 
-  if (document.errors.length) {return degraded(`MCP config YAML is invalid: ${document.errors[0].message}`)}
+  if (document.errors.length) {
+    return degraded(`MCP config YAML is invalid: ${document.errors[0].message}`)
+  }
   const entry = document.getIn(['mcp_servers', 'quizverse'], true)
 
-  const actual = entry && typeof entry === 'object' && 'toJSON' in entry
-    ? (entry as { toJSON: () => unknown }).toJSON()
-    : entry
+  const actual =
+    entry && typeof entry === 'object' && 'toJSON' in entry ? (entry as { toJSON: () => unknown }).toJSON() : entry
 
   const expected = {
     args: [input.relayPath],
@@ -93,7 +98,9 @@ export function validateQuizverseProbe(
   try {
     const profile = JSON.parse(probe.profileText)
 
-    if (!profile || typeof profile !== 'object') {return degraded('Safe profile resource returned invalid data')}
+    if (!profile || typeof profile !== 'object') {
+      return degraded('Safe profile resource returned invalid data')
+    }
   } catch {
     return degraded('Safe profile resource returned malformed JSON')
   }

@@ -1,5 +1,5 @@
 function object(value: unknown): Record<string, unknown> {
-  return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {}
+  return value && typeof value === 'object' && !Array.isArray(value) ? (value as Record<string, unknown>) : {}
 }
 
 export function sourceData(value: unknown): Record<string, unknown> {
@@ -13,7 +13,9 @@ export function debateScorePayload(topic: string, userPosition: string) {
 }
 
 export function audiobookLibraryPath(userId: string): string {
-  if (!userId) {throw new Error('Audiobook library requires a user identity')}
+  if (!userId) {
+    throw new Error('Audiobook library requires a user identity')
+  }
 
   return `/audiobook/library/${encodeURIComponent(userId)}`
 }
@@ -102,7 +104,7 @@ export function normalizeTournamentQuestions(value: unknown): TournamentQuestion
 
   const rows = Array.isArray(value)
     ? value
-    : [root.questions, root.items, root.data, root.results].find(Array.isArray) ?? []
+    : ([root.questions, root.items, root.data, root.results].find(Array.isArray) ?? [])
 
   return rows.flatMap((raw, index) => {
     const row = object(raw)
@@ -112,23 +114,32 @@ export function normalizeTournamentQuestions(value: unknown): TournamentQuestion
     let correctIndex = Number(row.correctIndex ?? row.correct_index ?? row.answer ?? row.correct ?? -1)
 
     if (!Number.isInteger(correctIndex) && typeof row.correct === 'string') {
-            correctIndex = options.findIndex(
-              option => option.trim().toLowerCase() === String(row.correct).trim().toLowerCase()
-            )
+      correctIndex = options.findIndex(
+        option => option.trim().toLowerCase() === String(row.correct).trim().toLowerCase()
+      )
     }
 
-    if (!prompt || options.length < 2 || !Number.isInteger(correctIndex) || correctIndex < 0 || correctIndex >= options.length) {
+    if (
+      !prompt ||
+      options.length < 2 ||
+      !Number.isInteger(correctIndex) ||
+      correctIndex < 0 ||
+      correctIndex >= options.length
+    ) {
       return []
     }
 
-    return [{
-      correctIndex,
-      explanation: row.explanation ? String(row.explanation) : undefined,
-      id: String(row.id ?? row.questionId ?? row.question_id ?? `q_${index}`),
-      mediaUrl: row.mediaUrl || row.media_url || row.image ? String(row.mediaUrl ?? row.media_url ?? row.image) : undefined,
-      options,
-      prompt
-    }]
+    return [
+      {
+        correctIndex,
+        explanation: row.explanation ? String(row.explanation) : undefined,
+        id: String(row.id ?? row.questionId ?? row.question_id ?? `q_${index}`),
+        mediaUrl:
+          row.mediaUrl || row.media_url || row.image ? String(row.mediaUrl ?? row.media_url ?? row.image) : undefined,
+        options,
+        prompt
+      }
+    ]
   })
 }
 
@@ -147,7 +158,8 @@ export async function loadTournamentPackArtifact(
 
   const url = new URL(artifactUrl)
 
-  const trustedHost = url.hostname === 's3.amazonaws.com' ||
+  const trustedHost =
+    url.hostname === 's3.amazonaws.com' ||
     url.hostname.endsWith('.amazonaws.com') ||
     url.hostname.endsWith('.intelli-verse-x.ai')
 
@@ -157,10 +169,14 @@ export async function loadTournamentPackArtifact(
 
   const response = await fetcher(url, { cache: 'no-store', credentials: 'omit' })
 
-  if (!response.ok) {throw new Error(`Tournament pack fetch failed (${response.status})`)}
+  if (!response.ok) {
+    throw new Error(`Tournament pack fetch failed (${response.status})`)
+  }
   const questions = normalizeTournamentQuestions(await response.json())
 
-  if (!questions.length) {throw new Error('Tournament pack contains no playable questions')}
+  if (!questions.length) {
+    throw new Error('Tournament pack contains no playable questions')
+  }
 
   return {
     packId: String(pack.content_factory_task_id ?? slug),

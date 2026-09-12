@@ -75,7 +75,10 @@ test('IX voice IPC requires a single-use main-process microphone attestation', (
 test('both desktop brands discover the same shared voice skill in isolated homes', () => {
   const repoRoot = path.resolve(desktopRoot, '../..')
 
-  for (const [brandId, productName] of [['ix-agency', 'Agency'], ['quizverse', 'Learning']] as const) {
+  for (const [brandId, productName] of [
+    ['ix-agency', 'Agency'],
+    ['quizverse', 'Learning']
+  ] as const) {
     const home = fs.mkdtempSync(path.join(os.tmpdir(), `${brandId}-voice-`))
 
     const result = provisionDesktopBrand({

@@ -18,7 +18,10 @@ const PRODUCT_ROUTES: readonly ProductRoute[] = [
   { methods: ['GET'], path: /^\/notes\/[^/]+\/(?:debate-topics|recommended-content|with-chat)$/ },
   { methods: ['GET'], path: /^\/notes\/[^/]+\/figurine-prompt$/ },
   { methods: ['GET'], path: /^\/notes\/[^/]+\/explainer-status\/[^/]+$/ },
-  { methods: ['POST'], path: /^\/notes\/[^/]+\/(?:audio-overview|chat|generate-all|generate-all\/async|generate-explainer-video|generate-figurine|generate-flashcards-quizzes|generate-music|microlearning|mindmap|speed-reading)$/ },
+  {
+    methods: ['POST'],
+    path: /^\/notes\/[^/]+\/(?:audio-overview|chat|generate-all|generate-all\/async|generate-explainer-video|generate-figurine|generate-flashcards-quizzes|generate-music|microlearning|mindmap|speed-reading)$/
+  },
   { methods: ['POST'], path: /^\/notes\/[^/]+\/debate\/(?:start|timed|rapid-fire|multi-round)$/ },
   { methods: ['POST'], path: /^\/notes\/[^/]+\/debate\/oxford\/start$/ },
   { methods: ['GET'], path: /^\/notes\/debate\/modes$/ },
@@ -37,13 +40,19 @@ const PRODUCT_ROUTES: readonly ProductRoute[] = [
   { methods: ['GET'], path: /^\/flashcards\/srs\/(?:queue|stats|mastery-by-note)$/ },
   { methods: ['POST'], path: /^\/flashcards\/srs\/(?:highlight-to-card|image-occlusion)$/ },
   { methods: ['GET'], path: /^\/learner\/streak$/ },
-  { methods: ['POST'], path: /^\/learner\/(?:streak|note-microlearning|daily-microlearning|note-mind-map|user-mind-map|audio-overview|speed-reading)$/ },
+  {
+    methods: ['POST'],
+    path: /^\/learner\/(?:streak|note-microlearning|daily-microlearning|note-mind-map|user-mind-map|audio-overview|speed-reading)$/
+  },
   { methods: ['GET', 'POST'], path: /^\/library$/ },
   { methods: ['DELETE', 'GET', 'PATCH'], path: /^\/library\/[^/]+$/ },
   { methods: ['GET', 'POST'], path: /^\/note-share$/ },
   { methods: ['DELETE', 'GET'], path: /^\/note-share\/[^/]+$/ },
   { methods: ['POST'], path: /^\/multimedia\/(?:chat-v2|search-v2|instant-quiz|battle-session)$/ },
-  { methods: ['POST'], path: /^\/audiobook\/(?:create|daily-briefing|quiz-review|summary|url-digest|upsell-data|validate-purchase)$/ },
+  {
+    methods: ['POST'],
+    path: /^\/audiobook\/(?:create|daily-briefing|quiz-review|summary|url-digest|upsell-data|validate-purchase)$/
+  },
   { methods: ['GET'], path: /^\/audiobook\/(?:products|social-proof)$/ },
   { methods: ['GET'], path: /^\/audiobook\/(?:status|stream|streaming-info|library|entitlement)\/[^/]+$/ },
   { methods: ['GET'], path: /^\/audiobook\/[^/]+$/ },
@@ -77,7 +86,9 @@ export interface QuizverseWordsCacheRecord {
 }
 
 export function quizverseWordsCacheExpiry(requestPath: string, body: string, savedAt: number): number {
-  if (!Number.isFinite(savedAt) || savedAt <= 0) {return 0}
+  if (!Number.isFinite(savedAt) || savedAt <= 0) {
+    return 0
+  }
 
   if (requestPath === '/api/words/content/manifest') {
     try {
@@ -86,9 +97,7 @@ export function quizverseWordsCacheExpiry(requestPath: string, body: string, sav
       const cacheMaxAgeSeconds = Number(value.cache_max_age_seconds)
 
       const cacheExpiry =
-        Number.isInteger(cacheMaxAgeSeconds) && cacheMaxAgeSeconds > 0
-          ? savedAt + cacheMaxAgeSeconds * 1000
-          : expiresAt
+        Number.isInteger(cacheMaxAgeSeconds) && cacheMaxAgeSeconds > 0 ? savedAt + cacheMaxAgeSeconds * 1000 : expiresAt
 
       return Number.isFinite(expiresAt) && expiresAt > savedAt ? Math.min(expiresAt, cacheExpiry) : 0
     } catch {
@@ -121,7 +130,9 @@ export function requiresQuizverseProductConfirmation(
   method: CanonicalProductRequest['method'],
   requestPath: string
 ): boolean {
-  if (method === 'DELETE' || /\/cancel$/.test(requestPath)) {return true}
+  if (method === 'DELETE' || /\/cancel$/.test(requestPath)) {
+    return true
+  }
 
   return (
     requestPath === '/note-share' ||
@@ -229,7 +240,10 @@ export function canonicalizeQuizverseProductRequest(rawPath: string, rawMethod =
     method: method as CanonicalProductRequest['method'],
     requestPath: `${requestPath}${url.search}`,
     requiresAuth: true,
-    requiresConfirmation: requiresQuizverseProductConfirmation(method as CanonicalProductRequest['method'], requestPath),
+    requiresConfirmation: requiresQuizverseProductConfirmation(
+      method as CanonicalProductRequest['method'],
+      requestPath
+    ),
     url: url.toString()
   }
 }

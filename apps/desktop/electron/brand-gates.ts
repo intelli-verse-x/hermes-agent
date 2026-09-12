@@ -28,5 +28,4 @@
 export const IS_QUIZVERSE_BRAND: boolean = process.env.HERMES_DESKTOP_BRAND === 'quizverse'
 export const IS_FOUNDRLY_BRAND: boolean = process.env.HERMES_DESKTOP_BRAND === 'foundrly'
 export const IS_IX_AGENCY_BRAND: boolean =
-  process.env.HERMES_DESKTOP_BRAND !== 'quizverse' &&
-  process.env.HERMES_DESKTOP_BRAND !== 'foundrly'
+  process.env.HERMES_DESKTOP_BRAND !== 'quizverse' && process.env.HERMES_DESKTOP_BRAND !== 'foundrly'

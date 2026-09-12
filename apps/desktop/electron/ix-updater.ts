@@ -124,11 +124,7 @@ export function pickDownloadUrl(
   }
 
   const prefer =
-    platform === 'darwin'
-      ? ['.dmg', '.zip']
-      : platform === 'win32'
-        ? ['.exe', '.msi']
-        : ['.AppImage', '.deb', '.rpm']
+    platform === 'darwin' ? ['.dmg', '.zip'] : platform === 'win32' ? ['.exe', '.msi'] : ['.AppImage', '.deb', '.rpm']
 
   const pick = prefer.map(ext => names.find(n => n.endsWith(ext))).find(Boolean) ?? names[0]
 

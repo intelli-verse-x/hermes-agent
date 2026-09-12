@@ -93,19 +93,32 @@ const stringArray: FieldValidator = value => Array.isArray(value) && value.every
 const FIELD_RULES: Record<string, FieldValidator> = {
   accuracy: value => numberValue(value) && (value as number) >= 0 && (value as number) <= 100,
   answer: stringValue,
-  answers: value => Array.isArray(value) && (
-    (value.length === 10 && value.every(answer => integerValue(answer) && (answer as number) >= 0 && (answer as number) <= 3)) ||
-    value.every(answer => exactObject(answer, {
-      latency_ms: value => integerValue(value) && (value as number) >= 0,
-      question_id: stringValue,
-      selected_index: value => integerValue(value) && (value as number) >= -1
-    }, ['latency_ms', 'question_id', 'selected_index'])) ||
-    value.every(answer => exactObject(answer, {
-      answer: stringValue,
-      elapsedMs: value => integerValue(value) && (value as number) >= 0,
-      questionIdx: value => integerValue(value) && (value as number) >= 0
-    }, ['answer', 'elapsedMs', 'questionIdx']))
-  ),
+  answers: value =>
+    Array.isArray(value) &&
+    ((value.length === 10 &&
+      value.every(answer => integerValue(answer) && (answer as number) >= 0 && (answer as number) <= 3)) ||
+      value.every(answer =>
+        exactObject(
+          answer,
+          {
+            latency_ms: value => integerValue(value) && (value as number) >= 0,
+            question_id: stringValue,
+            selected_index: value => integerValue(value) && (value as number) >= -1
+          },
+          ['latency_ms', 'question_id', 'selected_index']
+        )
+      ) ||
+      value.every(answer =>
+        exactObject(
+          answer,
+          {
+            answer: stringValue,
+            elapsedMs: value => integerValue(value) && (value as number) >= 0,
+            questionIdx: value => integerValue(value) && (value as number) >= 0
+          },
+          ['answer', 'elapsedMs', 'questionIdx']
+        )
+      )),
   categoryId: stringValue,
   categoryName: stringValue,
   challengeData: objectValue,
@@ -132,17 +145,23 @@ const FIELD_RULES: Record<string, FieldValidator> = {
   gameId: value => value === GAME_ID,
   id_prefix: stringValue,
   idempotency_key: stringValue,
-  inline_questions: value => Array.isArray(value) && value.every(question =>
-    exactObject(question, {
-      correct_index: value => integerValue(value) && (value as number) >= 0,
-      explanation: stringValue,
-      id: stringValue,
-      media_url: stringValue,
-      options: stringArray,
-      question: stringValue,
-      topic: stringValue
-    }, ['correct_index', 'id', 'options', 'question'])
-  ),
+  inline_questions: value =>
+    Array.isArray(value) &&
+    value.every(question =>
+      exactObject(
+        question,
+        {
+          correct_index: value => integerValue(value) && (value as number) >= 0,
+          explanation: stringValue,
+          id: stringValue,
+          media_url: stringValue,
+          options: stringArray,
+          question: stringValue,
+          topic: stringValue
+        },
+        ['correct_index', 'id', 'options', 'question']
+      )
+    ),
   iso_day: value => integerValue(value) && (value as number) >= 1 && (value as number) <= 7,
   iso_week: value => integerValue(value) && (value as number) >= 1 && (value as number) <= 53,
   iso_year: value => integerValue(value) && (value as number) >= 2000 && (value as number) <= 9999,
@@ -162,20 +181,28 @@ const FIELD_RULES: Record<string, FieldValidator> = {
   paid_via: value => value === 'balance' || value === 'amoe',
   pack_id: stringValue,
   partyId: stringValue,
-  picks: value => Array.isArray(value) && value.every(pick =>
-    exactObject(pick, { answer_id: stringValue, question_id: stringValue }, ['answer_id', 'question_id'])
-  ),
+  picks: value =>
+    Array.isArray(value) &&
+    value.every(pick =>
+      exactObject(pick, { answer_id: stringValue, question_id: stringValue }, ['answer_id', 'question_id'])
+    ),
   playerEmail: stringValue,
   playerName: stringValue,
   playerDisplayName: stringValue,
   provider: stringValue,
-  questionHistory: value => Array.isArray(value) && value.every(entry =>
-    exactObject(entry, {
-      category: stringValue,
-      correct: booleanValue,
-      time_ms: value => integerValue(value) && (value as number) >= 0
-    }, ['category', 'correct', 'time_ms'])
-  ),
+  questionHistory: value =>
+    Array.isArray(value) &&
+    value.every(entry =>
+      exactObject(
+        entry,
+        {
+          category: stringValue,
+          correct: booleanValue,
+          time_ms: value => integerValue(value) && (value as number) >= 0
+        },
+        ['category', 'correct', 'time_ms']
+      )
+    ),
   question_pack_id: stringValue,
   quizConfig: objectValue,
   quizModeName: stringValue,
@@ -201,16 +228,15 @@ const FIELD_RULES: Record<string, FieldValidator> = {
 
 const POLICIES = QUIZVERSE_CONTRACTS as Readonly<Record<string, ToolPolicy>>
 
-function exactObject(
-  value: unknown,
-  fields: Record<string, FieldValidator>,
-  required: readonly string[]
-): boolean {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) {return false}
+function exactObject(value: unknown, fields: Record<string, FieldValidator>, required: readonly string[]): boolean {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return false
+  }
   const record = value as Record<string, unknown>
 
-  return required.every(key => key in record) &&
-    Object.entries(record).every(([key, item]) => Boolean(fields[key]?.(item)))
+  return (
+    required.every(key => key in record) && Object.entries(record).every(([key, item]) => Boolean(fields[key]?.(item)))
+  )
 }
 
 export function quizverseMcpSocketPath(userData: string): string {
@@ -220,7 +246,10 @@ export function quizverseMcpSocketPath(userData: string): string {
     return `\\\\.\\pipe\\quizverse-mcp-${safe}`
   }
 
-  return path.join(os.tmpdir(), `quizverse-mcp-${crypto.createHash('sha256').update(userData).digest('hex').slice(0, 24)}.sock`)
+  return path.join(
+    os.tmpdir(),
+    `quizverse-mcp-${crypto.createHash('sha256').update(userData).digest('hex').slice(0, 24)}.sock`
+  )
 }
 
 function timingSafeSecret(actual: unknown, expected: string): boolean {
@@ -240,14 +269,20 @@ function canonical(value: unknown): string {
   }
 
   if (value && typeof value === 'object') {
-    return `{${Object.keys(value).sort().map(key => `${JSON.stringify(key)}:${canonical((value as Record<string, unknown>)[key])}`).join(',')}}`
+    return `{${Object.keys(value)
+      .sort()
+      .map(key => `${JSON.stringify(key)}:${canonical((value as Record<string, unknown>)[key])}`)
+      .join(',')}}`
   }
 
   return JSON.stringify(value)
 }
 
 function payloadHash(tool: string, payload: Record<string, unknown>): string {
-  return crypto.createHash('sha256').update(`${tool}\0${canonical(payload)}`).digest('hex')
+  return crypto
+    .createHash('sha256')
+    .update(`${tool}\0${canonical(payload)}`)
+    .digest('hex')
 }
 
 function validate(policy: ToolPolicy, request: BrokerRequest): Record<string, unknown> {
@@ -255,13 +290,14 @@ function validate(policy: ToolPolicy, request: BrokerRequest): Record<string, un
     throw new Error('Unknown QuizVerse MCP tool')
   }
 
-  if (request.rpc && !([policy.rpc, ...(policy.rpcs ?? [])].filter(Boolean).includes(request.rpc))) {
+  if (request.rpc && ![policy.rpc, ...(policy.rpcs ?? [])].filter(Boolean).includes(request.rpc)) {
     throw new Error('RPC is outside the dedicated QuizVerse MCP allowlist')
   }
 
-  const payload = request.payload && typeof request.payload === 'object' && !Array.isArray(request.payload)
-    ? { ...request.payload }
-    : {}
+  const payload =
+    request.payload && typeof request.payload === 'object' && !Array.isArray(request.payload)
+      ? { ...request.payload }
+      : {}
 
   for (const key of Object.keys(payload)) {
     if (!policy.allowedKeys.includes(key)) {
@@ -305,11 +341,17 @@ function validate(policy: ToolPolicy, request: BrokerRequest): Record<string, un
     }
   }
 
-  if ('game_id' in payload) {payload.game_id = GAME_ID}
+  if ('game_id' in payload) {
+    payload.game_id = GAME_ID
+  }
 
-  if ('gameId' in payload) {payload.gameId = GAME_ID}
+  if ('gameId' in payload) {
+    payload.gameId = GAME_ID
+  }
 
-  if ('gameID' in payload) {payload.gameID = GAME_ID}
+  if ('gameID' in payload) {
+    payload.gameID = GAME_ID
+  }
 
   return payload
 }
@@ -337,17 +379,23 @@ function validateResponse(
 }
 
 function validateJsonValue(value: unknown, depth: number): void {
-  if (depth > 12) {throw new Error('Response nesting exceeds the contract limit')}
+  if (depth > 12) {
+    throw new Error('Response nesting exceeds the contract limit')
+  }
 
   if (
     value === null ||
     typeof value === 'string' ||
     typeof value === 'boolean' ||
     (typeof value === 'number' && Number.isFinite(value))
-  ) {return}
+  ) {
+    return
+  }
 
   if (Array.isArray(value)) {
-    for (const item of value) {validateJsonValue(item, depth + 1)}
+    for (const item of value) {
+      validateJsonValue(item, depth + 1)
+    }
 
     return
   }
@@ -367,7 +415,9 @@ function readIdempotency(filePath: string): Record<string, IdempotencyRecord> {
   try {
     const parsed = JSON.parse(fs.readFileSync(filePath, 'utf8'))
 
-    if (!parsed || typeof parsed !== 'object') {return {}}
+    if (!parsed || typeof parsed !== 'object') {
+      return {}
+    }
 
     return Object.fromEntries(
       Object.entries(parsed).map(([key, value]) => {
@@ -396,7 +446,11 @@ export function startQuizverseMcpBroker(options: QvMcpBrokerOptions): Promise<ne
   }
 
   if (process.platform !== 'win32') {
-    try { fs.unlinkSync(socketPath) } catch { /* missing stale socket */ }
+    try {
+      fs.unlinkSync(socketPath)
+    } catch {
+      /* missing stale socket */
+    }
   }
 
   const challenges = new Map<string, ChallengeRecord>()
@@ -417,7 +471,9 @@ export function startQuizverseMcpBroker(options: QvMcpBrokerOptions): Promise<ne
 
       const newline = buffer.indexOf('\n')
 
-      if (newline < 0) {return}
+      if (newline < 0) {
+        return
+      }
       const line = buffer.slice(0, newline)
       buffer = ''
 
@@ -444,21 +500,27 @@ export function startQuizverseMcpBroker(options: QvMcpBrokerOptions): Promise<ne
           } else if (policy.authenticated && capability.authKind !== 'authenticated') {
             throw new Error(`${request.tool} requires an authenticated QuizVerse account`)
           } else if (request.operation === 'tutor' && policy.tutorPath) {
-            if (!request.tutorPath || !policy.tutorPath.test(request.tutorPath)) {throw new Error('TutorX path is not allowed')}
+            if (!request.tutorPath || !policy.tutorPath.test(request.tutorPath)) {
+              throw new Error('TutorX path is not allowed')
+            }
             result = validateResponse(request.tool!, await handlers.tutor(request.tutorPath))
           } else if (request.operation === 'read' && !policy.write) {
             const payload = validate(policy, request)
-            result = validateResponse(
-              request.tool!,
-              await handlers.rpc(request.rpc || policy.rpc || '', payload),
-              { payload, rpc: request.rpc || policy.rpc }
-            )
+            result = validateResponse(request.tool!, await handlers.rpc(request.rpc || policy.rpc || '', payload), {
+              payload,
+              rpc: request.rpc || policy.rpc
+            })
           } else if (request.operation === 'prepare' && policy.write) {
             const payload = validate(policy, request)
             const hash = payloadHash(request.tool!, payload)
             const existing = idempotency[request.idempotencyKey || '']
 
-            if (existing && (existing.playerId !== capability.playerId || existing.tool !== request.tool || existing.payloadHash !== hash)) {
+            if (
+              existing &&
+              (existing.playerId !== capability.playerId ||
+                existing.tool !== request.tool ||
+                existing.payloadHash !== hash)
+            ) {
               throw new Error('Idempotency key was already bound to different input')
             }
 
@@ -468,7 +530,8 @@ export function startQuizverseMcpBroker(options: QvMcpBrokerOptions): Promise<ne
               } else {
                 result = {
                   idempotency_state: existing.status === 'pending' ? 'unknown' : existing.status,
-                  message: existing.error || 'The prior mutation outcome requires reconciliation; it will not be retried.'
+                  message:
+                    existing.error || 'The prior mutation outcome requires reconciliation; it will not be retried.'
                 }
               }
             } else {
@@ -506,7 +569,9 @@ export function startQuizverseMcpBroker(options: QvMcpBrokerOptions): Promise<ne
             const payload = validate(policy, request)
             const record = challenges.get(request.challenge || '')
 
-            if (!record || !record.approved || record.state !== 'approved' || record.expiresAt < Date.now()) {throw new Error('Approval challenge is invalid, denied, expired, or already consumed')}
+            if (!record || !record.approved || record.state !== 'approved' || record.expiresAt < Date.now()) {
+              throw new Error('Approval challenge is invalid, denied, expired, or already consumed')
+            }
             const hash = payloadHash(request.tool!, payload)
 
             if (
@@ -514,14 +579,20 @@ export function startQuizverseMcpBroker(options: QvMcpBrokerOptions): Promise<ne
               record.tool !== request.tool ||
               record.idempotencyKey !== request.idempotencyKey ||
               record.payloadHash !== hash
-            ) {throw new Error('Approval challenge does not match this player, tool, or payload')}
+            ) {
+              throw new Error('Approval challenge does not match this player, tool, or payload')
+            }
 
             record.state = 'executing'
             challenges.delete(request.challenge || '')
             const existing = idempotency[record.idempotencyKey]
 
             if (existing) {
-              if (existing.payloadHash !== hash || existing.playerId !== capability.playerId || existing.tool !== request.tool) {
+              if (
+                existing.payloadHash !== hash ||
+                existing.playerId !== capability.playerId ||
+                existing.tool !== request.tool
+              ) {
                 throw new Error('Idempotency key was already bound to different input')
               }
 
@@ -580,12 +651,14 @@ export function startQuizverseMcpBroker(options: QvMcpBrokerOptions): Promise<ne
             operation: request.operation,
             tool: request.tool
           })
-          socket.end(`${JSON.stringify({
-            code: typeof (error as { code?: unknown })?.code === 'number' ? (error as { code: number }).code : -32003,
-            error: error instanceof Error ? error.message.slice(0, 300) : 'QuizVerse broker request failed',
-            id: request.id,
-            ok: false
-          })}\n`)
+          socket.end(
+            `${JSON.stringify({
+              code: typeof (error as { code?: unknown })?.code === 'number' ? (error as { code: number }).code : -32003,
+              error: error instanceof Error ? error.message.slice(0, 300) : 'QuizVerse broker request failed',
+              id: request.id,
+              ok: false
+            })}\n`
+          )
         }
       })()
     })
@@ -596,7 +669,9 @@ export function startQuizverseMcpBroker(options: QvMcpBrokerOptions): Promise<ne
     server.listen(socketPath, () => {
       server.off('error', reject)
 
-      if (process.platform !== 'win32') {fs.chmodSync(socketPath, 0o600)}
+      if (process.platform !== 'win32') {
+        fs.chmodSync(socketPath, 0o600)
+      }
       resolve(server)
     })
   })
@@ -618,7 +693,9 @@ function rateLimit(rates: Map<string, number[]>, key: string, limit: number): vo
   const now = Date.now()
   const current = (rates.get(key) ?? []).filter(timestamp => now - timestamp < 60_000)
 
-  if (current.length >= limit) {throw new Error('QuizVerse MCP broker rate limit exceeded')}
+  if (current.length >= limit) {
+    throw new Error('QuizVerse MCP broker rate limit exceeded')
+  }
   current.push(now)
   rates.set(key, current)
 }
@@ -627,6 +704,10 @@ export function stopQuizverseMcpBroker(server: net.Server | null, socketPath: st
   server?.close()
 
   if (process.platform !== 'win32') {
-    try { fs.unlinkSync(socketPath) } catch { /* already removed */ }
+    try {
+      fs.unlinkSync(socketPath)
+    } catch {
+      /* already removed */
+    }
   }
 }

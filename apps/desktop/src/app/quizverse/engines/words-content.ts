@@ -1,6 +1,13 @@
 import { productRequest } from './product-client'
 
-export type WordsDatasetKind = 'crossword' | 'daily-solutions' | 'groups' | 'guess-5' | 'imposter' | 'spell-dictionary' | 'spell-puzzles'
+export type WordsDatasetKind =
+  | 'crossword'
+  | 'daily-solutions'
+  | 'groups'
+  | 'guess-5'
+  | 'imposter'
+  | 'spell-dictionary'
+  | 'spell-puzzles'
 export type WordsDatasetSkin = 'general' | 'gre-easy' | 'shared'
 
 export interface WordsContentDataset {
@@ -43,7 +50,9 @@ function validHex(value: unknown): value is string {
 }
 
 export function parseWordsContentManifest(value: unknown): WordsContentManifest {
-  if (!value || typeof value !== 'object') {throw new Error('Words content manifest is not an object')}
+  if (!value || typeof value !== 'object') {
+    throw new Error('Words content manifest is not an object')
+  }
   const raw = value as Record<string, unknown>
 
   if (
@@ -69,7 +78,9 @@ export function parseWordsContentManifest(value: unknown): WordsContentManifest 
   }
 
   const datasets = raw.datasets.map((entry, index) => {
-    if (!entry || typeof entry !== 'object') {throw new Error(`Words dataset ${index} is malformed`)}
+    if (!entry || typeof entry !== 'object') {
+      throw new Error(`Words dataset ${index} is malformed`)
+    }
     const dataset = entry as Record<string, unknown>
     const id = String(dataset.id ?? '')
     const url = String(dataset.url ?? '')
@@ -80,7 +91,9 @@ export function parseWordsContentManifest(value: unknown): WordsContentManifest 
       !/^[A-Za-z0-9._-]{1,100}$/.test(id) ||
       ids.has(id) ||
       !/^\/api\/words\/content\/[A-Za-z0-9._-]+$/.test(url) ||
-      !['crossword', 'daily-solutions', 'groups', 'guess-5', 'imposter', 'spell-dictionary', 'spell-puzzles'].includes(kind) ||
+      !['crossword', 'daily-solutions', 'groups', 'guess-5', 'imposter', 'spell-dictionary', 'spell-puzzles'].includes(
+        kind
+      ) ||
       !['general', 'gre-easy', 'shared'].includes(skin) ||
       !validHex(dataset.sha256) ||
       !Number.isInteger(dataset.bytes) ||
@@ -131,16 +144,24 @@ async function sha256(text: string): Promise<string> {
 }
 
 function itemCount(value: unknown): number {
-  if (Array.isArray(value)) {return value.length}
+  if (Array.isArray(value)) {
+    return value.length
+  }
 
   if (value && typeof value === 'object') {
     const root = value as Record<string, unknown>
 
-    if (Array.isArray(root.items)) {return root.items.length}
+    if (Array.isArray(root.items)) {
+      return root.items.length
+    }
 
-    if (Array.isArray(root.words)) {return root.words.length}
+    if (Array.isArray(root.words)) {
+      return root.words.length
+    }
 
-    if (Array.isArray(root.puzzles)) {return root.puzzles.length}
+    if (Array.isArray(root.puzzles)) {
+      return root.puzzles.length
+    }
   }
 
   return 0
@@ -172,11 +193,11 @@ async function fetchAndVerifyDataset<T>(
     throw new Error(`Words content ${dataset.id} byte length does not match its manifest`)
   }
 
-  if (await sha256(raw) !== dataset.sha256) {
+  if ((await sha256(raw)) !== dataset.sha256) {
     throw new Error(`Words content ${dataset.id} failed SHA-256 integrity verification`)
   }
 
-  const parsed = typeof response.data === 'string' ? JSON.parse(response.data) as T : response.data as T
+  const parsed = typeof response.data === 'string' ? (JSON.parse(response.data) as T) : (response.data as T)
 
   if (itemCount(parsed) < dataset.min_items) {
     throw new Error(`Words content ${dataset.id} is incomplete`)
@@ -196,7 +217,9 @@ export async function loadWordsDataset<T>(
   const key = `${kind}:${skin}`
   const active = inflight.get(key)
 
-  if (active) {return active as Promise<LoadedWordsDataset<T>>}
+  if (active) {
+    return active as Promise<LoadedWordsDataset<T>>
+  }
 
   const request = (async () => {
     let manifest: WordsContentManifest
@@ -204,16 +227,24 @@ export async function loadWordsDataset<T>(
     try {
       manifest = await fetchManifest()
     } catch (error) {
-      if (!/manifest.*(?:malformed|expired)|dataset.*malformed/i.test(error instanceof Error ? error.message : String(error))) {
+      if (
+        !/manifest.*(?:malformed|expired)|dataset.*malformed/i.test(
+          error instanceof Error ? error.message : String(error)
+        )
+      ) {
         throw error
       }
 
       manifest = await fetchManifest('reload')
     }
 
-    let dataset = manifest.datasets.find(candidate => candidate.kind === kind && (candidate.skin === skin || candidate.skin === 'shared'))
+    let dataset = manifest.datasets.find(
+      candidate => candidate.kind === kind && (candidate.skin === skin || candidate.skin === 'shared')
+    )
 
-    if (!dataset) {throw new Error(`Words content ${kind}/${skin} is not published in manifest ${manifest.content_version}`)}
+    if (!dataset) {
+      throw new Error(`Words content ${kind}/${skin} is not published in manifest ${manifest.content_version}`)
+    }
     let response: Awaited<ReturnType<typeof fetchAndVerifyDataset<T>>>
 
     try {
@@ -224,9 +255,13 @@ export async function loadWordsDataset<T>(
       }
 
       manifest = await fetchManifest('reload')
-      dataset = manifest.datasets.find(candidate => candidate.kind === kind && (candidate.skin === skin || candidate.skin === 'shared'))
+      dataset = manifest.datasets.find(
+        candidate => candidate.kind === kind && (candidate.skin === skin || candidate.skin === 'shared')
+      )
 
-      if (!dataset) {throw new Error(`Words content ${kind}/${skin} is not published in manifest ${manifest.content_version}`)}
+      if (!dataset) {
+        throw new Error(`Words content ${kind}/${skin} is not published in manifest ${manifest.content_version}`)
+      }
       response = await fetchAndVerifyDataset<T>(dataset, 'reload')
     }
 

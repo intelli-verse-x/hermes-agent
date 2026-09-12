@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict'
+import { spawn } from 'node:child_process'
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { spawn } from 'node:child_process'
 
 import { test } from 'vitest'
 
@@ -14,6 +14,7 @@ async function rpcRoundTrip(messages: object[]): Promise<object[]> {
     const child = spawn(process.execPath, [serverPath], { stdio: ['pipe', 'pipe', 'pipe'] })
     let out = ''
     const expected = messages.filter(m => Object.prototype.hasOwnProperty.call(m, 'id')).length
+
     const timer = setTimeout(() => {
       child.kill()
       reject(new Error(`timeout; stdout=${out}`))
@@ -21,13 +22,13 @@ async function rpcRoundTrip(messages: object[]): Promise<object[]> {
 
     child.stdout.on('data', chunk => {
       out += chunk.toString()
-      const lines = out
-        .trim()
-        .split(/\n/)
-        .filter(Boolean)
+
+      const lines = out.trim().split(/\n/).filter(Boolean)
+
       if (lines.length >= expected) {
         clearTimeout(timer)
         child.kill()
+
         try {
           resolve(lines.map(line => JSON.parse(line)))
         } catch (error) {
@@ -68,9 +69,11 @@ test('foundrly-mcp server answers initialize, tools/list, and fd_product_knowled
   const init = replies.find(r => (r as { id?: number }).id === 1) as {
     result?: { serverInfo?: { name?: string } }
   }
+
   const list = replies.find(r => (r as { id?: number }).id === 2) as {
     result?: { tools?: Array<{ name: string }> }
   }
+
   const call = replies.find(r => (r as { id?: number }).id === 3) as {
     result?: {
       structuredContent?: { data?: { boundaries?: { mailStudio?: boolean; crm?: boolean }; text?: string } }

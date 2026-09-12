@@ -86,36 +86,42 @@ test('real broker handles context prompt and reconnect after authentication', as
         for (;;) {
           const newline = buffer.indexOf('\n')
 
-          if (newline < 0) {break}
+          if (newline < 0) {
+            break
+          }
           received.push(JSON.parse(buffer.slice(0, newline)))
           buffer = buffer.slice(newline + 1)
 
           if (received.length === 1) {
-            socket.write(`${JSON.stringify({
-              protocolVersion: 1,
-              requestId: 'request-real-0002',
-              issuedAt: Date.now(),
-              expiresAt: Date.now() + 10_000,
-              payload: {
-                kind: 'prompt-submit',
-                modality: 'text',
-                text: 'Review this selection',
-                context: { uri: 'file:///workspace/a.ts', text: 'const answer = 42' }
-              }
-            })}\n`)
+            socket.write(
+              `${JSON.stringify({
+                protocolVersion: 1,
+                requestId: 'request-real-0002',
+                issuedAt: Date.now(),
+                expiresAt: Date.now() + 10_000,
+                payload: {
+                  kind: 'prompt-submit',
+                  modality: 'text',
+                  text: 'Review this selection',
+                  context: { uri: 'file:///workspace/a.ts', text: 'const answer = 42' }
+                }
+              })}\n`
+            )
           } else if (received.length === 2) {
-            socket.write(`${JSON.stringify({
-              protocolVersion: 1,
-              requestId: 'request-real-0004',
-              issuedAt: Date.now(),
-              expiresAt: Date.now() + 10_000,
-              payload: {
-                kind: 'workspace-edit-review',
-                editId: 'edit-1',
-                reviewDigest: 'digest',
-                accepted: true
-              }
-            })}\n`)
+            socket.write(
+              `${JSON.stringify({
+                protocolVersion: 1,
+                requestId: 'request-real-0004',
+                issuedAt: Date.now(),
+                expiresAt: Date.now() + 10_000,
+                payload: {
+                  kind: 'workspace-edit-review',
+                  editId: 'edit-1',
+                  reviewDigest: 'digest',
+                  accepted: true
+                }
+              })}\n`
+            )
           } else {
             socket.end()
             resolve(received)

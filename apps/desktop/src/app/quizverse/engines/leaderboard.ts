@@ -6,7 +6,7 @@ export interface LeaderboardRow {
 }
 
 export function normalizeLeaderboard(value: unknown): LeaderboardRow[] {
-  const record = value && typeof value === 'object' ? value as Record<string, unknown> : {}
+  const record = value && typeof value === 'object' ? (value as Record<string, unknown>) : {}
   const rows = Array.isArray(record.records) ? record.records : []
 
   return rows
@@ -22,12 +22,14 @@ export function normalizeLeaderboard(value: unknown): LeaderboardRow[] {
         return []
       }
 
-      return [{
-        ownerId: String(item.ownerId ?? item.owner_id ?? ''),
-        rank: Number.isInteger(item.rank) && Number(item.rank) > 0 ? Number(item.rank) : index + 1,
-        score,
-        username: String(item.username ?? item.playerName ?? `Player ${index + 1}`)
-      }]
+      return [
+        {
+          ownerId: String(item.ownerId ?? item.owner_id ?? ''),
+          rank: Number.isInteger(item.rank) && Number(item.rank) > 0 ? Number(item.rank) : index + 1,
+          score,
+          username: String(item.username ?? item.playerName ?? `Player ${index + 1}`)
+        }
+      ]
     })
     .sort((left, right) => left.rank - right.rank || right.score - left.score)
 }

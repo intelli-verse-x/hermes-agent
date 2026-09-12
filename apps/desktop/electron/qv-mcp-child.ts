@@ -42,7 +42,11 @@ export function scrubQuizverseMcpSecret(env: NodeJS.ProcessEnv): NodeJS.ProcessE
 
 export async function startQuizverseMcpChild(options: QvMcpChildOptions): Promise<ChildProcess> {
   if (process.platform !== 'win32') {
-    try { fs.unlinkSync(options.serverSocket) } catch { /* no stale socket */ }
+    try {
+      fs.unlinkSync(options.serverSocket)
+    } catch {
+      /* no stale socket */
+    }
   }
 
   const child = spawn(options.executable, [options.serverPath], {
@@ -108,13 +112,15 @@ export async function stopQuizverseMcpChild(
   }
 
   if (platform !== 'win32') {
-    try { fs.unlinkSync(serverSocket) } catch { /* already removed */ }
+    try {
+      fs.unlinkSync(serverSocket)
+    } catch {
+      /* already removed */
+    }
   }
 }
 
-export async function probeQuizverseMcp(
-  serverSocket: string
-): Promise<{ profileText: string; toolIds: string[] }> {
+export async function probeQuizverseMcp(serverSocket: string): Promise<{ profileText: string; toolIds: string[] }> {
   const socket = net.createConnection(serverSocket)
   socket.setEncoding('utf8')
   let buffer = ''
@@ -149,8 +155,11 @@ export async function probeQuizverseMcp(
       waiters.set(id, message => {
         clearTimeout(timer)
 
-        if (message.error) {reject(new Error(message.error.message || `QuizVerse MCP probe failed: ${method}`))}
-        else {resolve(message.result)}
+        if (message.error) {
+          reject(new Error(message.error.message || `QuizVerse MCP probe failed: ${method}`))
+        } else {
+          resolve(message.result)
+        }
       })
       socket.write(`${JSON.stringify({ id, jsonrpc: '2.0', method, ...(params ? { params } : {}) })}\n`)
     })
@@ -165,12 +174,16 @@ export async function probeQuizverseMcp(
     const profile = await request('resources/read', { uri: 'qv://player/profile' })
     const profileText = profile.contents?.[0]?.text
 
-    if (typeof profileText !== 'string') {throw new Error('QuizVerse profile resource is unavailable')}
+    if (typeof profileText !== 'string') {
+      throw new Error('QuizVerse profile resource is unavailable')
+    }
 
     return {
       profileText,
       toolIds: Array.isArray(listed.tools)
-        ? listed.tools.map((tool: { name?: unknown }) => tool.name).filter((name: unknown): name is string => typeof name === 'string')
+        ? listed.tools
+            .map((tool: { name?: unknown }) => tool.name)
+            .filter((name: unknown): name is string => typeof name === 'string')
         : []
     }
   } finally {
@@ -183,7 +196,9 @@ function cryptoRandomOffset(): number {
 }
 
 function waitForExit(child: ChildProcess, timeoutMs: number): Promise<boolean> {
-  if (!isQuizverseMcpChildRunning(child)) {return Promise.resolve(true)}
+  if (!isQuizverseMcpChildRunning(child)) {
+    return Promise.resolve(true)
+  }
 
   return new Promise(resolve => {
     const timeout = setTimeout(() => {

@@ -3,13 +3,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { externalToPlayQuestions, isoWeekParts } from './play-questions'
-import {
-  $playSession,
-  $playSubmission,
-  fetchPlayQuestions,
-  type PlayMode,
-  submitPlayResult
-} from './play-store'
+import { $playSession, $playSubmission, fetchPlayQuestions, type PlayMode, submitPlayResult } from './play-store'
 
 const mode: PlayMode = {
   available: true,
@@ -116,30 +110,32 @@ describe('native Play contracts', () => {
       [650]
     )
 
-    expect(result).toEqual(expect.objectContaining({
-      authority: 'unranked',
-      correct: 1,
-      ranked: false,
-      score: 100
-    }))
+    expect(result).toEqual(
+      expect.objectContaining({
+        authority: 'unranked',
+        correct: 1,
+        ranked: false,
+        score: 100
+      })
+    )
     expect(rpc).not.toHaveBeenCalled()
     expect($playSubmission.get()).toEqual(expect.objectContaining({ phase: 'submitted', result }))
   })
 
   it('rejects incomplete grading instead of trusting the client score', async () => {
-    const rpc = vi.fn(async (name: string) =>
-      name === 'quiz_submit_result_v2' ? { success: true } : { rank: 1 }
-    )
+    const rpc = vi.fn(async (name: string) => (name === 'quiz_submit_result_v2' ? { success: true } : { rank: 1 }))
 
     installBridge(rpc)
-    await expect(submitPlayResult(
-      { ...mode, id: 'invalid-grade-mode' },
-      [{ correctIndex: 0, id: 'invalid-grade-q', options: ['A', 'B'], prompt: 'Grade?' }],
-      [0],
-      'invalid-grade-pack',
-      900,
-      [850]
-    )).rejects.toThrow('no authoritative score')
+    await expect(
+      submitPlayResult(
+        { ...mode, id: 'invalid-grade-mode' },
+        [{ correctIndex: 0, id: 'invalid-grade-q', options: ['A', 'B'], prompt: 'Grade?' }],
+        [0],
+        'invalid-grade-pack',
+        900,
+        [850]
+      )
+    ).rejects.toThrow('no authoritative score')
     expect(rpc.mock.calls.map(call => call[0])).toEqual(['quiz_submit_result_v2'])
   })
 

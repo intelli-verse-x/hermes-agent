@@ -276,9 +276,9 @@ export function ConnectTab() {
           </Field>
           <p className="text-[0.68rem] leading-relaxed text-muted-foreground/70">
             Your per-employee profile is fetched from the portal automatically on sign-in (manual import stays as an
-            override). Connecting prompts for your admin password; needs wireguard-tools on macOS/Linux or WireGuard
-            for Windows. The status lamp turns green only when a fresh handshake is seen AND traffic actually egresses
-            via the exit IP above.
+            override). Connecting prompts for your admin password; needs wireguard-tools on macOS/Linux or WireGuard for
+            Windows. The status lamp turns green only when a fresh handshake is seen AND traffic actually egresses via
+            the exit IP above.
           </p>
         </section>
 
@@ -373,10 +373,10 @@ export function ConnectTab() {
             />
           </Field>
           <p className="text-[0.68rem] leading-relaxed text-muted-foreground/70">
-            Checked on launch and every 4 hours. The default is the official S3 feed that CI publishes on every
-            release; when a newer version is there, a non-blocking "Update available" button appears in the strip
-            above and the tray, and clicking it downloads, installs and restarts in place. A URL ending in .json is
-            treated as a legacy hand-published manifest (the button opens the download instead).
+            Checked on launch and every 4 hours. The default is the official S3 feed that CI publishes on every release;
+            when a newer version is there, a non-blocking "Update available" button appears in the strip above and the
+            tray, and clicking it downloads, installs and restarts in place. A URL ending in .json is treated as a
+            legacy hand-published manifest (the button opens the download instead).
           </p>
         </section>
 
@@ -433,7 +433,11 @@ export function ConnectTab() {
               onClick={() => void runHermesInit()}
               size="sm"
             >
-              {initBusy ? 'Installing…' : hermes?.installerAvailable ? 'Install local Intelliverse runtime' : 'Initialize local Intelliverse runtime'}
+              {initBusy
+                ? 'Installing…'
+                : hermes?.installerAvailable
+                  ? 'Install local Intelliverse runtime'
+                  : 'Initialize local Intelliverse runtime'}
             </Button>
           </div>
           {initLog && (
@@ -442,11 +446,11 @@ export function ConnectTab() {
             </pre>
           )}
           <p className="text-[0.68rem] leading-relaxed text-muted-foreground/70">
-            Runs automatically after your first sign-in (the secret is provisioned from the portal; the buttons stay
-            for re-runs and overrides): validates the S2S credentials with a real client-credentials grant (token
-            verified against the pool's JWKS), stores them keychain-backed (safeStorage), then initializes the local
-            Intelliverse runtime through the managed installer and points it at the LiteLLM gateway. Your gateway
-            token and LiteLLM key remain in protected local runtime storage.
+            Runs automatically after your first sign-in (the secret is provisioned from the portal; the buttons stay for
+            re-runs and overrides): validates the S2S credentials with a real client-credentials grant (token verified
+            against the pool's JWKS), stores them keychain-backed (safeStorage), then initializes the local Intelliverse
+            runtime through the managed installer and points it at the LiteLLM gateway. Your gateway token and LiteLLM
+            key remain in protected local runtime storage.
           </p>
         </section>
       </div>

@@ -36,7 +36,10 @@ test('ixDirectMcpTiles keeps only public HTTPS endpoints on our domains', () => 
     { id: 'no-url' }
   ])
 
-  assert.deepEqual(tiles.map(t => t.id), ['notifuse', 'open-seo'])
+  assert.deepEqual(
+    tiles.map(t => t.id),
+    ['notifuse', 'open-seo']
+  )
 })
 
 test('ixDirectMcpTiles drops denylisted broken endpoints even on our domains', () => {
@@ -48,7 +51,10 @@ test('ixDirectMcpTiles drops denylisted broken endpoints even on our domains', (
     { id: 'notifuse', mcpUrl: 'https://notifuse-mcp.intelli-verse-x.ai/mcp' }
   ])
 
-  assert.deepEqual(tiles.map(t => t.id), ['notifuse'])
+  assert.deepEqual(
+    tiles.map(t => t.id),
+    ['notifuse']
+  )
 })
 
 test('the bundled registry snapshot yields the EKS MCP fleet', () => {
@@ -74,7 +80,12 @@ test('tileNeedsBearer: bearer hints yes, "no token" wrappers no', () => {
 
 test('ixDirectMcpServersYaml emits url/timeout and env-var bearer placeholders', () => {
   const yaml = ixDirectMcpServersYaml([
-    { id: 'notifuse', label: 'Email', mcpUrl: 'https://notifuse-mcp.intelli-verse-x.ai/mcp', mcpAuthHint: 'Bearer = key' },
+    {
+      id: 'notifuse',
+      label: 'Email',
+      mcpUrl: 'https://notifuse-mcp.intelli-verse-x.ai/mcp',
+      mcpAuthHint: 'Bearer = key'
+    },
     { id: 'intelliverse-mcp', mcpUrl: 'https://mcp.intelli-verse-x.ai/api/mcp', mcpAuthHint: 'Bearer = key' },
     { id: 'grafana', mcpUrl: 'https://grafana-mcp.intelli-verse-x.ai/', mcpAuthHint: 'no token' }
   ])

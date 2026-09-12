@@ -16,11 +16,9 @@ import {
   WEEKLY_RAW_JSON_NEGATIVE_FIXTURES
 } from '../../../packages/quizverse-mcp/test/response-fixtures.mjs'
 
-const {
-  quizverseMcpSocketPath,
-  startQuizverseMcpBroker,
-  stopQuizverseMcpBroker
-} = await import(new URL('./qv-mcp-broker.ts', import.meta.url).href)
+const { quizverseMcpSocketPath, startQuizverseMcpBroker, stopQuizverseMcpBroker } = await import(
+  new URL('./qv-mcp-broker.ts', import.meta.url).href
+)
 
 function send(socketPath: string, request: Record<string, unknown>): Promise<Record<string, unknown>> {
   return new Promise((resolve, reject) => {
@@ -32,7 +30,9 @@ function send(socketPath: string, request: Record<string, unknown>): Promise<Rec
       text += chunk
       const newline = text.indexOf('\n')
 
-      if (newline >= 0) {resolve(JSON.parse(text.slice(0, newline)))}
+      if (newline >= 0) {
+        resolve(JSON.parse(text.slice(0, newline)))
+      }
     })
     socket.on('error', reject)
   })
@@ -60,9 +60,10 @@ function sendRaw(socketPath: string, line: string): Promise<Record<string, unkno
 test('enforces and normalizes every routed quiz fetch contract', async t => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'qv-broker-fetch-'))
 
-  const socketPath = process.platform === 'win32'
-    ? `\\\\.\\pipe\\qv-broker-fetch-${crypto.randomUUID()}`
-    : path.join(root, 'broker.sock')
+  const socketPath =
+    process.platform === 'win32'
+      ? `\\\\.\\pipe\\qv-broker-fetch-${crypto.randomUUID()}`
+      : path.join(root, 'broker.sock')
 
   const secret = crypto.randomBytes(48).toString('base64url')
   const byRpc = new Map(Object.values(QUIZ_FETCH_ROUTE_FIXTURES).map(item => [item.rpc, item]))
@@ -73,11 +74,12 @@ test('enforces and normalizes every routed quiz fetch contract', async t => {
     handlers: {
       approve: async () => false,
       capability: async () => ({ authKind: 'guest', playerId: 'guest-1' }),
-      rpc: async (name, payload) => name === 'quizverse_fetch_external_quiz'
-        ? EXTERNAL_PROVIDER_FIXTURES[String(payload.provider)]
-        : name === 'quizverse_weekly_fetch'
-          ? weeklyResponse
-          : byRpc.get(name)!.response,
+      rpc: async (name, payload) =>
+        name === 'quizverse_fetch_external_quiz'
+          ? EXTERNAL_PROVIDER_FIXTURES[String(payload.provider)]
+          : name === 'quizverse_weekly_fetch'
+            ? weeklyResponse
+            : byRpc.get(name)!.response,
       tutor: async () => ({})
     },
     idempotencyPath: path.join(root, 'idempotency.json'),
@@ -127,15 +129,14 @@ test('enforces and normalizes every routed quiz fetch contract', async t => {
     })
 
     assert.equal(response.ok, true)
-    assert.equal(
-      (response.result as { data: { provenance: { provider: string } } }).data.provenance.provider,
-      provider
-    )
+    assert.equal((response.result as { data: { provenance: { provider: string } } }).data.provenance.provider, provider)
 
     if (provider === 'starwars') {
-      const question = (response.result as {
-        data: { questions: Array<{ correctIndex: number; options: string[]; prompt: string }> }
-      }).data.questions[0]
+      const question = (
+        response.result as {
+          data: { questions: Array<{ correctIndex: number; options: string[]; prompt: string }> }
+        }
+      ).data.questions[0]
 
       assert.match(question.prompt, /Luke Skywalker.*eyes.*Star Wars/i)
       assert.equal(question.options[question.correctIndex], 'Blue')
@@ -159,10 +160,7 @@ test('enforces and normalizes every routed quiz fetch contract', async t => {
     })
 
     assert.equal(response.ok, true, fixtureName)
-    assert.ok(
-      (response.result as { data: { questions: unknown[] } }).data.questions.length > 0,
-      fixtureName
-    )
+    assert.ok((response.result as { data: { questions: unknown[] } }).data.questions.length > 0, fixtureName)
   }
 
   for (const [fixtureName, raw] of Object.entries(WEEKLY_RAW_JSON_NEGATIVE_FIXTURES)) {
@@ -207,9 +205,10 @@ function withoutSource(args: Record<string, unknown>): Record<string, unknown> {
 test('maps all native subdomain contracts through the broker exactly', async t => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'qv-broker-native-'))
 
-  const socketPath = process.platform === 'win32'
-    ? `\\\\.\\pipe\\qv-broker-native-${crypto.randomUUID()}`
-    : path.join(root, 'broker.sock')
+  const socketPath =
+    process.platform === 'win32'
+      ? `\\\\.\\pipe\\qv-broker-native-${crypto.randomUUID()}`
+      : path.join(root, 'broker.sock')
 
   const secret = crypto.randomBytes(48).toString('base64url')
   const tournamentPackIdempotencyKey = crypto.randomUUID()
@@ -218,73 +217,113 @@ test('maps all native subdomain contracts through the broker exactly', async t =
   const cases = [
     ['qv_tournament_get', { slug: 'weekly-cup' }, 'tournament_get', { slug: 'weekly-cup' }],
     ['qv_tournament_bracket', { slug: 'weekly-cup' }, 'tournament_bracket_state', { slug: 'weekly-cup' }],
-    ['qv_tournament_leaderboard', { limit: 25, slug: 'weekly-cup', view: 'top' }, 'tournament_leaderboard_top', { limit: 25, slug: 'weekly-cup' }],
+    [
+      'qv_tournament_leaderboard',
+      { limit: 25, slug: 'weekly-cup', view: 'top' },
+      'tournament_leaderboard_top',
+      { limit: 25, slug: 'weekly-cup' }
+    ],
     ['qv_learning_track_get', { track_id: 'featured' }, 'learning_track_get', { track_id: 'featured' }],
     ['qv_words_duel_get', { exam: 'gre' }, 'quizverse_words_duel_get', { exam: 'gre' }],
-    ['qv_live_events_list', { maxPages: 2, status: 'published' }, 'creator_event_list', { maxPages: 2, status: 'published' }],
-    ['qv_live_event_get', { creatorId: 'creator-1', eventId: 'event-1' }, 'creator_event_get', { creatorId: 'creator-1', eventId: 'event-1' }],
-    ['qv_tournament_submit_pack', {
-      correct: 8,
-      duration_ms: 12_000,
-      idempotency_key: tournamentPackIdempotencyKey,
-      pack_id: 'pack-1',
-      slug: 'weekly-cup',
-      total: 10
-    }, 'tournament_submit_pack_result', {
-      correct: 8,
-      duration_ms: 12_000,
-      idempotency_key: tournamentPackIdempotencyKey,
-      pack_id: 'pack-1',
-      slug: 'weekly-cup',
-      total: 10
-    }],
-    ['qv_tournament_submit_picks', {
-      idempotency_key: tournamentPicksIdempotencyKey,
-      picks: [{ answer_id: 'a-1', question_id: 'q-1' }],
-      slug: 'weekly-cup'
-    }, 'tournament_submit_picks', {
-      idempotency_key: tournamentPicksIdempotencyKey,
-      picks: [{ answer_id: 'a-1', question_id: 'q-1' }],
-      slug: 'weekly-cup'
-    }],
-    ['qv_words_duel_submit', {
-      answers: [0, 1, 2, 3, 0, 1, 2, 3, 0, 1],
-      elapsed_ms: 15_000,
-      exam: 'gre',
-      idempotency_key: crypto.randomUUID()
-    }, 'quizverse_words_duel_submit', {
-      answers: [0, 1, 2, 3, 0, 1, 2, 3, 0, 1],
-      elapsed_ms: 15_000,
-      exam: 'gre'
-    }],
-    ['qv_live_event_join', {
-      creatorId: 'creator-1',
-      deviceId: 'desktop-device-1',
-      eventId: 'event-1',
-      idempotency_key: crypto.randomUUID(),
-      playerName: 'Player One'
-    }, 'creator_event_spa_join', {
-      creatorId: 'creator-1',
-      deviceId: 'desktop-device-1',
-      eventId: 'event-1',
-      playerName: 'Player One'
-    }],
-    ['qv_live_event_submit', {
-      answer: 'Mars',
-      answers: [{ answer: 'Mars', elapsedMs: 1200, questionIdx: 0 }],
-      creatorId: 'creator-1',
-      deviceId: 'desktop-device-1',
-      eventId: 'event-1',
-      idempotency_key: crypto.randomUUID(),
-      playerName: 'Player One'
-    }, 'creator_event_submit', {
-      answer: 'Mars',
-      answers: [{ answer: 'Mars', elapsedMs: 1200, questionIdx: 0 }],
-      creatorId: 'creator-1',
-      deviceId: 'desktop-device-1',
-      eventId: 'event-1',
-      playerName: 'Player One'
-    }]
+    [
+      'qv_live_events_list',
+      { maxPages: 2, status: 'published' },
+      'creator_event_list',
+      { maxPages: 2, status: 'published' }
+    ],
+    [
+      'qv_live_event_get',
+      { creatorId: 'creator-1', eventId: 'event-1' },
+      'creator_event_get',
+      { creatorId: 'creator-1', eventId: 'event-1' }
+    ],
+    [
+      'qv_tournament_submit_pack',
+      {
+        correct: 8,
+        duration_ms: 12_000,
+        idempotency_key: tournamentPackIdempotencyKey,
+        pack_id: 'pack-1',
+        slug: 'weekly-cup',
+        total: 10
+      },
+      'tournament_submit_pack_result',
+      {
+        correct: 8,
+        duration_ms: 12_000,
+        idempotency_key: tournamentPackIdempotencyKey,
+        pack_id: 'pack-1',
+        slug: 'weekly-cup',
+        total: 10
+      }
+    ],
+    [
+      'qv_tournament_submit_picks',
+      {
+        idempotency_key: tournamentPicksIdempotencyKey,
+        picks: [{ answer_id: 'a-1', question_id: 'q-1' }],
+        slug: 'weekly-cup'
+      },
+      'tournament_submit_picks',
+      {
+        idempotency_key: tournamentPicksIdempotencyKey,
+        picks: [{ answer_id: 'a-1', question_id: 'q-1' }],
+        slug: 'weekly-cup'
+      }
+    ],
+    [
+      'qv_words_duel_submit',
+      {
+        answers: [0, 1, 2, 3, 0, 1, 2, 3, 0, 1],
+        elapsed_ms: 15_000,
+        exam: 'gre',
+        idempotency_key: crypto.randomUUID()
+      },
+      'quizverse_words_duel_submit',
+      {
+        answers: [0, 1, 2, 3, 0, 1, 2, 3, 0, 1],
+        elapsed_ms: 15_000,
+        exam: 'gre'
+      }
+    ],
+    [
+      'qv_live_event_join',
+      {
+        creatorId: 'creator-1',
+        deviceId: 'desktop-device-1',
+        eventId: 'event-1',
+        idempotency_key: crypto.randomUUID(),
+        playerName: 'Player One'
+      },
+      'creator_event_spa_join',
+      {
+        creatorId: 'creator-1',
+        deviceId: 'desktop-device-1',
+        eventId: 'event-1',
+        playerName: 'Player One'
+      }
+    ],
+    [
+      'qv_live_event_submit',
+      {
+        answer: 'Mars',
+        answers: [{ answer: 'Mars', elapsedMs: 1200, questionIdx: 0 }],
+        creatorId: 'creator-1',
+        deviceId: 'desktop-device-1',
+        eventId: 'event-1',
+        idempotency_key: crypto.randomUUID(),
+        playerName: 'Player One'
+      },
+      'creator_event_submit',
+      {
+        answer: 'Mars',
+        answers: [{ answer: 'Mars', elapsedMs: 1200, questionIdx: 0 }],
+        creatorId: 'creator-1',
+        deviceId: 'desktop-device-1',
+        eventId: 'event-1',
+        playerName: 'Player One'
+      }
+    ]
   ] as const
 
   const calls: Array<{ name: string; payload: Record<string, unknown> }> = []
@@ -344,11 +383,10 @@ test('maps all native subdomain contracts through the broker exactly', async t =
       assert.equal(response.ok, true, `${toolName}: ${String(response.error ?? '')}`)
       assert.deepEqual(
         response.result,
-        validateAndNormalizeQuizverseResponse(
-          toolName,
-          RESPONSE_FIXTURES[toolName],
-          { payload: mapped.payload, rpc: mapped.rpc }
-        ),
+        validateAndNormalizeQuizverseResponse(toolName, RESPONSE_FIXTURES[toolName], {
+          payload: mapped.payload,
+          rpc: mapped.rpc
+        }),
         `${toolName} response fixture`
       )
 
@@ -396,9 +434,8 @@ test('maps all native subdomain contracts through the broker exactly', async t =
 test('authenticates clients and enforces broker-owned write approval', async t => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'qv-broker-'))
 
-  const socketPath = process.platform === 'win32'
-    ? `\\\\.\\pipe\\qv-broker-test-${crypto.randomUUID()}`
-    : path.join(root, 'broker.sock')
+  const socketPath =
+    process.platform === 'win32' ? `\\\\.\\pipe\\qv-broker-test-${crypto.randomUUID()}` : path.join(root, 'broker.sock')
 
   const secret = crypto.randomBytes(48).toString('base64url')
   const rpcCalls: unknown[] = []
@@ -513,16 +550,17 @@ test('authenticates clients and enforces broker-owned write approval', async t =
 
   const concurrentChallenge = (concurrentPrepared.result as { approval_challenge: string }).approval_challenge
 
-  const execute = (id: string) => send(socketPath, {
-    auth: secret,
-    challenge: concurrentChallenge,
-    id,
-    idempotencyKey: concurrentKey,
-    operation: 'execute',
-    payload: concurrentPayload,
-    rpc: 'tournament_enter',
-    tool: 'qv_tournament_enter'
-  })
+  const execute = (id: string) =>
+    send(socketPath, {
+      auth: secret,
+      challenge: concurrentChallenge,
+      id,
+      idempotencyKey: concurrentKey,
+      operation: 'execute',
+      payload: concurrentPayload,
+      rpc: 'tournament_enter',
+      tool: 'qv_tournament_enter'
+    })
 
   const executions = await Promise.all([execute('5'), execute('6')])
 
@@ -533,9 +571,8 @@ test('authenticates clients and enforces broker-owned write approval', async t =
 test('rejects broader Play RPCs outside the dedicated tool policy', async t => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'qv-broker-'))
 
-  const socketPath = process.platform === 'win32'
-    ? `\\\\.\\pipe\\qv-broker-test-${crypto.randomUUID()}`
-    : path.join(root, 'broker.sock')
+  const socketPath =
+    process.platform === 'win32' ? `\\\\.\\pipe\\qv-broker-test-${crypto.randomUUID()}` : path.join(root, 'broker.sock')
 
   const secret = crypto.randomBytes(48).toString('base64url')
 
@@ -590,11 +627,16 @@ test('rejects broader Play RPCs outside the dedicated tool policy', async t => {
   })
 
   assert.equal(invalidResponse.ok, false)
-  assert.equal((await send(socketPath, {
-    auth: 'wrong-secret-value-that-is-long-enough-to-compare',
-    id: '2',
-    operation: 'capability'
-  })).ok, false)
+  assert.equal(
+    (
+      await send(socketPath, {
+        auth: 'wrong-secret-value-that-is-long-enough-to-compare',
+        id: '2',
+        operation: 'capability'
+      })
+    ).ok,
+    false
+  )
 
   const idempotencyKey = crypto.randomUUID()
 
@@ -654,15 +696,18 @@ test('uses a short brand-scoped local socket path', () => {
   const socketPath = quizverseMcpSocketPath('/a/very/long/path/to/QuizVerse/user/data')
   assert.ok(socketPath.includes('quizverse-mcp-'))
 
-  if (process.platform !== 'win32') {assert.ok(socketPath.length < 104)}
+  if (process.platform !== 'win32') {
+    assert.ok(socketPath.length < 104)
+  }
 })
 
 test('preserves pending crash state across restart and expires challenges', async t => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'qv-broker-restart-'))
 
-  const socketPath = process.platform === 'win32'
-    ? `\\\\.\\pipe\\qv-broker-restart-${crypto.randomUUID()}`
-    : path.join(root, 'broker.sock')
+  const socketPath =
+    process.platform === 'win32'
+      ? `\\\\.\\pipe\\qv-broker-restart-${crypto.randomUUID()}`
+      : path.join(root, 'broker.sock')
 
   const secret = crypto.randomBytes(48).toString('base64url')
   const idempotencyPath = path.join(root, 'idempotency.json')
@@ -670,18 +715,19 @@ test('preserves pending crash state across restart and expires challenges', asyn
   const pendingPayload = { idempotency_key: pendingKey, slug: 'pending', paid_via: 'balance' }
   const canonical = JSON.stringify(pendingPayload, Object.keys(pendingPayload).sort())
 
-  const payloadHash = crypto.createHash('sha256')
-    .update(`qv_tournament_enter\0${canonical}`)
-    .digest('hex')
+  const payloadHash = crypto.createHash('sha256').update(`qv_tournament_enter\0${canonical}`).digest('hex')
 
-  fs.writeFileSync(idempotencyPath, JSON.stringify({
-    [pendingKey]: {
-      payloadHash,
-      playerId: 'player-1',
-      status: 'pending',
-      tool: 'qv_tournament_enter'
-    }
-  }))
+  fs.writeFileSync(
+    idempotencyPath,
+    JSON.stringify({
+      [pendingKey]: {
+        payloadHash,
+        playerId: 'player-1',
+        status: 'pending',
+        tool: 'qv_tournament_enter'
+      }
+    })
+  )
   let rpcCalls = 0
 
   const server = await startQuizverseMcpBroker({

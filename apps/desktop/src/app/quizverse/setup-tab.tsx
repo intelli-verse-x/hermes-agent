@@ -167,8 +167,8 @@ export function SetupTab() {
           <div>
             <h3 className="text-sm font-medium">QuizVerse account</h3>
             <p className="mt-1 text-xs text-muted-foreground">
-              Native Cognito PKCE links the account to the same Nakama identity as web and Unity. Tokens remain in
-              the system keychain.
+              Native Cognito PKCE links the account to the same Nakama identity as web and Unity. Tokens remain in the
+              system keychain.
             </p>
           </div>
           <label className="block space-y-1">
@@ -195,7 +195,8 @@ export function SetupTab() {
             disabled={!settings?.cognitoDomain || !settings.cognitoClientId || !settings.cognitoIssuer}
             onClick={() => {
               setAccountStatus('Opening secure sign-in…')
-              void window.hermesDesktop.quizverse?.authStart()
+              void window.hermesDesktop.quizverse
+                ?.authStart()
                 .then(() => setAccountStatus('Complete sign-in in your browser.'))
                 .catch(error => setAccountStatus(error instanceof Error ? error.message : String(error)))
             }}
@@ -205,13 +206,20 @@ export function SetupTab() {
           >
             Connect account
           </Button>
-          {accountStatus && <p className="text-xs" role="status">{accountStatus}</p>}
+          {accountStatus && (
+            <p className="text-xs" role="status">
+              {accountStatus}
+            </p>
+          )}
         </section>
 
         {/* Supervisor status + controls */}
         <section className="rounded-lg border border-(--ui-border-primary) bg-(--ui-bg-quinary) p-4">
           <div className="flex items-center gap-2">
-            <span aria-hidden="true" className={cn('size-2 shrink-0 rounded-full', STATE_DOT[state] ?? STATE_DOT.stopped)} />
+            <span
+              aria-hidden="true"
+              className={cn('size-2 shrink-0 rounded-full', STATE_DOT[state] ?? STATE_DOT.stopped)}
+            />
             <span className="text-sm font-medium text-foreground">{TUTORX_NAME}</span>
             <span className="min-w-0 flex-1 truncate text-xs text-muted-foreground">{status?.detail ?? ''}</span>
           </div>
@@ -242,11 +250,19 @@ export function SetupTab() {
         <section className="space-y-3">
           <FieldLabel>{TUTORX_NAME} mode</FieldLabel>
           <div className="flex items-center gap-2">
-            <Button onClick={() => setTutorMode('local')} size="sm" variant={tutorMode === 'local' ? 'default' : 'secondary'}>
+            <Button
+              onClick={() => setTutorMode('local')}
+              size="sm"
+              variant={tutorMode === 'local' ? 'default' : 'secondary'}
+            >
               <Codicon name="device-desktop" size="0.8rem" />
               Local
             </Button>
-            <Button onClick={() => setTutorMode('remote')} size="sm" variant={tutorMode === 'remote' ? 'default' : 'secondary'}>
+            <Button
+              onClick={() => setTutorMode('remote')}
+              size="sm"
+              variant={tutorMode === 'remote' ? 'default' : 'secondary'}
+            >
               <Codicon name="cloud" size="0.8rem" />
               Remote
             </Button>
@@ -269,8 +285,17 @@ export function SetupTab() {
                     Install a managed copy (Python 3.11+ required) — or point the fields below at your own checkout.
                   </p>
                 </div>
-                <Button disabled={provision.running} onClick={() => void provisionTutor()} size="sm" variant="secondary">
-                  {provision.running ? <Codicon name="loading~spin" size="0.8rem" /> : <Codicon name="cloud-download" size="0.8rem" />}
+                <Button
+                  disabled={provision.running}
+                  onClick={() => void provisionTutor()}
+                  size="sm"
+                  variant="secondary"
+                >
+                  {provision.running ? (
+                    <Codicon name="loading~spin" size="0.8rem" />
+                  ) : (
+                    <Codicon name="cloud-download" size="0.8rem" />
+                  )}
                   {provision.running ? 'Installing…' : `Install ${TUTORX_NAME}`}
                 </Button>
               </div>
@@ -297,11 +322,21 @@ export function SetupTab() {
             <div className="grid gap-3 sm:grid-cols-2">
               <label className="block space-y-1">
                 <FieldLabel>API port (FastAPI)</FieldLabel>
-                <Input inputMode="numeric" onChange={event => setApiPort(event.target.value)} placeholder="auto" value={apiPort} />
+                <Input
+                  inputMode="numeric"
+                  onChange={event => setApiPort(event.target.value)}
+                  placeholder="auto"
+                  value={apiPort}
+                />
               </label>
               <label className="block space-y-1">
                 <FieldLabel>Web port (Next.js)</FieldLabel>
-                <Input inputMode="numeric" onChange={event => setWebPort(event.target.value)} placeholder="auto" value={webPort} />
+                <Input
+                  inputMode="numeric"
+                  onChange={event => setWebPort(event.target.value)}
+                  placeholder="auto"
+                  value={webPort}
+                />
               </label>
             </div>
             <p className="text-xs text-muted-foreground">
@@ -318,7 +353,8 @@ export function SetupTab() {
             </label>
             <label className="block space-y-1">
               <FieldLabel>
-                LiteLLM API key {settings?.litellmKeySet ? '(saved — leave blank to keep)' : '(required for local TutorX)'}
+                LiteLLM API key{' '}
+                {settings?.litellmKeySet ? '(saved — leave blank to keep)' : '(required for local TutorX)'}
               </FieldLabel>
               <Input
                 autoComplete="off"
@@ -335,7 +371,9 @@ export function SetupTab() {
                   setLitellmStatus('Testing model discovery and completion…')
                   void window.hermesDesktop?.quizverse
                     ?.validateLitellm({ key: litellmKey.trim() || undefined, url: litellmUrl })
-                    .then(result => setLitellmStatus(`${result.provider} · ${result.model} · ${result.modelCount} models`))
+                    .then(result =>
+                      setLitellmStatus(`${result.provider} · ${result.model} · ${result.modelCount} models`)
+                    )
                     .catch(error => setLitellmStatus(error instanceof Error ? error.message : String(error)))
                 }}
                 size="sm"

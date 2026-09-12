@@ -100,11 +100,14 @@ test('local-only transport failure never reaches a cloud endpoint', async () => 
 test('sensitive local-first turns never cloud-escalate after local validation failure', async () => {
   const urls: string[] = []
 
-  const input = options((async (request: string | URL | Request) => {
-    urls.push(String(request))
+  const input = options(
+    (async (request: string | URL | Request) => {
+      urls.push(String(request))
 
-    return streamResponse('')
-  }) as typeof fetch, 'local-first')
+      return streamResponse('')
+    }) as typeof fetch,
+    'local-first'
+  )
 
   input.userText = '[sensitive] summarize this locally'
   await assert.rejects(runIxChatTurn(input), /Sensitive input cannot use cloud fallback/)
@@ -144,12 +147,15 @@ test('cloud fallback waits for single-use session-bound approval', async () => {
   const urls: string[] = []
   let nonce = ''
 
-  const input = options((async (request: string | URL | Request) => {
-    const url = String(request)
-    urls.push(url)
+  const input = options(
+    (async (request: string | URL | Request) => {
+      const url = String(request)
+      urls.push(url)
 
-    return url.startsWith('http://127.0.0.1') ? streamResponse('') : streamResponse('Approved cloud')
-  }) as typeof fetch, 'local-first')
+      return url.startsWith('http://127.0.0.1') ? streamResponse('') : streamResponse('Approved cloud')
+    }) as typeof fetch,
+    'local-first'
+  )
 
   input.escalationGate = gate
 

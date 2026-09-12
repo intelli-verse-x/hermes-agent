@@ -50,26 +50,130 @@ const TOOL_OUTPUT_CAP = 12_000
 /* ── Write-action classifier (parity with the portals' write-gate) ────────── */
 
 const WRITE_TOKENS = new Set([
-  'create', 'update', 'delete', 'remove', 'send', 'resend', 'post', 'pay',
-  'refund', 'charge', 'issue', 'grant', 'ban', 'unban', 'disable', 'enable',
-  'toggle', 'publish', 'schedule', 'broadcast', 'assign', 'execute', 'write',
-  'set', 'rotate', 'deploy', 'apply', 'approve', 'deny', 'reject', 'activate',
-  'deactivate', 'launch', 'pause', 'resume', 'cancel', 'redeem', 'stake',
-  'unstake', 'flag', 'book', 'trigger', 'promote', 'submit', 'upload',
-  'import', 'invalidate', 'restart', 'scale', 'transfer', 'mint', 'revoke',
-  'generate', 'add', 'use', 'duplicate', 'sign', 'archive', 'restore',
-  'purge', 'reset', 'insert', 'patch', 'put', 'kill', 'stop'
+  'create',
+  'update',
+  'delete',
+  'remove',
+  'send',
+  'resend',
+  'post',
+  'pay',
+  'refund',
+  'charge',
+  'issue',
+  'grant',
+  'ban',
+  'unban',
+  'disable',
+  'enable',
+  'toggle',
+  'publish',
+  'schedule',
+  'broadcast',
+  'assign',
+  'execute',
+  'write',
+  'set',
+  'rotate',
+  'deploy',
+  'apply',
+  'approve',
+  'deny',
+  'reject',
+  'activate',
+  'deactivate',
+  'launch',
+  'pause',
+  'resume',
+  'cancel',
+  'redeem',
+  'stake',
+  'unstake',
+  'flag',
+  'book',
+  'trigger',
+  'promote',
+  'submit',
+  'upload',
+  'import',
+  'invalidate',
+  'restart',
+  'scale',
+  'transfer',
+  'mint',
+  'revoke',
+  'generate',
+  'add',
+  'use',
+  'duplicate',
+  'sign',
+  'archive',
+  'restore',
+  'purge',
+  'reset',
+  'insert',
+  'patch',
+  'put',
+  'kill',
+  'stop'
 ])
 
 const READ_TOKENS = new Set([
-  'list', 'get', 'search', 'stats', 'retrieve', 'query', 'describe', 'health',
-  'directory', 'view', 'inspect', 'show', 'find', 'read', 'fetch', 'check',
-  'status', 'history', 'balance', 'preflight', 'catalog', 'learn', 'lookup',
-  'count', 'preview', 'analytics', 'report', 'summary', 'overview',
-  'forecast', 'alerts', 'alert', 'dashboard', 'url', 'cost', 'metrics',
-  'timeline', 'ping', 'probe', 'watch', 'tail', 'logs', 'info', 'detail',
-  'details', 'browse', 'map', 'crawl', 'scrape', 'extract', 'research',
-  'keywords', 'serp', 'rank', 'slot'
+  'list',
+  'get',
+  'search',
+  'stats',
+  'retrieve',
+  'query',
+  'describe',
+  'health',
+  'directory',
+  'view',
+  'inspect',
+  'show',
+  'find',
+  'read',
+  'fetch',
+  'check',
+  'status',
+  'history',
+  'balance',
+  'preflight',
+  'catalog',
+  'learn',
+  'lookup',
+  'count',
+  'preview',
+  'analytics',
+  'report',
+  'summary',
+  'overview',
+  'forecast',
+  'alerts',
+  'alert',
+  'dashboard',
+  'url',
+  'cost',
+  'metrics',
+  'timeline',
+  'ping',
+  'probe',
+  'watch',
+  'tail',
+  'logs',
+  'info',
+  'detail',
+  'details',
+  'browse',
+  'map',
+  'crawl',
+  'scrape',
+  'extract',
+  'research',
+  'keywords',
+  'serp',
+  'rank',
+  'slot'
 ])
 
 /** Known-safe exact names that would otherwise hit a write token or the
@@ -178,10 +282,7 @@ export interface IxEscalationGate {
   resolve: (sessionId: string, nonce: string, approved: boolean) => boolean
 }
 
-export function createEscalationGate(
-  now: () => number = Date.now,
-  ttlMs = CONFIRM_TTL_MS
-): IxEscalationGate {
+export function createEscalationGate(now: () => number = Date.now, ttlMs = CONFIRM_TTL_MS): IxEscalationGate {
   const pending = new Map<
     string,
     {
@@ -289,12 +390,7 @@ export function createWriteGate(now: () => number = Date.now): IxWriteGate {
       const digest = approvalArgsDigest(args)
 
       for (const [nonce, entry] of pending) {
-        if (
-          entry.approved &&
-          entry.tool === tool &&
-          entry.sessionId === sessionId &&
-          entry.argsDigest === digest
-        ) {
+        if (entry.approved && entry.tool === tool && entry.sessionId === sessionId && entry.argsDigest === digest) {
           pending.delete(nonce) // single-use
 
           return cloneApprovalArgs(entry.args)
@@ -331,7 +427,10 @@ function canonicalizeApprovalValue(value: unknown, key = ''): unknown {
 }
 
 export function approvalArgsDigest(args: Record<string, unknown>): string {
-  return crypto.createHash('sha256').update(JSON.stringify(canonicalizeApprovalValue(args))).digest('hex')
+  return crypto
+    .createHash('sha256')
+    .update(JSON.stringify(canonicalizeApprovalValue(args)))
+    .digest('hex')
 }
 
 /** Complete redacted structured arguments for the confirm card. */
@@ -362,14 +461,7 @@ export function gateResultForModel(tool: string, args: Record<string, unknown>):
  * gateway caller) and report. Pure enough to unit-test with a fake gateway. */
 
 export interface IxChatEvent {
-  type:
-    | 'confirmation-required'
-    | 'done'
-    | 'error'
-    | 'step'
-    | 'text-delta'
-    | 'tool-call'
-    | 'tool-result'
+  type: 'confirmation-required' | 'done' | 'error' | 'step' | 'text-delta' | 'tool-call' | 'tool-result'
   [key: string]: unknown
 }
 
@@ -761,9 +853,7 @@ const MAX_STORED_CONVERSATIONS = 100
 
 export function writeIxChatStore(filePath: string, store: IxChatStoreFile) {
   const bounded = {
-    conversations: [...store.conversations]
-      .sort((a, b) => b.updatedAt - a.updatedAt)
-      .slice(0, MAX_STORED_CONVERSATIONS)
+    conversations: [...store.conversations].sort((a, b) => b.updatedAt - a.updatedAt).slice(0, MAX_STORED_CONVERSATIONS)
   }
 
   fs.mkdirSync(path.dirname(filePath), { recursive: true })
@@ -810,15 +900,17 @@ export function compactIxCloudHandoff(messages: any[], maxCharacters = 12_000): 
     maxTokens: Math.floor(maxCharacters / 8)
   })
 
-  let metadataBudget =
-    maxCharacters - compacted.messages.reduce((total, message) => total + message.content.length, 0)
+  let metadataBudget = maxCharacters - compacted.messages.reduce((total, message) => total + message.content.length, 0)
 
   return compacted.messages.map(compact => {
     const source =
       compact.role === 'tool'
         ? messages.find(message => message.role === 'tool' && message.tool_call_id === compact.toolCallId)
         : compact.role === 'assistant' && compact.toolCallId
-          ? messages.find(message => message.role === 'assistant' && message.tool_calls?.some((call: any) => call.id === compact.toolCallId))
+          ? messages.find(
+              message =>
+                message.role === 'assistant' && message.tool_calls?.some((call: any) => call.id === compact.toolCallId)
+            )
           : messages.findLast(message => message.role === compact.role)
 
     const retainedCalls = Array.isArray(source?.tool_calls)
@@ -950,8 +1042,7 @@ export async function runIxChatTurn({
       type: 'confirmation-required',
       nonce,
       tool: 'Cloud fallback',
-      argsSummary:
-        `${reason}. The bounded recent conversation and required tool results will be sent to the configured cloud provider.`
+      argsSummary: `${reason}. The bounded recent conversation and required tool results will be sent to the configured cloud provider.`
     })
     const approved = await approval
 
@@ -964,10 +1055,10 @@ export async function runIxChatTurn({
     emit({ type: 'step', step })
     const messages = [{ role: 'system' as const, content: system }, ...conversation.modelMessages]
 
-    const sensitivity = trustedSensitivity === 'confidential' ||
-      /^\s*(?:\[sensitive\]|sensitive:|local-only:)/i.test(userText)
-      ? ('confidential' as const)
-      : ('internal' as const)
+    const sensitivity =
+      trustedSensitivity === 'confidential' || /^\s*(?:\[sensitive\]|sensitive:|local-only:)/i.test(userText)
+        ? ('confidential' as const)
+        : ('internal' as const)
 
     const request = {
       modality: 'text' as const,
@@ -1008,13 +1099,18 @@ export async function runIxChatTurn({
         messages,
         tools,
         onTextDelta: delta => {
-          if (usedLocal) {bufferedLocalText += delta}
-          else {emit({ type: 'text-delta', delta })}
+          if (usedLocal) {
+            bufferedLocalText += delta
+          } else {
+            emit({ type: 'text-delta', delta })
+          }
         },
         fetchImpl
       })
     } catch (error) {
-      if (!usedLocal) {throw error}
+      if (!usedLocal) {
+        throw error
+      }
 
       const fallback = evaluateLocalOutcome(localAi!.mode, {
         transportOk: false,
@@ -1027,7 +1123,9 @@ export async function runIxChatTurn({
         explicitCloudRetry: false
       })
 
-      if (fallback.route !== 'cloud') {throw error}
+      if (fallback.route !== 'cloud') {
+        throw error
+      }
 
       if (sensitivity === 'confidential') {
         throw new Error(`Sensitive input cannot use cloud fallback (${fallback.reason}).`)
@@ -1096,8 +1194,7 @@ export async function runIxChatTurn({
         const runtimeReportedTokens = completion.inputTokens + completion.outputTokens
         await localAi?.recordRoute?.({
           tokensAvoided:
-            runtimeReportedTokens ||
-            request.estimatedContextTokens + Math.ceil(completion.text.length / 4),
+            runtimeReportedTokens || request.estimatedContextTokens + Math.ceil(completion.text.length / 4),
           measurement: runtimeReportedTokens ? 'runtime-reported' : 'estimated'
         })
       }

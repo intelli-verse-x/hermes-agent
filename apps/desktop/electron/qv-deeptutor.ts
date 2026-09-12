@@ -144,8 +144,17 @@ export function writeQuizverseSettings(
 export function sanitizeQuizverseSettingsInput(input: unknown, current: QuizverseSettings): QuizverseSettings {
   const source = (input && typeof input === 'object' ? input : {}) as Record<string, unknown>
 
-  const pick = (key: 'apiKey' | 'cognitoClientId' | 'cognitoDomain' | 'cognitoIssuer' | 'litellmKey' | 'localCommand' | 'localDirectory' | 'remoteUrl'): string =>
-    typeof source[key] === 'string' ? String(source[key]).trim() : current[key]
+  const pick = (
+    key:
+      | 'apiKey'
+      | 'cognitoClientId'
+      | 'cognitoDomain'
+      | 'cognitoIssuer'
+      | 'litellmKey'
+      | 'localCommand'
+      | 'localDirectory'
+      | 'remoteUrl'
+  ): string => (typeof source[key] === 'string' ? String(source[key]).trim() : current[key])
 
   return {
     tutorMode: source.tutorMode === 'remote' ? 'remote' : source.tutorMode === 'local' ? 'local' : current.tutorMode,
@@ -155,7 +164,10 @@ export function sanitizeQuizverseSettingsInput(input: unknown, current: Quizvers
     apiPort: clampPort(source.apiPort, current.apiPort),
     webPort: clampPort(source.webPort, current.webPort),
     apiKey: pick('apiKey'),
-    litellmUrl: typeof source.litellmUrl === 'string' ? String(source.litellmUrl).trim() || current.litellmUrl : current.litellmUrl,
+    litellmUrl:
+      typeof source.litellmUrl === 'string'
+        ? String(source.litellmUrl).trim() || current.litellmUrl
+        : current.litellmUrl,
     litellmKey: pick('litellmKey'),
     cognitoDomain: pick('cognitoDomain'),
     cognitoClientId: pick('cognitoClientId'),
@@ -240,14 +252,10 @@ export function probeHttpReachable(url: string, timeoutMs = 5000): Promise<boole
 
     const lib = parsed.protocol === 'https:' ? https : http
 
-    const req = lib.request(
-      parsed,
-      { method: 'GET', timeout: timeoutMs },
-      res => {
-        res.resume()
-        resolve(true)
-      }
-    )
+    const req = lib.request(parsed, { method: 'GET', timeout: timeoutMs }, res => {
+      res.resume()
+      resolve(true)
+    })
 
     req.on('timeout', () => req.destroy(new Error('timeout')))
     req.on('error', () => resolve(false))
@@ -513,7 +521,10 @@ export class DeepTutorSupervisor {
       apiPort = apiPort > 0 ? apiPort : await allocateFreePort()
       webPort = webPort > 0 ? webPort : await allocateFreePort()
     } catch (error) {
-      this.setState('error', `Could not allocate ${TUTORX_PRODUCT_NAME} ports: ${error instanceof Error ? error.message : String(error)}`)
+      this.setState(
+        'error',
+        `Could not allocate ${TUTORX_PRODUCT_NAME} ports: ${error instanceof Error ? error.message : String(error)}`
+      )
 
       return this.status()
     }
@@ -535,7 +546,10 @@ export class DeepTutorSupervisor {
       }
     }
 
-    this.setState('starting', `Starting ${TUTORX_PRODUCT_NAME}: ${settings.localCommand} (api :${apiPort}, web :${webPort})`)
+    this.setState(
+      'starting',
+      `Starting ${TUTORX_PRODUCT_NAME}: ${settings.localCommand} (api :${apiPort}, web :${webPort})`
+    )
 
     let child: ChildProcess
 
@@ -562,7 +576,10 @@ export class DeepTutorSupervisor {
         }
       })
     } catch (error) {
-      this.setState('error', `Failed to spawn ${TUTORX_PRODUCT_NAME}: ${error instanceof Error ? error.message : String(error)}`)
+      this.setState(
+        'error',
+        `Failed to spawn ${TUTORX_PRODUCT_NAME}: ${error instanceof Error ? error.message : String(error)}`
+      )
 
       return this.status()
     }
@@ -591,7 +608,10 @@ export class DeepTutorSupervisor {
         const delay = RESTART_BACKOFF_MS[Math.min(this.autoRestarts, RESTART_BACKOFF_MS.length - 1)]
 
         this.autoRestarts += 1
-        this.setState('starting', `${why} — restarting in ${Math.round(delay / 1000)}s (${this.autoRestarts}/${MAX_AUTO_RESTARTS})`)
+        this.setState(
+          'starting',
+          `${why} — restarting in ${Math.round(delay / 1000)}s (${this.autoRestarts}/${MAX_AUTO_RESTARTS})`
+        )
         setTimeout(() => {
           if (!this.stopping && !this.child) {
             void this.start()
