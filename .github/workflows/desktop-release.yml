@@ -68,6 +68,9 @@ jobs:
         shell: bash
     env:
       DESKTOP_BRAND: ${{ matrix.brand }}
+      # `secrets` is not a valid context in step-level `if:` (the workflow
+      # fails to parse on dispatch) — surface the presence check as job env.
+      ES_SIGNING_ENABLED: ${{ secrets.ES_USERNAME != '' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -92,13 +95,13 @@ jobs:
       # Java for the tool + pinned CodeSignTool release; only when the ES_*
       # secrets exist — forks and unsigned releases skip both steps.
       - uses: actions/setup-java@v4
-        if: matrix.platform == 'windows-latest' && secrets.ES_USERNAME != ''
+        if: matrix.platform == 'windows-latest' && env.ES_SIGNING_ENABLED == 'true'
         with:
           distribution: temurin
           java-version: 17
 
       - name: Download SSL.com CodeSignTool
-        if: matrix.platform == 'windows-latest' && secrets.ES_USERNAME != ''
+        if: matrix.platform == 'windows-latest' && env.ES_SIGNING_ENABLED == 'true'
         run: |
           curl -fsSL -o /tmp/CodeSignTool.zip \
             https://github.com/SSLcom/CodeSignTool/releases/download/v1.3.2/CodeSignTool-v1.3.2-windows.zip
