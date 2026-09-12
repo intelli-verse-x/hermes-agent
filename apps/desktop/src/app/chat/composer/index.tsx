@@ -191,9 +191,7 @@ export function ChatBar({
       ...options,
       inputModality,
       voiceAttestation:
-        inputModality === 'voice'
-          ? (options?.voiceAttestation ?? await consumeDesktopVoiceAttestation())
-          : undefined
+        inputModality === 'voice' ? (options?.voiceAttestation ?? (await consumeDesktopVoiceAttestation())) : undefined
     })
 
     if (result) {

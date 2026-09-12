@@ -181,9 +181,7 @@ export function removeEngagement(id: string) {
   mutate(book => ({
     ...book,
     engagements: book.engagements.filter(engagement => engagement.id !== id),
-    invoices: book.invoices.map(invoice =>
-      invoice.engagementId === id ? { ...invoice, engagementId: '' } : invoice
-    )
+    invoices: book.invoices.map(invoice => (invoice.engagementId === id ? { ...invoice, engagementId: '' } : invoice))
   }))
 }
 

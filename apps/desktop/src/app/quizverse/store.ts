@@ -22,9 +22,7 @@ import { TUTORX_NAME } from './tutorx'
 const bridge = () => window.hermesDesktop?.quizverse
 
 export function quizversePublicText(value: string): string {
-  return value
-    .replace(/deep[\s_-]*tutor/gi, TUTORX_NAME)
-    .replace(/\bhermes(?:[\s-]agent)?\b/gi, 'QuizVerse')
+  return value.replace(/deep[\s_-]*tutor/gi, TUTORX_NAME).replace(/\bhermes(?:[\s-]agent)?\b/gi, 'QuizVerse')
 }
 
 function publicTutorStatus(status: DeepTutorRendererStatus): DeepTutorRendererStatus {
@@ -65,7 +63,7 @@ export function installTutorEvents() {
     const current = $qvProvision.get()
 
     $qvProvision.set({
-      error: payload.error ? quizversePublicText(payload.error) : (payload.done ? null : current.error),
+      error: payload.error ? quizversePublicText(payload.error) : payload.done ? null : current.error,
       lines: payload.line ? [...current.lines.slice(-199), quizversePublicText(payload.line)] : current.lines,
       running: payload.done ? false : current.running
     })

@@ -21,11 +21,17 @@ export function hasActiveEntitlement(value: unknown, productId: string, now = Da
   }
 
   const visit = (raw: unknown): boolean => {
-    if (typeof raw === 'string') {return expected.has(raw)}
+    if (typeof raw === 'string') {
+      return expected.has(raw)
+    }
 
-    if (Array.isArray(raw)) {return raw.some(visit)}
+    if (Array.isArray(raw)) {
+      return raw.some(visit)
+    }
 
-    if (!raw || typeof raw !== 'object') {return false}
+    if (!raw || typeof raw !== 'object') {
+      return false
+    }
     const item = raw as EntitlementRecord & Record<string, unknown>
     const status = String(item.status ?? '').toLowerCase()
 
@@ -38,24 +44,40 @@ export function hasActiveEntitlement(value: unknown, productId: string, now = Da
     if (expiry !== undefined) {
       const expiresAt = Date.parse(String(expiry))
 
-      if (!Number.isFinite(expiresAt) || expiresAt <= now) {return false}
+      if (!Number.isFinite(expiresAt) || expiresAt <= now) {
+        return false
+      }
     }
 
-    for (const field of ['product_id', 'productId', 'entitlement', 'entitlement_id', 'entitlementId', 'entitlement_ids', 'tier']) {
-      if (visit(item[field])) {return true}
+    for (const field of [
+      'product_id',
+      'productId',
+      'entitlement',
+      'entitlement_id',
+      'entitlementId',
+      'entitlement_ids',
+      'tier'
+    ]) {
+      if (visit(item[field])) {
+        return true
+      }
     }
 
     const activeMap = item.active
 
     if (activeMap && typeof activeMap === 'object' && !Array.isArray(activeMap)) {
       for (const [id, active] of Object.entries(activeMap as Record<string, unknown>)) {
-        if (expected.has(id) && active !== false && active != null) {return true}
+        if (expected.has(id) && active !== false && active != null) {
+          return true
+        }
       }
     }
 
     for (const [key, child] of Object.entries(item)) {
       if (expected.has(key)) {
-        if (child === true) {return true}
+        if (child === true) {
+          return true
+        }
 
         if (child && typeof child === 'object' && !Array.isArray(child)) {
           const record = child as EntitlementRecord & Record<string, unknown>
@@ -65,13 +87,18 @@ export function hasActiveEntitlement(value: unknown, productId: string, now = Da
           const active =
             record.active !== false &&
             !INACTIVE_ENTITLEMENT_STATUSES.has(childStatus) &&
-            (childExpiry === undefined || (Number.isFinite(Date.parse(String(childExpiry))) && Date.parse(String(childExpiry)) > now))
+            (childExpiry === undefined ||
+              (Number.isFinite(Date.parse(String(childExpiry))) && Date.parse(String(childExpiry)) > now))
 
-          if (active) {return true}
+          if (active) {
+            return true
+          }
         }
       }
 
-      if (typeof child === 'object' && child !== null && visit(child)) {return true}
+      if (typeof child === 'object' && child !== null && visit(child)) {
+        return true
+      }
     }
 
     return false

@@ -10,12 +10,14 @@ function manifest(contentVersion = 'v1', sha256 = validHash, minItems = 1) {
   return {
     ...fixture,
     content_version: contentVersion,
-    datasets: [{
-      ...fixture.datasets[0],
-      bytes: 9,
-      min_items: minItems,
-      sha256
-    }]
+    datasets: [
+      {
+        ...fixture.datasets[0],
+        bytes: 9,
+        min_items: minItems,
+        sha256
+      }
+    ]
   }
 }
 
@@ -49,22 +51,30 @@ describe('Words first-party content manifest', () => {
   })
 
   it('rejects external dataset URLs, duplicate IDs, and missing integrity', () => {
-    expect(() => parseWordsContentManifest({
-      ...fixture,
-      datasets: [{ ...fixture.datasets[0], url: 'https://evil.example/bank.json' }]
-    })).toThrow(/malformed/)
-    expect(() => parseWordsContentManifest({
-      ...fixture,
-      datasets: [fixture.datasets[0], fixture.datasets[0]]
-    })).toThrow(/malformed/)
-    expect(() => parseWordsContentManifest({
-      ...fixture,
-      datasets: [{ ...fixture.datasets[0], sha256: '' }]
-    })).toThrow(/malformed/)
-    expect(() => parseWordsContentManifest({
-      ...fixture,
-      expires_at: fixture.generated_at
-    })).toThrow(/expiry/)
+    expect(() =>
+      parseWordsContentManifest({
+        ...fixture,
+        datasets: [{ ...fixture.datasets[0], url: 'https://evil.example/bank.json' }]
+      })
+    ).toThrow(/malformed/)
+    expect(() =>
+      parseWordsContentManifest({
+        ...fixture,
+        datasets: [fixture.datasets[0], fixture.datasets[0]]
+      })
+    ).toThrow(/malformed/)
+    expect(() =>
+      parseWordsContentManifest({
+        ...fixture,
+        datasets: [{ ...fixture.datasets[0], sha256: '' }]
+      })
+    ).toThrow(/malformed/)
+    expect(() =>
+      parseWordsContentManifest({
+        ...fixture,
+        expires_at: fixture.generated_at
+      })
+    ).toThrow(/expiry/)
   })
 
   it('refetches an expired cached manifest and fails closed when no current manifest is available', async () => {
@@ -74,7 +84,8 @@ describe('Words first-party content manifest', () => {
       generated_at: '2020-01-01T00:00:00.000Z'
     }
 
-    const request = vi.fn()
+    const request = vi
+      .fn()
       .mockResolvedValueOnce(response(JSON.stringify(expired), { offline: true }))
       .mockResolvedValueOnce(response(JSON.stringify(expired), { offline: true }))
 
@@ -85,7 +96,8 @@ describe('Words first-party content manifest', () => {
   })
 
   it('evicts a tampered cached body and refetches exactly once without a 304 loop', async () => {
-    const request = vi.fn()
+    const request = vi
+      .fn()
       .mockResolvedValueOnce(response(JSON.stringify(manifest())))
       .mockResolvedValueOnce(response('["BRAVO"]'))
       .mockResolvedValueOnce(response(JSON.stringify(manifest())))
@@ -98,18 +110,14 @@ describe('Words first-party content manifest', () => {
       data: ['ALPHA'],
       source: 'first-party-network'
     })
-    expect(request.mock.calls.map(([input]) => input.cacheMode)).toEqual([
-      'default',
-      'default',
-      'reload',
-      'reload'
-    ])
+    expect(request.mock.calls.map(([input]) => input.cacheMode)).toEqual(['default', 'default', 'reload', 'reload'])
   })
 
   it('refreshes the manifest and dataset together on content rollover', async () => {
     const bravoHash = 'b425d6b246fb2b1559085da4b4468574b7ec6de57a67648967b64ec25e95aa47'
 
-    const request = vi.fn()
+    const request = vi
+      .fn()
       .mockResolvedValueOnce(response(JSON.stringify(manifest('v1'))))
       .mockResolvedValueOnce(response('["BRAVO"]'))
       .mockResolvedValueOnce(response(JSON.stringify(manifest('v2', bravoHash))))
@@ -124,7 +132,8 @@ describe('Words first-party content manifest', () => {
   })
 
   it('uses a verified encrypted-cache response offline and rejects incomplete content after one retry', async () => {
-    const offlineRequest = vi.fn()
+    const offlineRequest = vi
+      .fn()
       .mockResolvedValueOnce(response(JSON.stringify(manifest())))
       .mockResolvedValueOnce(response(validBody, { offline: true }))
 
@@ -135,7 +144,8 @@ describe('Words first-party content manifest', () => {
       source: 'first-party-cache'
     })
 
-    const incompleteRequest = vi.fn()
+    const incompleteRequest = vi
+      .fn()
       .mockResolvedValueOnce(response(JSON.stringify(manifest('count-v1', validHash, 2))))
       .mockResolvedValueOnce(response(validBody))
       .mockResolvedValueOnce(response(JSON.stringify(manifest('count-v1', validHash, 2))))

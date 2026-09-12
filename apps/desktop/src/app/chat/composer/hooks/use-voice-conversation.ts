@@ -292,7 +292,7 @@ export function useVoiceConversation({
     awaitingSpokenResponseRef.current = false
     resetSpeechBuffer()
     consumePendingResponse()
-      pendingStartRef.current = !blockedRef.current
+    pendingStartRef.current = !blockedRef.current
     await startListening()
   }, [
     consumePendingResponse,
@@ -334,7 +334,13 @@ export function useVoiceConversation({
         clearTurnTimeout()
         handle.cancel()
         setStatus('idle')
-      } else if (continuous && enabledRef.current && !busyRef.current && !blockedRef.current && statusRef.current === 'idle') {
+      } else if (
+        continuous &&
+        enabledRef.current &&
+        !busyRef.current &&
+        !blockedRef.current &&
+        statusRef.current === 'idle'
+      ) {
         pendingStartRef.current = true
       }
 
@@ -431,7 +437,18 @@ export function useVoiceConversation({
     if (pendingStartRef.current) {
       void startListening()
     }
-  }, [blocked, busy, consumePendingResponse, continuous, enabled, muted, pendingResponse, speak, startListening, status])
+  }, [
+    blocked,
+    busy,
+    consumePendingResponse,
+    continuous,
+    enabled,
+    muted,
+    pendingResponse,
+    speak,
+    startListening,
+    status
+  ])
 
   useEffect(() => {
     if (enabled && !wasEnabledRef.current) {

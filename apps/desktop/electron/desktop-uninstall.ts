@@ -102,7 +102,9 @@ function resolveRemovableAppPath(execPath, platform, env: any = {}) {
 
     const installDirNames = [BRAND.productName, 'Hermes', 'hermes-desktop']
 
-    if (installDirNames.some(name => new RegExp(`[\\\\/]${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i').test(dir))) {
+    if (
+      installDirNames.some(name => new RegExp(`[\\\\/]${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i').test(dir))
+    ) {
       return dir
     }
 

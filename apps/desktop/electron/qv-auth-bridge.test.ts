@@ -67,8 +67,7 @@ test('exchanges callback, authenticates Cognito Nakama identity, and merges gues
       merged.push(args)
     },
     pending: started.pending,
-    previousGuestUserId: 'guest-user-1'
-    ,
+    previousGuestUserId: 'guest-user-1',
     verifyIdToken: async token => JSON.parse(Buffer.from(token.split('.')[1]!, 'base64url').toString('utf8'))
   })
 
@@ -98,8 +97,7 @@ test('rejects callback state and URI mismatches before token exchange', async ()
     },
     mergeGuest: async () => undefined,
     pending: started.pending,
-    previousGuestUserId: ''
-    ,
+    previousGuestUserId: '',
     verifyIdToken: async () => {
       throw new Error('unreachable')
     }
@@ -149,33 +147,42 @@ test('verifies OIDC issuer, audience, expiry, nonce, and RSA signature', async t
     const url = String(input)
 
     if (url.endsWith('/.well-known/openid-configuration')) {
-      return new Response(JSON.stringify({
-        authorization_endpoint: 'https://auth.quizverse.test/oauth2/authorize',
-        issuer: claims.iss,
-        jwks_uri: 'https://issuer.quizverse.test/.well-known/jwks.json',
-        token_endpoint: 'https://auth.quizverse.test/oauth2/token'
-      }))
+      return new Response(
+        JSON.stringify({
+          authorization_endpoint: 'https://auth.quizverse.test/oauth2/authorize',
+          issuer: claims.iss,
+          jwks_uri: 'https://issuer.quizverse.test/.well-known/jwks.json',
+          token_endpoint: 'https://auth.quizverse.test/oauth2/token'
+        })
+      )
     }
 
-    return new Response(JSON.stringify({
-      keys: [{ ...jwk, kid: 'fixture-key', use: 'sig' }]
-    }))
+    return new Response(
+      JSON.stringify({
+        keys: [{ ...jwk, kid: 'fixture-key', use: 'sig' }]
+      })
+    )
   }) as typeof fetch
 
-  await assert.doesNotReject(verifyQuizverseIdToken(token, {
-    clientId: 'desktop-client',
-    domain: 'auth.quizverse.test',
-    issuer: claims.iss,
-    nonce: 'fixture-nonce',
-    now
-  }))
-  await assert.rejects(verifyQuizverseIdToken(token, {
-    clientId: 'other-client',
-    domain: 'auth.quizverse.test',
-    issuer: claims.iss,
-    nonce: 'fixture-nonce',
-    now
-  }), /claims/)
+  await assert.doesNotReject(
+    verifyQuizverseIdToken(token, {
+      clientId: 'desktop-client',
+      domain: 'auth.quizverse.test',
+      issuer: claims.iss,
+      nonce: 'fixture-nonce',
+      now
+    })
+  )
+  await assert.rejects(
+    verifyQuizverseIdToken(token, {
+      clientId: 'other-client',
+      domain: 'auth.quizverse.test',
+      issuer: claims.iss,
+      nonce: 'fixture-nonce',
+      now
+    }),
+    /claims/
+  )
 })
 
 test('refreshes Cognito tokens with the stored refresh grant', async t => {
@@ -189,19 +196,24 @@ test('refreshes Cognito tokens with the stored refresh grant', async t => {
     assert.match(String(init?.body), /grant_type=refresh_token/)
     assert.match(String(init?.body), /refresh_token=stored-refresh/)
 
-    return new Response(JSON.stringify({
-      access_token: 'fresh-access',
-      id_token: 'fresh-id'
-    }))
+    return new Response(
+      JSON.stringify({
+        access_token: 'fresh-access',
+        id_token: 'fresh-id'
+      })
+    )
   }) as typeof fetch
 
-  assert.deepEqual(await refreshQuizverseOAuthTokens({
-    clientId: 'desktop-client',
-    domain: 'auth.quizverse.test',
-    refreshToken: 'stored-refresh'
-  }), {
-    accessToken: 'fresh-access',
-    idToken: 'fresh-id',
-    refreshToken: 'stored-refresh'
-  })
+  assert.deepEqual(
+    await refreshQuizverseOAuthTokens({
+      clientId: 'desktop-client',
+      domain: 'auth.quizverse.test',
+      refreshToken: 'stored-refresh'
+    }),
+    {
+      accessToken: 'fresh-access',
+      idToken: 'fresh-id',
+      refreshToken: 'stored-refresh'
+    }
+  )
 })

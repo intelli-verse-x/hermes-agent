@@ -70,11 +70,23 @@ test('fetch hits the provision endpoint with credentials include', async () => {
 })
 
 test('fetch maps 401 to a sign-in-first error', async () => {
-  await assert.rejects(fetchIxDesktopProvision(PORTAL, fakeFetch(() => ({ status: 401 }))), /sign in/i)
+  await assert.rejects(
+    fetchIxDesktopProvision(
+      PORTAL,
+      fakeFetch(() => ({ status: 401 }))
+    ),
+    /sign in/i
+  )
 })
 
 test('fetch rejects a payload without ok:true', async () => {
-  await assert.rejects(fetchIxDesktopProvision(PORTAL, fakeFetch(() => ({ body: {} }))), /did not return/)
+  await assert.rejects(
+    fetchIxDesktopProvision(
+      PORTAL,
+      fakeFetch(() => ({ body: {} }))
+    ),
+    /did not return/
+  )
 })
 
 test('fetch tolerates missing slots (degraded server config)', async () => {
@@ -127,10 +139,7 @@ test('is idempotent — a second pass after filling changes nothing', () => {
 })
 
 test('a manually-configured .conf PATH blocks the keychain VPN import', () => {
-  const { next, filled } = applyIxProvisionToSettings(
-    settings({ vpnConfPath: '/home/user/usa-vpn.conf' }),
-    payload()
-  )
+  const { next, filled } = applyIxProvisionToSettings(settings({ vpnConfPath: '/home/user/usa-vpn.conf' }), payload())
 
   assert.ok(!filled.includes('vpnConfSecret'))
   assert.equal(next.vpnConfSecret, '')

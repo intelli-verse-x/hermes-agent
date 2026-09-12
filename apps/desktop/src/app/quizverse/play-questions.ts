@@ -4,15 +4,60 @@ const CDN = 'https://intelli-verse-x-media.s3.us-east-1.amazonaws.com'
 const TIMEOUT_MS = 6_000
 
 const FALLBACK: PlayQuestion[] = [
-  { correctIndex: 0, id: 'fallback-capital', options: ['Paris', 'London', 'Berlin', 'Madrid'], prompt: 'What is the capital of France?' },
-  { correctIndex: 1, id: 'fallback-planet', options: ['Venus', 'Mars', 'Jupiter', 'Saturn'], prompt: 'Which planet is known as the Red Planet?' },
-  { correctIndex: 2, id: 'fallback-continents', options: ['5', '6', '7', '8'], prompt: 'How many continents are there?' },
-  { correctIndex: 1, id: 'fallback-mammal', options: ['Elephant', 'Blue whale', 'Giraffe', 'Polar bear'], prompt: 'What is the largest mammal?' },
-  { correctIndex: 2, id: 'fallback-gold', options: ['Go', 'Gd', 'Au', 'Ag'], prompt: 'What is the chemical symbol for gold?' },
-  { correctIndex: 3, id: 'fallback-ocean', options: ['Atlantic', 'Indian', 'Arctic', 'Pacific'], prompt: 'Which ocean is the largest?' },
-  { correctIndex: 2, id: 'fallback-prime', options: ['0', '1', '2', '3'], prompt: 'What is the smallest prime number?' },
-  { correctIndex: 1, id: 'fallback-hexagon', options: ['5', '6', '7', '8'], prompt: 'How many sides does a hexagon have?' },
-  { correctIndex: 2, id: 'fallback-water', options: ['50', '75', '100', '150'], prompt: 'At sea level, water boils at how many °C?' },
+  {
+    correctIndex: 0,
+    id: 'fallback-capital',
+    options: ['Paris', 'London', 'Berlin', 'Madrid'],
+    prompt: 'What is the capital of France?'
+  },
+  {
+    correctIndex: 1,
+    id: 'fallback-planet',
+    options: ['Venus', 'Mars', 'Jupiter', 'Saturn'],
+    prompt: 'Which planet is known as the Red Planet?'
+  },
+  {
+    correctIndex: 2,
+    id: 'fallback-continents',
+    options: ['5', '6', '7', '8'],
+    prompt: 'How many continents are there?'
+  },
+  {
+    correctIndex: 1,
+    id: 'fallback-mammal',
+    options: ['Elephant', 'Blue whale', 'Giraffe', 'Polar bear'],
+    prompt: 'What is the largest mammal?'
+  },
+  {
+    correctIndex: 2,
+    id: 'fallback-gold',
+    options: ['Go', 'Gd', 'Au', 'Ag'],
+    prompt: 'What is the chemical symbol for gold?'
+  },
+  {
+    correctIndex: 3,
+    id: 'fallback-ocean',
+    options: ['Atlantic', 'Indian', 'Arctic', 'Pacific'],
+    prompt: 'Which ocean is the largest?'
+  },
+  {
+    correctIndex: 2,
+    id: 'fallback-prime',
+    options: ['0', '1', '2', '3'],
+    prompt: 'What is the smallest prime number?'
+  },
+  {
+    correctIndex: 1,
+    id: 'fallback-hexagon',
+    options: ['5', '6', '7', '8'],
+    prompt: 'How many sides does a hexagon have?'
+  },
+  {
+    correctIndex: 2,
+    id: 'fallback-water',
+    options: ['50', '75', '100', '150'],
+    prompt: 'At sea level, water boils at how many °C?'
+  },
   { correctIndex: 1, id: 'fallback-math', options: ['54', '56', '63', '48'], prompt: 'What is 7 × 8?' }
 ]
 
@@ -85,22 +130,25 @@ export function normalizePlayQuestions(payload: unknown): PlayQuestion[] {
       return []
     }
 
-    return [{
-      correctIndex,
-      explanation: String(raw.explanation ?? ''),
-      id: String(raw.id ?? raw.questionId ?? raw.question_id ?? `question-${index}`),
-      mediaUrl: String(raw.mediaUrl ?? raw.media_url ?? raw.image ?? raw.audio ?? raw.video ?? '') || undefined,
-      options: answerOptions,
-      prompt
-    }]
+    return [
+      {
+        correctIndex,
+        explanation: String(raw.explanation ?? ''),
+        id: String(raw.id ?? raw.questionId ?? raw.question_id ?? `question-${index}`),
+        mediaUrl: String(raw.mediaUrl ?? raw.media_url ?? raw.image ?? raw.audio ?? raw.video ?? '') || undefined,
+        options: answerOptions,
+        prompt
+      }
+    ]
   })
 }
 
 export async function dailyPool(daysBack = 4): Promise<PlayQuestion[]> {
   for (let day = 0; day <= daysBack; day += 1) {
-    const document = (await json(`${CDN}/quiz-verse/daily/dailyquiz-${utcDate(-day)}.json`)) as
-      | { questions?: unknown[]; today_quiz?: { questions?: unknown[] } }
-      | null
+    const document = (await json(`${CDN}/quiz-verse/daily/dailyquiz-${utcDate(-day)}.json`)) as {
+      questions?: unknown[]
+      today_quiz?: { questions?: unknown[] }
+    } | null
 
     const questions = normalizePlayQuestions(document?.today_quiz?.questions ?? document?.questions ?? [])
 
@@ -114,9 +162,9 @@ export async function dailyPool(daysBack = 4): Promise<PlayQuestion[]> {
 
 export async function premiumPool(language = 'en'): Promise<PlayQuestion[]> {
   for (let day = 0; day <= 4; day += 1) {
-    const document = (await json(`${CDN}/quiz-verse/daily/dailyquiz-prem-${language}-${utcDate(-day)}.json`)) as
-      | { premium_questions?: unknown[] }
-      | null
+    const document = (await json(`${CDN}/quiz-verse/daily/dailyquiz-prem-${language}-${utcDate(-day)}.json`)) as {
+      premium_questions?: unknown[]
+    } | null
 
     const questions = normalizePlayQuestions(document?.premium_questions ?? [])
 
@@ -187,65 +235,86 @@ interface ExternalCard {
 
 function externalCards(provider: string, payload: unknown): ExternalCard[] {
   const data = (payload ?? {}) as Record<string, any>
-  const titleCase = (value: string) => value.replace(/(^|[\s-])([a-z])/g, (_match, prefix, letter) => prefix + letter.toUpperCase())
+  const titleCase = (value: string) =>
+    value.replace(/(^|[\s-])([a-z])/g, (_match, prefix, letter) => prefix + letter.toUpperCase())
 
   const adapters: Record<string, () => ExternalCard[]> = {
-    countries: () => asArray(payload).map(item => {
-      const country = item as Record<string, any>
+    countries: () =>
+      asArray(payload).map(item => {
+        const country = item as Record<string, any>
 
-      return { image: string(country.flags?.png ?? country.flags?.svg), label: string(country.name?.common) }
-    }),
-    disney: () => asArray(data.data).map(item => {
-      const character = item as Record<string, any>
+        return { image: string(country.flags?.png ?? country.flags?.svg), label: string(country.name?.common) }
+      }),
+    disney: () =>
+      asArray(data.data).map(item => {
+        const character = item as Record<string, any>
 
-      return { image: string(character.imageUrl), label: string(character.name) }
-    }),
-    dog: () => asArray(data.message).map(item => {
-      const image = string(item)
-      const token = image.split('/breeds/')[1]?.split('/')[0] ?? ''
+        return { image: string(character.imageUrl), label: string(character.name) }
+      }),
+    dog: () =>
+      asArray(data.message).map(item => {
+        const image = string(item)
+        const token = image.split('/breeds/')[1]?.split('/')[0] ?? ''
 
-      return { image, label: token.split('-').reverse().map(value => titleCase(value)).join(' ') }
-    }),
-    ghibli: () => asArray(payload).map(item => {
-      const film = item as Record<string, any>
+        return {
+          image,
+          label: token
+            .split('-')
+            .reverse()
+            .map(value => titleCase(value))
+            .join(' ')
+        }
+      }),
+    ghibli: () =>
+      asArray(payload).map(item => {
+        const film = item as Record<string, any>
 
-      return { image: string(film.image ?? film.movie_banner), label: string(film.title) }
-    }),
-    jikan: () => asArray(data.data).map(item => {
-      const anime = item as Record<string, any>
+        return { image: string(film.image ?? film.movie_banner), label: string(film.title) }
+      }),
+    jikan: () =>
+      asArray(data.data).map(item => {
+        const anime = item as Record<string, any>
 
-      return {
-        image: string(anime.images?.jpg?.large_image_url ?? anime.images?.jpg?.image_url ?? anime.images?.webp?.image_url),
-        label: string(anime.title_english ?? anime.title)
-      }
-    }),
-    nasa: () => asArray(data.collection?.items).map(item => {
-      const entry = item as Record<string, any>
+        return {
+          image: string(
+            anime.images?.jpg?.large_image_url ?? anime.images?.jpg?.image_url ?? anime.images?.webp?.image_url
+          ),
+          label: string(anime.title_english ?? anime.title)
+        }
+      }),
+    nasa: () =>
+      asArray(data.collection?.items).map(item => {
+        const entry = item as Record<string, any>
 
-      return {
-        image: string((asArray(entry.links)[0] as Record<string, unknown>)?.href),
-        label: string((asArray(entry.data)[0] as Record<string, unknown>)?.title)
-      }
-    }),
-    pokeapi: () => asArray(data.results).map(item => {
-      const pokemon = item as Record<string, any>
-      const id = /\/pokemon\/(\d+)\/?$/.exec(string(pokemon.url))?.[1]
+        return {
+          image: string((asArray(entry.links)[0] as Record<string, unknown>)?.href),
+          label: string((asArray(entry.data)[0] as Record<string, unknown>)?.title)
+        }
+      }),
+    pokeapi: () =>
+      asArray(data.results).map(item => {
+        const pokemon = item as Record<string, any>
+        const id = /\/pokemon\/(\d+)\/?$/.exec(string(pokemon.url))?.[1]
 
-      return {
-        image: id ? `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${id}.png` : undefined,
-        label: titleCase(string(pokemon.name))
-      }
-    }),
-    sports: () => asArray(data.teams).map(item => {
-      const team = item as Record<string, any>
+        return {
+          image: id
+            ? `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${id}.png`
+            : undefined,
+          label: titleCase(string(pokemon.name))
+        }
+      }),
+    sports: () =>
+      asArray(data.teams).map(item => {
+        const team = item as Record<string, any>
 
-      return { image: string(team.strBadge ?? team.strTeamBadge), label: string(team.strTeam) }
-    }),
-    themealdb: () => asArray(data.meals).map(item => {
-      const meal = item as Record<string, any>
+        return { image: string(team.strBadge ?? team.strTeamBadge), label: string(team.strTeam) }
+      }),
+    themealdb: () =>
+      asArray(data.meals).map(item => {
+        const meal = item as Record<string, any>
 
-      return { image: string(meal.strMealThumb), label: string(meal.strMeal) }
-    })
+        return { image: string(meal.strMealThumb), label: string(meal.strMeal) }
+      })
   }
 
   return (adapters[provider]?.() ?? []).filter(card => card.label && card.image)
@@ -259,18 +328,21 @@ export function externalToPlayQuestions(provider: string, payload: unknown, coun
 
     const titles = articles.map(item => string(item.title))
 
-    return shuffled(articles).slice(0, count).map((article, index) => {
-      const correct = string(article.title)
-      const answerOptions = shuffled([correct, ...shuffled(titles.filter(title => title !== correct)).slice(0, 3)])
+    return shuffled(articles)
+      .slice(0, count)
+      .map((article, index) => {
+        const correct = string(article.title)
+        const answerOptions = shuffled([correct, ...shuffled(titles.filter(title => title !== correct)).slice(0, 3)])
 
-      return {
-        correctIndex: answerOptions.indexOf(correct),
-        id: `news-${index}-${correct.slice(0, 20)}`,
-        mediaUrl: string(article.imageUrl ?? article.image),
-        options: answerOptions,
-        prompt: 'Which headline matches this image?'
-      }
-    }).filter(question => question.options.length === 4)
+        return {
+          correctIndex: answerOptions.indexOf(correct),
+          id: `news-${index}-${correct.slice(0, 20)}`,
+          mediaUrl: string(article.imageUrl ?? article.image),
+          options: answerOptions,
+          prompt: 'Which headline matches this image?'
+        }
+      })
+      .filter(question => question.options.length === 4)
   }
 
   if (provider === 'starwars') {
@@ -280,19 +352,23 @@ export function externalToPlayQuestions(provider: string, payload: unknown, coun
 
     const colors = [...new Set(people.map(person => string(person.eye_color)))]
 
-    return shuffled(people).slice(0, count).flatMap((person, index) => {
-      const correct = string(person.eye_color)
-      const answerOptions = shuffled([correct, ...shuffled(colors.filter(color => color !== correct)).slice(0, 3)])
+    return shuffled(people)
+      .slice(0, count)
+      .flatMap((person, index) => {
+        const correct = string(person.eye_color)
+        const answerOptions = shuffled([correct, ...shuffled(colors.filter(color => color !== correct)).slice(0, 3)])
 
-      return answerOptions.length === 4
-        ? [{
-            correctIndex: answerOptions.indexOf(correct),
-            id: `starwars-${index}-${string(person.name)}`,
-            options: answerOptions,
-            prompt: `What colour are ${string(person.name)}'s eyes?`
-          }]
-        : []
-    })
+        return answerOptions.length === 4
+          ? [
+              {
+                correctIndex: answerOptions.indexOf(correct),
+                id: `starwars-${index}-${string(person.name)}`,
+                options: answerOptions,
+                prompt: `What colour are ${string(person.name)}'s eyes?`
+              }
+            ]
+          : []
+      })
   }
 
   const cards = externalCards(provider, payload)
@@ -310,19 +386,26 @@ export function externalToPlayQuestions(provider: string, payload: unknown, coun
     themealdb: 'Which dish is this?'
   }
 
-  return shuffled(cards).slice(0, count).flatMap((card, index) => {
-    const answerOptions = shuffled([card.label, ...shuffled(labels.filter(label => label !== card.label)).slice(0, 3)])
+  return shuffled(cards)
+    .slice(0, count)
+    .flatMap((card, index) => {
+      const answerOptions = shuffled([
+        card.label,
+        ...shuffled(labels.filter(label => label !== card.label)).slice(0, 3)
+      ])
 
-    return answerOptions.length === 4
-      ? [{
-          correctIndex: answerOptions.indexOf(card.label),
-          id: `${provider}-${index}-${card.label.slice(0, 20)}`,
-          mediaUrl: card.image,
-          options: answerOptions,
-          prompt: prompts[provider] ?? 'Identify the image'
-        }]
-      : []
-  })
+      return answerOptions.length === 4
+        ? [
+            {
+              correctIndex: answerOptions.indexOf(card.label),
+              id: `${provider}-${index}-${card.label.slice(0, 20)}`,
+              mediaUrl: card.image,
+              options: answerOptions,
+              prompt: prompts[provider] ?? 'Identify the image'
+            }
+          ]
+        : []
+    })
 }
 
 export function isoWeekParts(date = new Date()): { isoDay: number; isoWeek: number; isoYear: number } {

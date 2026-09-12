@@ -23,9 +23,7 @@ test('every QuizVerse skill satisfies authoring and tool contracts', async () =>
     .filter(entry => entry.isDirectory())
     .map(entry => entry.name)
 
-  const { TOOLS } = await import(
-    new URL('../../../packages/quizverse-mcp/server.mjs', import.meta.url).href
-  )
+  const { TOOLS } = await import(new URL('../../../packages/quizverse-mcp/server.mjs', import.meta.url).href)
 
   const toolNames = new Set(TOOLS.map((tool: { name: string }) => tool.name))
   assert.ok(skillNames.length >= 6)
@@ -62,10 +60,7 @@ test('IX brand manifest does not reference QuizVerse skills or MCP', () => {
 })
 
 test('social guidance exposes only implemented party operations', () => {
-  const social = fs.readFileSync(
-    path.join(skillsRoot, 'quizverse-social-party', 'SKILL.md'),
-    'utf8'
-  )
+  const social = fs.readFileSync(path.join(skillsRoot, 'quizverse-social-party', 'SKILL.md'), 'utf8')
 
   assert.match(social, /qv_party_create/)
   assert.match(social, /qv_party_join/)

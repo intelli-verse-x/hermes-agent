@@ -1,11 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 
-import {
-  isApprovedMicrophoneRequestContext,
-  isApprovedRendererUrl,
-  isAudioOnlyPermission
-} from './mic-permissions'
+import { isApprovedMicrophoneRequestContext, isApprovedRendererUrl, isAudioOnlyPermission } from './mic-permissions'
 
 const packaged = {
   packagedRendererPaths: ['file:///Applications/IVX.app/Contents/Resources/app.asar/dist/index.html']

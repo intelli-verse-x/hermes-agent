@@ -87,8 +87,7 @@ export function LocalAiSetupOverlay({ enabled = true, forceOpen = false, onCompl
   const busy = state.action !== null
   const progress = state.progress
 
-  const visible =
-    enabled && (forceOpen || !state.initialized || state.status?.setupRequired !== false || submitted)
+  const visible = enabled && (forceOpen || !state.initialized || state.status?.setupRequired !== false || submitted)
 
   const installing =
     submitted &&
@@ -104,7 +103,9 @@ export function LocalAiSetupOverlay({ enabled = true, forceOpen = false, onCompl
   }, [enabled, state.initialized])
 
   useEffect(() => {
-    if (!visible) {return}
+    if (!visible) {
+      return
+    }
     const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null
     titleRef.current?.focus()
 
@@ -116,7 +117,9 @@ export function LocalAiSetupOverlay({ enabled = true, forceOpen = false, onCompl
         return
       }
 
-      if (event.key !== 'Tab' || !dialogRef.current) {return}
+      if (event.key !== 'Tab' || !dialogRef.current) {
+        return
+      }
 
       const focusable = Array.from(
         dialogRef.current.querySelectorAll<HTMLElement>(
@@ -328,9 +331,7 @@ export function LocalAiSetupOverlay({ enabled = true, forceOpen = false, onCompl
                 )}
                 {completed && (
                   <>
-                    <Badge variant="outline">
-                      {state.status?.routeStatus?.label || 'Smart local ready'}
-                    </Badge>
+                    <Badge variant="outline">{state.status?.routeStatus?.label || 'Smart local ready'}</Badge>
                     <Button disabled={busy} onClick={() => void verifyLocalAi()} variant="secondary">
                       {state.action === 'verifying' ? 'Verifying…' : 'Verify again'}
                     </Button>

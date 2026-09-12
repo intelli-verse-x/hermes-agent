@@ -125,7 +125,10 @@ test('listUserSkills returns skills newest-first and skips junk folders', () => 
 
     const skills = listUserSkills(dir)
 
-    assert.deepEqual(skills.map(s => s.id), ['new', 'old'])
+    assert.deepEqual(
+      skills.map(s => s.id),
+      ['new', 'old']
+    )
   } finally {
     fs.rmSync(dir, { recursive: true, force: true })
   }
@@ -199,10 +202,7 @@ test('publishUserSkill surfaces portal errors and never marks published', async 
     )
     assert.equal(readUserSkill(dir, 'rejected')?.publishedId, null)
 
-    await assert.rejects(
-      () => publishUserSkill(dir, 'missing', 'https://portal.example.com', failing),
-      /not found/
-    )
+    await assert.rejects(() => publishUserSkill(dir, 'missing', 'https://portal.example.com', failing), /not found/)
   } finally {
     fs.rmSync(dir, { recursive: true, force: true })
   }

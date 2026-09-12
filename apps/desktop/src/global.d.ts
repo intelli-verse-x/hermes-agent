@@ -1,7 +1,6 @@
 import type { GatewayWsUrlResult } from '@hermes/shared'
 
 import type { LocalAiRendererBridge } from './store/local-ai'
-
 import type {
   PetOverlayBounds,
   PetOverlayControl,

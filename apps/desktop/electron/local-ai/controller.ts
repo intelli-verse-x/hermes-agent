@@ -203,7 +203,9 @@ async function findExecutable(
       if (entry.isDirectory()) {
         const nested = await visit(candidate)
 
-        if (nested) {return nested}
+        if (nested) {
+          return nested
+        }
       } else if (entry.name === filename) {
         return candidate
       }
@@ -214,9 +216,13 @@ async function findExecutable(
 
   const found = await visit(directory)
 
-  if (!found) {throw new Error(`${filename} was not present in the verified runtime archive`)}
+  if (!found) {
+    throw new Error(`${filename} was not present in the verified runtime archive`)
+  }
 
-  if (platform !== 'win32') {await fs.chmod(found, 0o700)}
+  if (platform !== 'win32') {
+    await fs.chmod(found, 0o700)
+  }
 
   return found
 }
@@ -226,9 +232,7 @@ function chooseRuntimeAsset(catalog: RuntimeCatalog, hardware: HardwareProfile):
     asset => asset.platform === hardware.platform && asset.architecture === hardware.architecture
   )
 
-  const directAcceleration = hardware.accelerators.find(value =>
-    candidates.some(asset => asset.acceleration === value)
-  )
+  const directAcceleration = hardware.accelerators.find(value => candidates.some(asset => asset.acceleration === value))
 
   const acceleration =
     directAcceleration ??
@@ -237,7 +241,9 @@ function chooseRuntimeAsset(catalog: RuntimeCatalog, hardware: HardwareProfile):
       ? 'vulkan'
       : undefined)
 
-  const selected = candidates.find(asset => asset.acceleration === acceleration) ?? candidates.find(asset => asset.acceleration === 'cpu')
+  const selected =
+    candidates.find(asset => asset.acceleration === acceleration) ??
+    candidates.find(asset => asset.acceleration === 'cpu')
 
   if (!selected) {
     throw new Error(`No managed llama.cpp runtime is available for ${hardware.platform}/${hardware.architecture}`)
@@ -265,10 +271,7 @@ function isReadinessVerified(state: Pick<ControllerState, 'endpoint' | 'modelId'
   const verifiedAt = Date.parse(state.lastVerifiedAt ?? '')
 
   return Boolean(
-    state.endpoint &&
-    state.modelId &&
-    Number.isFinite(verifiedAt) &&
-    Date.now() - verifiedAt <= READINESS_TTL_MS
+    state.endpoint && state.modelId && Number.isFinite(verifiedAt) && Date.now() - verifiedAt <= READINESS_TTL_MS
   )
 }
 
@@ -291,14 +294,22 @@ function externalModelScore(requestedId: string, advertisedId: string): number {
   const value = advertisedId.toLowerCase()
   let score = modelIdMatches(requestedId, advertisedId) ? 10_000 : 0
 
-  if (/(coder|code|qwen|devstral)/.test(value)) {score += 500}
+  if (/(coder|code|qwen|devstral)/.test(value)) {
+    score += 500
+  }
 
-  if (/(instruct|chat)/.test(value)) {score += 200}
+  if (/(instruct|chat)/.test(value)) {
+    score += 200
+  }
 
-  if (/(vision|embed|rerank)/.test(value)) {score -= 1_000}
+  if (/(vision|embed|rerank)/.test(value)) {
+    score -= 1_000
+  }
   const size = value.match(/(\d+(?:\.\d+)?)b\b/)?.[1]
 
-  if (size) {score += Math.min(100, Number(size))}
+  if (size) {
+    score += Math.min(100, Number(size))
+  }
 
   return score
 }
@@ -327,7 +338,9 @@ export class LocalAiController extends EventEmitter {
   }
 
   private handleSidecarState = (snapshot: { state: string }): void => {
-    if (snapshot.state !== 'error' && snapshot.state !== 'stopped') {return}
+    if (snapshot.state !== 'error' && snapshot.state !== 'stopped') {
+      return
+    }
     this.state.lastVerifiedAt = undefined
     void this.save()
   }
@@ -337,15 +350,21 @@ export class LocalAiController extends EventEmitter {
   }
 
   private async initialize(): Promise<void> {
-    if (this.initialized) {return}
+    if (this.initialized) {
+      return
+    }
 
     try {
       const state = await readJson<ControllerState>(this.statePath)
 
-      if (state.schemaVersion === 1) {this.state = { ...defaultState(), ...state }}
+      if (state.schemaVersion === 1) {
+        this.state = { ...defaultState(), ...state }
+      }
       await fs.chmod(this.statePath, 0o600)
     } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {throw error}
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+        throw error
+      }
     }
 
     this.initialized = true
@@ -372,9 +391,7 @@ export class LocalAiController extends EventEmitter {
   }
 
   private async catalogs(): Promise<{ models: ModelCatalog; runtime: RuntimeCatalog }> {
-    let models = validateCatalog(
-      await readJson(path.join(this.options.assetsRoot, 'local-ai-model-catalog.v1.json'))
-    )
+    let models = validateCatalog(await readJson(path.join(this.options.assetsRoot, 'local-ai-model-catalog.v1.json')))
 
     const updateUrl = process.env.HERMES_LOCAL_AI_CATALOG_URL
     const publicKeyPem = process.env.HERMES_LOCAL_AI_CATALOG_PUBLIC_KEY
@@ -417,15 +434,18 @@ export class LocalAiController extends EventEmitter {
     if (modelId) {
       const model = models.models.find(entry => entry.id === modelId)
 
-      if (!model) {throw new Error(`Unknown local model: ${modelId}`)}
+      if (!model) {
+        throw new Error(`Unknown local model: ${modelId}`)
+      }
 
-      const selected = selectModel(
-        { ...models, models: [model] },
-        hardware,
-        { capabilities: ['chat', 'tools'], availableDiskBytes: availableDisk }
-      )
+      const selected = selectModel({ ...models, models: [model] }, hardware, {
+        capabilities: ['chat', 'tools'],
+        availableDiskBytes: availableDisk
+      })
 
-      if (!selected) {throw new Error(`${model.displayName} does not fit this system's available memory or disk`)}
+      if (!selected) {
+        throw new Error(`${model.displayName} does not fit this system's available memory or disk`)
+      }
 
       return { hardware, model, acceleration: selected.acceleration, availableDisk }
     }
@@ -435,7 +455,9 @@ export class LocalAiController extends EventEmitter {
       availableDiskBytes: availableDisk
     })
 
-    if (!selected) {throw new Error('No catalog model fits this system safely')}
+    if (!selected) {
+      throw new Error('No catalog model fits this system safely')
+    }
 
     return { hardware, model: selected.model, acceleration: selected.acceleration, availableDisk }
   }
@@ -443,9 +465,13 @@ export class LocalAiController extends EventEmitter {
   async getRecommendation() {
     await this.initialize()
 
-    if (this.state.mode === 'cloud-only') {return null}
+    if (this.state.mode === 'cloud-only') {
+      return null
+    }
 
-    if (!(await this.assetsPresent())) {return null}
+    if (!(await this.assetsPresent())) {
+      return null
+    }
     const { hardware, model, acceleration } = await this.recommendationFor()
 
     return {
@@ -461,7 +487,9 @@ export class LocalAiController extends EventEmitter {
   }
 
   private async refreshLiveReadiness(): Promise<void> {
-    if (!this.state.endpoint || !this.state.modelId || !this.state.lastVerifiedAt) {return}
+    if (!this.state.endpoint || !this.state.modelId || !this.state.lastVerifiedAt) {
+      return
+    }
 
     if (this.state.endpointMode === 'managed' && this.sidecar?.snapshot().state !== 'ready') {
       this.state.lastVerifiedAt = undefined
@@ -482,7 +510,9 @@ export class LocalAiController extends EventEmitter {
         signal: AbortSignal.timeout(2_000)
       })
 
-      if (!response.ok) {throw new Error(`models probe returned ${response.status}`)}
+      if (!response.ok) {
+        throw new Error(`models probe returned ${response.status}`)
+      }
       const payload = (await response.json()) as { data?: Array<{ id?: string }> }
 
       if (!payload.data?.some(entry => entry.id === this.state.modelId)) {
@@ -497,12 +527,7 @@ export class LocalAiController extends EventEmitter {
   async getStatus() {
     await this.initialize()
 
-    if (
-      this.state.endpointMode === 'managed' &&
-      this.state.modelId &&
-      this.state.launchSpec &&
-      !this.sidecar
-    ) {
+    if (this.state.endpointMode === 'managed' && this.state.modelId && this.state.launchSpec && !this.sidecar) {
       await this.repair()
     }
 
@@ -518,8 +543,7 @@ export class LocalAiController extends EventEmitter {
     const readinessVerified = isReadinessVerified(this.state)
 
     const localRuntimeReady =
-      readinessVerified &&
-      (runtimeSnapshot?.state === 'ready' || this.state.endpointMode === 'existing')
+      readinessVerified && (runtimeSnapshot?.state === 'ready' || this.state.endpointMode === 'existing')
 
     const cloudFallbacks = this.state.cloudEscalations + routed.cloudEscalations
     // No baked catalog → this build can't set up local AI. Report it as
@@ -530,8 +554,7 @@ export class LocalAiController extends EventEmitter {
     return {
       available: supported,
       setupRequired:
-        supported &&
-        (this.state.mode === null || (this.state.mode !== 'cloud-only' && !readinessVerified)),
+        supported && (this.state.mode === null || (this.state.mode !== 'cloud-only' && !readinessVerified)),
       mode: this.state.mode,
       runtime: {
         state: !installed
@@ -596,11 +619,7 @@ export class LocalAiController extends EventEmitter {
     const verifiedAt = Date.parse(this.state.lastVerifiedAt ?? '')
     const readinessStale = !Number.isFinite(verifiedAt) || Date.now() - verifiedAt > READINESS_TTL_MS
 
-    if (
-      this.state.endpointMode === 'managed' &&
-      this.state.modelId &&
-      this.sidecar?.snapshot().state !== 'ready'
-    ) {
+    if (this.state.endpointMode === 'managed' && this.state.modelId && this.sidecar?.snapshot().state !== 'ready') {
       const repaired = await this.repair()
 
       if (!repaired.ok) {
@@ -668,11 +687,7 @@ export class LocalAiController extends EventEmitter {
 
     const candidates = models.models.filter(model =>
       Boolean(
-        selectModel(
-          { ...models, models: [model] },
-          hardware,
-          { capabilities: ['chat', 'tools'], availableDiskBytes }
-        )
+        selectModel({ ...models, models: [model] }, hardware, { capabilities: ['chat', 'tools'], availableDiskBytes })
       )
     )
 
@@ -688,75 +703,78 @@ export class LocalAiController extends EventEmitter {
   async install(input: { mode: Exclude<LocalAiPolicyMode, 'cloud-only'>; modelId: string }) {
     await this.initialize()
 
-    if (this.operation) {return { ok: false, message: 'A local AI operation is already running' }}
+    if (this.operation) {
+      return { ok: false, message: 'A local AI operation is already running' }
+    }
     const candidates = await this.compatibleModelCandidates(input.modelId)
 
-    if (!candidates.length) {return { ok: false, message: 'No compatible local model fits this system' }}
+    if (!candidates.length) {
+      return { ok: false, message: 'No compatible local model fits this system' }
+    }
     this.state.mode = input.mode
     this.state.lastVerifiedAt = undefined
     this.state.attempts = []
     await this.save()
 
-    const loop = await runCandidateReadinessLoop(
-      candidates,
-      async ({ candidate, index, total, phase }) => {
-        this.activeAttempt = {
-          attemptIndex: index,
-          attemptTotal: total,
-          attemptModel: candidate.displayName,
-          attemptPhase: phase
-        }
-
-        const attempt: LocalAiInstallAttempt = {
-          modelId: candidate.id,
-          modelDisplayName: candidate.displayName,
-          phase,
-          status: 'running',
-          startedAt: new Date().toISOString()
-        }
-
-        this.state.attempts.push(attempt)
-        await this.save()
-        this.progress({
-          stage: phase === 'runtime-repair' ? 'installing' : 'preparing',
-          message:
-            phase === 'runtime-repair'
-              ? `Repairing the runtime before retrying ${candidate.displayName}…`
-              : `Trying ${candidate.displayName}…`
-        })
-
-        const result = await this.installCandidate({
-          ...input,
-          modelId: candidate.id,
-          forceManaged: phase === 'runtime-repair'
-        })
-
-        attempt.finishedAt = new Date().toISOString()
-
-        if (result.ok) {
-          attempt.status = 'verified'
-        } else {
-          attempt.status = 'failed'
-          attempt.reason = result.message || 'Readiness verification failed'
-        }
-
-        await this.save()
-
-        if (!result.ok) {await this.sidecar?.stop()}
-
-        if (!result.ok && phase === 'runtime-repair') {
-          const modelPath = path.join(this.options.dataRoot, 'models', candidate.artifact.filename)
-          await fs.rm(modelPath, { force: true })
-          await cleanupPartialDownload(modelPath)
-        }
-
-        return {
-          ok: result.ok,
-          reason: result.message,
-          terminal: result.message === 'Local model setup was cancelled.'
-        }
+    const loop = await runCandidateReadinessLoop(candidates, async ({ candidate, index, total, phase }) => {
+      this.activeAttempt = {
+        attemptIndex: index,
+        attemptTotal: total,
+        attemptModel: candidate.displayName,
+        attemptPhase: phase
       }
-    )
+
+      const attempt: LocalAiInstallAttempt = {
+        modelId: candidate.id,
+        modelDisplayName: candidate.displayName,
+        phase,
+        status: 'running',
+        startedAt: new Date().toISOString()
+      }
+
+      this.state.attempts.push(attempt)
+      await this.save()
+      this.progress({
+        stage: phase === 'runtime-repair' ? 'installing' : 'preparing',
+        message:
+          phase === 'runtime-repair'
+            ? `Repairing the runtime before retrying ${candidate.displayName}…`
+            : `Trying ${candidate.displayName}…`
+      })
+
+      const result = await this.installCandidate({
+        ...input,
+        modelId: candidate.id,
+        forceManaged: phase === 'runtime-repair'
+      })
+
+      attempt.finishedAt = new Date().toISOString()
+
+      if (result.ok) {
+        attempt.status = 'verified'
+      } else {
+        attempt.status = 'failed'
+        attempt.reason = result.message || 'Readiness verification failed'
+      }
+
+      await this.save()
+
+      if (!result.ok) {
+        await this.sidecar?.stop()
+      }
+
+      if (!result.ok && phase === 'runtime-repair') {
+        const modelPath = path.join(this.options.dataRoot, 'models', candidate.artifact.filename)
+        await fs.rm(modelPath, { force: true })
+        await cleanupPartialDownload(modelPath)
+      }
+
+      return {
+        ok: result.ok,
+        reason: result.message,
+        terminal: result.message === 'Local model setup was cancelled.'
+      }
+    })
 
     if (loop.ok) {
       this.activeAttempt = undefined
@@ -786,7 +804,9 @@ export class LocalAiController extends EventEmitter {
   }) {
     await this.initialize()
 
-    if (this.operation) {return { ok: false, message: 'A local AI operation is already running' }}
+    if (this.operation) {
+      return { ok: false, message: 'A local AI operation is already running' }
+    }
     this.lastInstall = input
     this.operation = new AbortController()
     const signal = this.operation.signal
@@ -837,7 +857,9 @@ export class LocalAiController extends EventEmitter {
           fetchImpl: this.options.fetchImpl
         })
 
-        if (!verification.ok) {continue}
+        if (!verification.ok) {
+          continue
+        }
         const catalogMatch = modelIdMatches(model.id, external.advertisedModel)
 
         this.state = {
@@ -874,8 +896,17 @@ export class LocalAiController extends EventEmitter {
       const { runtime } = await this.catalogs()
       const runtimeAsset = chooseRuntimeAsset(runtime, hardware)
       const modelPath = path.join(this.options.dataRoot, 'models', model.artifact.filename)
-      const runtimeArchive = path.join(this.options.dataRoot, 'downloads', path.basename(new URL(runtimeAsset.url).pathname))
-      const runtimeDirectory = path.join(this.options.dataRoot, 'runtime', runtime.revision, `${runtimeAsset.platform}-${runtimeAsset.architecture}-${runtimeAsset.acceleration}`)
+      const runtimeArchive = path.join(
+        this.options.dataRoot,
+        'downloads',
+        path.basename(new URL(runtimeAsset.url).pathname)
+      )
+      const runtimeDirectory = path.join(
+        this.options.dataRoot,
+        'runtime',
+        runtime.revision,
+        `${runtimeAsset.platform}-${runtimeAsset.architecture}-${runtimeAsset.acceleration}`
+      )
 
       let previousBytes = 0
       let previousAt = Date.now()
@@ -926,8 +957,7 @@ export class LocalAiController extends EventEmitter {
       const threads = Math.max(2, hardware.physicalCpuCount ?? Math.floor(hardware.logicalCpuCount / 2))
 
       const gpuLayers =
-        runtimeAsset.acceleration === 'cpu' ||
-        (runtimeAsset.acceleration !== 'metal' && !hardware.gpuMemoryBytes)
+        runtimeAsset.acceleration === 'cpu' || (runtimeAsset.acceleration !== 'metal' && !hardware.gpuMemoryBytes)
           ? 0
           : 99
 
@@ -983,7 +1013,11 @@ export class LocalAiController extends EventEmitter {
       return { ok: true }
     } catch (error) {
       const cancelled = signal.aborted || (error as Error).name === 'AbortError'
-      const message = cancelled ? 'Local model setup was cancelled.' : error instanceof Error ? error.message : String(error)
+      const message = cancelled
+        ? 'Local model setup was cancelled.'
+        : error instanceof Error
+          ? error.message
+          : String(error)
       this.progress({
         stage: cancelled ? 'cancelled' : 'error',
         message,
@@ -1000,7 +1034,9 @@ export class LocalAiController extends EventEmitter {
     const deadline = Date.now() + 120_000
 
     while (Date.now() < deadline) {
-      if (signal.aborted) {throw Object.assign(new Error('Setup cancelled'), { name: 'AbortError' })}
+      if (signal.aborted) {
+        throw Object.assign(new Error('Setup cancelled'), { name: 'AbortError' })
+      }
 
       try {
         const response = await (this.options.fetchImpl ?? fetch)(`${this.state.endpoint}/v1/models`, {
@@ -1008,7 +1044,9 @@ export class LocalAiController extends EventEmitter {
           signal: AbortSignal.timeout(2000)
         })
 
-        if (response.ok) {return}
+        if (response.ok) {
+          return
+        }
       } catch {
         // Model loading can take minutes on CPU-only systems.
       }
@@ -1030,21 +1068,27 @@ export class LocalAiController extends EventEmitter {
       fetchImpl: this.options.fetchImpl
     })
 
-    if (!verification.ok) {throw new Error(verification.reason || 'Local inference verification failed')}
+    if (!verification.ok) {
+      throw new Error(verification.reason || 'Local inference verification failed')
+    }
     this.state.lastVerifiedAt = new Date().toISOString()
     this.readinessConfirmedThisProcess = true
     await this.save()
   }
 
   async cancel() {
-    if (!this.operation) {return { ok: true, message: 'No local AI operation is running' }}
+    if (!this.operation) {
+      return { ok: true, message: 'No local AI operation is running' }
+    }
     this.operation.abort()
 
     return { ok: true }
   }
 
   async retry() {
-    if (!this.lastInstall) {return { ok: false, message: 'There is no previous setup to retry' }}
+    if (!this.lastInstall) {
+      return { ok: false, message: 'There is no previous setup to retry' }
+    }
 
     return this.install(this.lastInstall)
   }
@@ -1053,7 +1097,9 @@ export class LocalAiController extends EventEmitter {
     await this.initialize()
 
     try {
-      if (!this.state.endpoint || !this.state.modelId) {throw new Error('No local model is installed')}
+      if (!this.state.endpoint || !this.state.modelId) {
+        throw new Error('No local model is installed')
+      }
       await this.verifyAndPersist()
 
       return { ok: true }
@@ -1068,7 +1114,9 @@ export class LocalAiController extends EventEmitter {
   async repair() {
     await this.initialize()
 
-    if (this.state.endpointMode === 'existing') {return this.verify()}
+    if (this.state.endpointMode === 'existing') {
+      return this.verify()
+    }
 
     if (!this.state.executablePath || !this.state.modelPath || !this.state.modelId) {
       return this.retry()
@@ -1079,7 +1127,9 @@ export class LocalAiController extends EventEmitter {
       const port = await reserveLoopbackPort()
       const launchSpec = this.state.launchSpec
 
-      if (!launchSpec) {return this.retry()}
+      if (!launchSpec) {
+        return this.retry()
+      }
       this.sidecar = this.createSidecar({
         executablePath: this.state.executablePath,
         modelPath: this.state.modelPath,
@@ -1114,7 +1164,9 @@ export class LocalAiController extends EventEmitter {
   }
 
   async reinstall() {
-    if (!this.state.modelId) {return { ok: false, message: 'No local model is selected' }}
+    if (!this.state.modelId) {
+      return { ok: false, message: 'No local model is selected' }
+    }
     await this.sidecar?.stop()
 
     if (this.state.modelPath) {
@@ -1159,7 +1211,9 @@ export class LocalAiController extends EventEmitter {
   }): Promise<void> {
     await this.initialize()
 
-    if (input.cloudEscalation) {this.state.cloudEscalations += 1}
+    if (input.cloudEscalation) {
+      this.state.cloudEscalations += 1
+    }
 
     if (Number.isFinite(input.tokensAvoided)) {
       const tokens = Math.max(0, Math.floor(input.tokensAvoided ?? 0))
@@ -1210,7 +1264,9 @@ export class LocalAiController extends EventEmitter {
       let measuredLocalTokens = 0
 
       for (const line of raw.split('\n')) {
-        if (!line) {continue}
+        if (!line) {
+          continue
+        }
 
         try {
           const event = JSON.parse(line) as {
@@ -1221,12 +1277,13 @@ export class LocalAiController extends EventEmitter {
             measurement?: string
           }
 
-          if (event.route === 'cloud' && event.reason?.startsWith('local-')) {cloudEscalations += 1}
+          if (event.route === 'cloud' && event.reason?.startsWith('local-')) {
+            cloudEscalations += 1
+          }
 
           if (event.route === 'local') {
             const tokens =
-              Math.max(0, Math.floor(event.inputTokens ?? 0)) +
-              Math.max(0, Math.floor(event.outputTokens ?? 0))
+              Math.max(0, Math.floor(event.inputTokens ?? 0)) + Math.max(0, Math.floor(event.outputTokens ?? 0))
 
             if (event.measurement === 'runtime-reported') {
               measuredLocalTokens += tokens

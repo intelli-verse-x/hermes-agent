@@ -94,7 +94,16 @@ test('saveIxConnector validates locally then POSTs the full definition', async (
     () =>
       saveIxConnector(
         PORTAL,
-        { label: '', url: 'https://x', transport: 'remote-mcp', authHeader: '', category: 'analytics', appIds: [], bundles: [], readOnlyTools: [] },
+        {
+          label: '',
+          url: 'https://x',
+          transport: 'remote-mcp',
+          authHeader: '',
+          category: 'analytics',
+          appIds: [],
+          bundles: [],
+          readOnlyTools: []
+        },
         fakeFetch
       ),
     /name/
@@ -104,7 +113,16 @@ test('saveIxConnector validates locally then POSTs the full definition', async (
     () =>
       saveIxConnector(
         PORTAL,
-        { label: 'X', url: 'ftp://x', transport: 'remote-mcp', authHeader: '', category: 'analytics', appIds: [], bundles: [], readOnlyTools: [] },
+        {
+          label: 'X',
+          url: 'ftp://x',
+          transport: 'remote-mcp',
+          authHeader: '',
+          category: 'analytics',
+          appIds: [],
+          bundles: [],
+          readOnlyTools: []
+        },
         fakeFetch
       ),
     /http/
@@ -141,7 +159,9 @@ test('setIxConnectorEnabled PATCHes and deleteIxConnector DELETEs the per-id rou
   const fakeFetch = (async (url: string, init?: RequestInit) => {
     calls.push({ method: init?.method ?? 'GET', url, body: init?.body ? JSON.parse(String(init.body)) : undefined })
 
-    return init?.method === 'DELETE' ? jsonResponse({ ok: true }) : jsonResponse({ data: { ...PUBLIC_ROW, enabled: false } })
+    return init?.method === 'DELETE'
+      ? jsonResponse({ ok: true })
+      : jsonResponse({ data: { ...PUBLIC_ROW, enabled: false } })
   }) as unknown as typeof fetch
 
   const patched = await setIxConnectorEnabled(PORTAL, 'metabase', false, fakeFetch)
@@ -175,7 +195,10 @@ test('testIxConnector sends only the id for saved connectors (stored token)', as
   assert.equal(result.toolCount, 4)
 
   const failing = (async () =>
-    jsonResponse({ ok: false, error: 'probe_failed', message: 'MCP tools/list → HTTP 502' }, 502)) as unknown as typeof fetch
+    jsonResponse(
+      { ok: false, error: 'probe_failed', message: 'MCP tools/list → HTTP 502' },
+      502
+    )) as unknown as typeof fetch
 
   const failed = await testIxConnector(PORTAL, { url: 'https://mcp.example.com/' }, failing)
 

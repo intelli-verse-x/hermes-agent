@@ -19,12 +19,16 @@ export interface RemoveLocalAiInstallationOptions {
 }
 
 function assertSafeCleanupPath(candidate: string): string {
-  if (!path.isAbsolute(candidate)) {throw new Error(`Cleanup path must be absolute: ${candidate}`)}
+  if (!path.isAbsolute(candidate)) {
+    throw new Error(`Cleanup path must be absolute: ${candidate}`)
+  }
   const normalized = path.resolve(candidate)
   const filesystemRoot = path.parse(normalized).root
   const forbidden = new Set([filesystemRoot, path.resolve(os.homedir()), path.resolve(os.tmpdir())])
 
-  if (forbidden.has(normalized)) {throw new Error(`Refusing unsafe cleanup path: ${normalized}`)}
+  if (forbidden.has(normalized)) {
+    throw new Error(`Refusing unsafe cleanup path: ${normalized}`)
+  }
 
   if (normalized.split(path.sep).filter(Boolean).length < 3) {
     throw new Error(`Refusing shallow cleanup path: ${normalized}`)
@@ -33,9 +37,7 @@ function assertSafeCleanupPath(candidate: string): string {
   return normalized
 }
 
-export async function cleanupLocalAiInstallation(
-  options: LocalAiCleanupOptions
-): Promise<LocalAiCleanupResult> {
+export async function cleanupLocalAiInstallation(options: LocalAiCleanupOptions): Promise<LocalAiCleanupResult> {
   await options.stopSidecar?.()
   const directories = [...new Set(options.directories.map(assertSafeCleanupPath))].sort()
   const result: LocalAiCleanupResult = { removed: [], missing: [] }

@@ -14,11 +14,9 @@ test('hardware probe normalizes injected Linux system data', async () => {
     readFile: async file => {
       assert.equal(file, '/proc/cpuinfo')
 
-      return [
-        'physical id : 0\ncore id : 0',
-        'physical id : 0\ncore id : 1',
-        'physical id : 0\ncore id : 1'
-      ].join('\n\n')
+      return ['physical id : 0\ncore id : 0', 'physical id : 0\ncore id : 1', 'physical id : 0\ncore id : 1'].join(
+        '\n\n'
+      )
     },
     execFile: async command => {
       assert.equal(command, 'lspci')

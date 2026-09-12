@@ -19,6 +19,7 @@ const catalogPath = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   '../../assets/local-ai-runtime-catalog.v1.json'
 )
+
 const catalog = JSON.parse(fs.readFileSync(catalogPath, 'utf8')) as {
   assets: RuntimeAssetFixture[]
   schemaVersion: number
@@ -37,9 +38,7 @@ test('runtime catalog covers supported desktop platform and architecture pairs',
   assert.equal(catalog.schemaVersion, 1)
 
   for (const [platform, architecture] of supported) {
-    const assets = catalog.assets.filter(
-      asset => asset.platform === platform && asset.architecture === architecture
-    )
+    const assets = catalog.assets.filter(asset => asset.platform === platform && asset.architecture === architecture)
 
     assert.ok(assets.length > 0, `missing ${platform}/${architecture} runtime`)
 

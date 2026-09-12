@@ -36,7 +36,15 @@ export function evaluateDesktopVoiceRoute(
   const disclosure = `Audio: STT ${sttProvider} · TTS ${ttsProvider} · inference ${localAi?.mode ?? 'configured route'}`
 
   if (config.stt?.enabled === false) {
-    return { allowed: false, disclosure, localOnly, reason: 'Speech-to-text is disabled.', sttProvider, ttsProvider, usesCloudAudio }
+    return {
+      allowed: false,
+      disclosure,
+      localOnly,
+      reason: 'Speech-to-text is disabled.',
+      sttProvider,
+      ttsProvider,
+      usesCloudAudio
+    }
   }
 
   if (remoteGateway) {
