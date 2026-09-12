@@ -87,6 +87,47 @@ EXPECT_VERSION=0.17.1 node apps/desktop/scripts/verify-update-feed.mjs
   (`https://intelliverse-x-desktop.s3.amazonaws.com/index.html`, republished
   by the `publish-download-page` job on every release).
 
+## Windows Authenticode (SSL.com eSigner)
+
+CI signs the Windows exe + NSIS/MSI installers with the org's SSL.com **OV
+Code Signing** certificate ("Intelliverse X Inc.", order `co-861l9o2cea9`)
+through **eSigner cloud signing** — no USB token. Signed installers show the
+verified publisher instead of "Unknown publisher".
+
+Repo secrets (all four, or Windows builds publish unsigned exactly as before):
+
+| Secret | Value |
+| --- | --- |
+| `ES_USERNAME` | SSL.com account email |
+| `ES_PASSWORD` | SSL.com account password |
+| `ES_TOTP_SECRET` | eSigner OTP secret (the *text* under the enrollment QR) |
+| `ES_CREDENTIAL_ID` | eSigner signing credential UUID (order page → Signing Credentials) |
+
+How it's wired (see `scripts/esigner-sign.mjs`):
+
+- `desktop-release.yml` downloads SSL.com CodeSignTool and, only when the
+  secrets exist, re-enables `win.signAndEditExecutable` plus a custom
+  `win.signtoolOptions.sign` hook via `-c` overrides. `package.json` keeps
+  `signAndEditExecutable=false` so local/dev builds never touch
+  electron-builder's winCodeSign path (broken on non-admin Windows — see
+  `scripts/set-exe-identity.mjs`).
+- Signing runs **inside** electron-builder so the `latest.yml` sha512 matches
+  the signed bytes — electron-updater would reject a file signed after
+  packaging.
+- When signing is active, `after-pack.mjs` skips its rcedit stamp:
+  electron-builder already stamped the branded icon/metadata before signing,
+  and editing the PE afterwards would break the signature.
+- Certificate renewal: yearly via SSL.com; re-enroll eSigner if the
+  credential changes and update `ES_CREDENTIAL_ID` (+ `ES_TOTP_SECRET` if a
+  new QR is generated).
+
+Verify a published installer:
+
+```powershell
+Get-AuthenticodeSignature .\IX-Agency-Setup.exe | Format-List
+# Expect: Status Valid, SignerCertificate CN=Intelliverse X Inc.
+```
+
 ## Troubleshooting
 
 - **`AccessDenied` from an S3 URL**: only the exact object keys exist —

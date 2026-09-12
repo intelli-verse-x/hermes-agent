@@ -29,6 +29,18 @@ export default async function afterPack(context) {
     return
   }
 
+  // CI signing path (desktop-release.yml sets the ES_* secrets and re-enables
+  // win.signAndEditExecutable): electron-builder already did its own rcedit
+  // pass (icon + branded version metadata) BEFORE signing the exe via
+  // scripts/esigner-sign.mjs. Re-running rcedit here would modify the PE
+  // after signing and break the Authenticode signature — skip the stamp.
+  const esignerActive = ['ES_USERNAME', 'ES_PASSWORD', 'ES_TOTP_SECRET', 'ES_CREDENTIAL_ID']
+    .every(v => process.env[v])
+  if (esignerActive) {
+    console.log('[after-pack] eSigner signing active — skipping rcedit stamp (already stamped + signed by electron-builder)')
+    return
+  }
+
   const productName = context.packager?.appInfo?.productFilename || loadBrand().productName
   const exe = path.join(context.appOutDir, `${productName}.exe`)
   const desktopRoot = path.resolve(import.meta.dirname, '..')

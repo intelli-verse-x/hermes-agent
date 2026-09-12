@@ -28,6 +28,17 @@
 # opening the .dmg URL):
 #   CSC_LINK / CSC_KEY_PASSWORD — Developer ID cert (base64 .p12 / password)
 #   APPLE_ID / APPLE_APP_SPECIFIC_PASSWORD / APPLE_TEAM_ID — notarytool
+# Optional (Windows Authenticode via SSL.com eSigner cloud signing; unsigned
+# builds still publish, but SmartScreen shows "Unknown publisher"):
+#   ES_USERNAME / ES_PASSWORD — SSL.com account (sales@intelli-verse-x.ai)
+#   ES_TOTP_SECRET            — eSigner OTP secret (text under the QR code)
+#   ES_CREDENTIAL_ID          — eSigner signing credential UUID
+# When all four exist, the Windows job downloads SSL.com CodeSignTool and
+# re-enables win.signAndEditExecutable + a custom sign hook
+# (apps/desktop/scripts/esigner-sign.mjs) via -c overrides, so the exe and
+# installers are signed INSIDE electron-builder and latest.yml checksums stay
+# valid. package.json keeps signAndEditExecutable=false for local builds
+# (winCodeSign extraction fails on non-admin Windows — see set-exe-identity.mjs).
 name: desktop-release
 
 permissions:
@@ -76,6 +87,28 @@ jobs:
       - name: Linux packaging deps (rpm for the rpm target)
         if: matrix.platform == 'ubuntu-22.04'
         run: sudo apt-get update && sudo apt-get install -y rpm
+
+      # SSL.com CodeSignTool (Windows Authenticode via eSigner cloud signing).
+      # Java for the tool + pinned CodeSignTool release; only when the ES_*
+      # secrets exist — forks and unsigned releases skip both steps.
+      - uses: actions/setup-java@v4
+        if: matrix.platform == 'windows-latest' && secrets.ES_USERNAME != ''
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Download SSL.com CodeSignTool
+        if: matrix.platform == 'windows-latest' && secrets.ES_USERNAME != ''
+        run: |
+          curl -fsSL -o /tmp/CodeSignTool.zip \
+            https://github.com/SSLcom/CodeSignTool/releases/download/v1.3.2/CodeSignTool-v1.3.2-windows.zip
+          unzip -q /tmp/CodeSignTool.zip -d "$RUNNER_TEMP/codesigntool"
+          # The zip may nest a single top-level dir; resolve to the dir that
+          # actually contains jar/ so CODE_SIGN_TOOL_PATH is always right.
+          TOOL_DIR="$(dirname "$(find "$RUNNER_TEMP/codesigntool" -name '*.jar' -path '*/jar/*' | head -1)")"
+          TOOL_DIR="$(dirname "$TOOL_DIR")"
+          echo "CODE_SIGN_TOOL_PATH=$TOOL_DIR" >> "$GITHUB_ENV"
+          echo "CodeSignTool at: $TOOL_DIR"
 
       - name: Guard — tag version must match apps/desktop/package.json
         if: startsWith(github.ref, 'refs/tags/ix-desktop-v')
@@ -126,13 +159,26 @@ jobs:
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           CSC_IDENTITY_AUTO_DISCOVERY: ${{ secrets.CSC_LINK != '' }}
+          # Windows Authenticode via SSL.com eSigner (scripts/esigner-sign.mjs;
+          # skipped when unset).
+          ES_USERNAME: ${{ secrets.ES_USERNAME }}
+          ES_PASSWORD: ${{ secrets.ES_PASSWORD }}
+          ES_TOTP_SECRET: ${{ secrets.ES_TOTP_SECRET }}
+          ES_CREDENTIAL_ID: ${{ secrets.ES_CREDENTIAL_ID }}
         # Unset EMPTY signing vars: electron-builder treats an empty CSC_LINK
         # as a certificate *path* and dies with "<cwd> not a file".
         run: |
-          for v in CSC_LINK CSC_KEY_PASSWORD APPLE_ID APPLE_APP_SPECIFIC_PASSWORD APPLE_TEAM_ID; do
+          for v in CSC_LINK CSC_KEY_PASSWORD APPLE_ID APPLE_APP_SPECIFIC_PASSWORD APPLE_TEAM_ID ES_USERNAME ES_PASSWORD ES_TOTP_SECRET ES_CREDENTIAL_ID; do
             if [ -z "${!v:-}" ]; then unset "$v"; fi
           done
-          npm run builder -- --publish never
+          SIGN_ARGS=()
+          if [ "$RUNNER_OS" = "Windows" ] && [ -n "${ES_USERNAME:-}" ]; then
+            # CI-only override: package.json keeps signAndEditExecutable=false
+            # because winCodeSign extraction fails on non-admin Windows (see
+            # set-exe-identity.mjs) — CI runners are admin, so it's safe here.
+            SIGN_ARGS=(-c.win.signAndEditExecutable=true -c.win.signtoolOptions.sign=scripts/esigner-sign.mjs)
+          fi
+          npm run builder -- --publish never "${SIGN_ARGS[@]}"
 
       - name: Verify unpacked app payload resources (not installer container)
         working-directory: apps/desktop
@@ -158,11 +204,19 @@ jobs:
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           CSC_IDENTITY_AUTO_DISCOVERY: ${{ secrets.CSC_LINK != '' }}
+          ES_USERNAME: ${{ secrets.ES_USERNAME }}
+          ES_PASSWORD: ${{ secrets.ES_PASSWORD }}
+          ES_TOTP_SECRET: ${{ secrets.ES_TOTP_SECRET }}
+          ES_CREDENTIAL_ID: ${{ secrets.ES_CREDENTIAL_ID }}
         run: |
-          for v in CSC_LINK CSC_KEY_PASSWORD APPLE_ID APPLE_APP_SPECIFIC_PASSWORD APPLE_TEAM_ID; do
+          for v in CSC_LINK CSC_KEY_PASSWORD APPLE_ID APPLE_APP_SPECIFIC_PASSWORD APPLE_TEAM_ID ES_USERNAME ES_PASSWORD ES_TOTP_SECRET ES_CREDENTIAL_ID; do
             if [ -z "${!v:-}" ]; then unset "$v"; fi
           done
-          npm run builder -- --publish always
+          SIGN_ARGS=()
+          if [ "$RUNNER_OS" = "Windows" ] && [ -n "${ES_USERNAME:-}" ]; then
+            SIGN_ARGS=(-c.win.signAndEditExecutable=true -c.win.signtoolOptions.sign=scripts/esigner-sign.mjs)
+          fi
+          npm run builder -- --publish always "${SIGN_ARGS[@]}"
 
       - name: Upload installers as workflow artifacts (debug/QA convenience)
         uses: actions/upload-artifact@v4
